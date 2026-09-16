@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-paper text-ink selection:bg-rfblue-100 selection:text-rfblue-900;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif tracking-tight text-ink-darkest;
+  }
+}
+
+@layer utilities {
+  /* Editorial Drop Cap */
+  .drop-cap::first-letter {
+    @apply float-left text-5xl font-serif pr-3 pt-1 text-rfblue font-bold leading-none;
+  }
+
+  /* Reading prose line measure */
+  .reading-container {
+    @apply max-w-[70ch] mx-auto px-4 sm:px-6;
+  }
+}

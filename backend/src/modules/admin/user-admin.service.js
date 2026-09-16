@@ -1,0 +1,337 @@
+import { prisma } from '../../config/db.js';
+import { AppError } from '../../middleware/errorHandler.js';
+import { UserDTO } from '../users/user.dto.js';
+
+export class UserAdminService {
+  /**
+   * Retrieves paginated user directory with role and status filtering
+   */
+  static async getUsers({ search = '', role = '', status = '', page = 1, limit = 20, sort = 'createdAt_desc' }) {
+    const skip = (Math.max(1, parseInt(page, 10)) - 1) * parseInt(limit, 10);
+    const take = parseInt(limit, 10);
+
+    const where = {};
+
+    if (status && ['ACTIVE', 'SUSPENDED', 'DEACTIVATED'].includes(status)) {
+      where.status = status;
+    }
+
+    if (role) {
+      where.roles = {
+        some: {
+          role: {
+            name: role.toUpperCase()
+          }
+        }
+      };
+    }
+
+    if (search && search.trim().length > 0) {
+      const q = search.trim();
+      where.OR = [
+        { email: { contains: q, mode: 'insensitive' } },
+        { firstName: { contains: q, mode: 'insensitive' } },
+        { lastName: { contains: q, mode: 'insensitive' } }
+      ];
+    }
+
+    const orderBy = [];
+    if (sort === 'createdAt_asc') {
+      orderBy.push({ createdAt: 'asc' });
+    } else if (sort === 'name_asc') {
+      orderBy.push({ firstName: 'asc' });
+    } else {
+      orderBy.push({ createdAt: 'desc' });
+    }
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        include: {
+          roles: { include: { role: true } },
+          authorProfile: true,
+          _count: {
+            select: {
+              articles: true,
+              comments: true,
+              bookmarks: true,
+              commentReports: true
+            }
+          }
+        },
+        orderBy,
+        skip,
+        take
+      }),
+      prisma.user.count({ where })
+    ]);
+
+    return {
+      users: users.map(u => UserDTO.toAdmin(u)),
+      pagination: {
+        total,
+        page: parseInt(page, 10),
+        limit: take,
+        totalPages: Math.ceil(total / take)
+      }
+    };
+  }
+
+  /**
+   * Retrieves deep detail for a single user, including recent activity
+   */
+  static async getUserDetails(userId) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        roles: { include: { role: true } },
+        authorProfile: true,
+        _count: {
+          select: {
+            articles: true,
+            comments: true,
+            bookmarks: true,
+            commentReports: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    }
+
+    // Fetch recent 5 articles and recent 5 comments
+    const [recentArticles, recentComments, auditLogs] = await Promise.all([
+      prisma.article.findMany({
+        where: { authorId: userId },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: { id: true, title: true, slug: true, status: true, viewCount: true, createdAt: true }
+      }),
+      prisma.comment.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        include: { article: { select: { id: true, title: true, slug: true } } }
+      }),
+      prisma.auditLog.findMany({
+        where: { entityType: 'User', entityId: userId },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        include: { actor: { select: { firstName: true, lastName: true, email: true } } }
+      })
+    ]);
+
+    return {
+      user: UserDTO.toAdmin(user),
+      recentArticles,
+      recentComments: recentComments.map(c => ({
+        id: c.id,
+        content: c.content.slice(0, 140),
+        status: c.status,
+        article: c.article,
+        createdAt: c.createdAt
+      })),
+      auditHistory: auditLogs.map(l => ({
+        id: l.id,
+        action: l.action,
+        metadata: l.metadata,
+        createdAt: l.createdAt,
+        actor: l.actor ? `${l.actor.firstName} ${l.actor.lastName}`.trim() : 'System'
+      }))
+    };
+  }
+
+  /**
+   * Updates user status (ACTIVE, SUSPENDED, DEACTIVATED) with anti-escalation safeguards
+   */
+  static async updateUserStatus(targetUserId, { status, reason = null }, actorUser) {
+    if (!['ACTIVE', 'SUSPENDED', 'DEACTIVATED'].includes(status)) {
+      throw new AppError('Invalid status. Allowed: ACTIVE, SUSPENDED, DEACTIVATED', 400, 'INVALID_STATUS');
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      include: { roles: { include: { role: true } } }
+    });
+
+    if (!targetUser) {
+      throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    }
+
+    const targetRoleNames = targetUser.roles.map(r => r.role.name);
+    const isTargetSuperAdmin = targetRoleNames.includes('SUPER_ADMIN');
+
+    // 1. Anti-escalation check: Only Super Admin can modify a Super Admin
+    if (isTargetSuperAdmin && !actorUser.isSuperAdmin) {
+      throw new AppError('Access denied: Standard administrators cannot modify a Super Administrator account', 403, 'FORBIDDEN_MUTATE_SUPER_ADMIN');
+    }
+
+    // 2. Anti-lockout check: Cannot suspend or deactivate the last active Super Admin
+    if (isTargetSuperAdmin && status !== 'ACTIVE') {
+      const activeSuperAdmins = await prisma.user.count({
+        where: {
+          id: { not: targetUserId },
+          status: 'ACTIVE',
+          roles: {
+            some: {
+              role: { name: 'SUPER_ADMIN' }
+            }
+          }
+        }
+      });
+
+      if (activeSuperAdmins === 0) {
+        throw new AppError('Cannot suspend or deactivate the sole remaining Super Administrator on the platform', 400, 'LAST_SUPER_ADMIN_IMMUTABLE');
+      }
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.update({
+        where: { id: targetUserId },
+        data: { status },
+        include: {
+          roles: { include: { role: true } },
+          authorProfile: true,
+          _count: {
+            select: { articles: true, comments: true, bookmarks: true, commentReports: true }
+          }
+        }
+      });
+
+      // Record Audit Log
+      await tx.auditLog.create({
+        data: {
+          actorId: actorUser.id,
+          action: `user.${status.toLowerCase()}`,
+          entityType: 'User',
+          entityId: targetUserId,
+          metadata: {
+            previousStatus: targetUser.status,
+            newStatus: status,
+            reason: reason || 'Administrative status change'
+          }
+        }
+      });
+
+      // If suspended, notify the user
+      if (status === 'SUSPENDED') {
+        await tx.notification.create({
+          data: {
+            userId: targetUserId,
+            type: 'ACCOUNT_SUSPENDED',
+            title: 'Account Suspended',
+            message: reason ? `Your account has been suspended: ${reason}` : 'Your account has been suspended by administration.'
+          }
+        });
+      }
+
+      return u;
+    });
+
+    return UserDTO.toAdmin(updated);
+  }
+
+  /**
+   * Reassigns roles to a user with anti-escalation and anti-lockout safeguards
+   */
+  static async assignUserRoles(targetUserId, { roleNames }, actorUser) {
+    if (!Array.isArray(roleNames) || roleNames.length === 0) {
+      throw new AppError('At least one valid role name must be provided', 400, 'INVALID_ROLES');
+    }
+
+    const normalizedRoleNames = roleNames.map(r => r.toUpperCase());
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      include: { roles: { include: { role: true } } }
+    });
+
+    if (!targetUser) {
+      throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    }
+
+    const currentRoleNames = targetUser.roles.map(r => r.role.name);
+    const wasSuperAdmin = currentRoleNames.includes('SUPER_ADMIN');
+    const willBeSuperAdmin = normalizedRoleNames.includes('SUPER_ADMIN');
+    const wasAdmin = currentRoleNames.includes('ADMIN');
+    const willBeAdmin = normalizedRoleNames.includes('ADMIN');
+
+    // 1. Anti-escalation check: Only Super Admin can assign or revoke ADMIN / SUPER_ADMIN
+    const touchedAdminTiers = wasSuperAdmin || willBeSuperAdmin || wasAdmin || willBeAdmin;
+    if (touchedAdminTiers && !actorUser.isSuperAdmin) {
+      throw new AppError('Access denied: Only Super Administrators can grant or revoke administrative roles', 403, 'FORBIDDEN_ELEVATE_ADMIN');
+    }
+
+    // 2. Anti-lockout check: Cannot remove SUPER_ADMIN from the last active Super Admin
+    if (wasSuperAdmin && !willBeSuperAdmin) {
+      const activeSuperAdmins = await prisma.user.count({
+        where: {
+          id: { not: targetUserId },
+          status: 'ACTIVE',
+          roles: {
+            some: {
+              role: { name: 'SUPER_ADMIN' }
+            }
+          }
+        }
+      });
+
+      if (activeSuperAdmins === 0) {
+        throw new AppError('Cannot demote the sole remaining Super Administrator on the platform', 400, 'LAST_SUPER_ADMIN_IMMUTABLE');
+      }
+    }
+
+    // Fetch all requested roles from database
+    const rolesInDb = await prisma.role.findMany({
+      where: { name: { in: normalizedRoleNames } }
+    });
+
+    if (rolesInDb.length !== normalizedRoleNames.length) {
+      throw new AppError('One or more specified role names do not exist in the catalog', 400, 'ROLE_NOT_FOUND');
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      // Remove current role mappings
+      await tx.userRole.deleteMany({
+        where: { userId: targetUserId }
+      });
+
+      // Insert new role mappings
+      await tx.userRole.createMany({
+        data: rolesInDb.map(r => ({
+          userId: targetUserId,
+          roleId: r.id
+        }))
+      });
+
+      // Record Audit Log
+      await tx.auditLog.create({
+        data: {
+          actorId: actorUser.id,
+          action: 'user.role_change',
+          entityType: 'User',
+          entityId: targetUserId,
+          metadata: {
+            previousRoles: currentRoleNames,
+            newRoles: normalizedRoleNames
+          }
+        }
+      });
+
+      return tx.user.findUnique({
+        where: { id: targetUserId },
+        include: {
+          roles: { include: { role: true } },
+          authorProfile: true,
+          _count: {
+            select: { articles: true, comments: true, bookmarks: true, commentReports: true }
+          }
+        }
+      });
+    });
+
+    return UserDTO.toAdmin(updated);
+  }
+}
