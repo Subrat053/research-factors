@@ -3,7 +3,7 @@ import { AdminService } from './admin.service.js';
 export class AdminController {
   static async getStats(req, res, next) {
     try {
-      const stats = await AdminService.getDashboardStats();
+      const stats = await AdminService.getDashboardStats(req.user);
       res.status(200).json({
         success: true,
         data: stats
@@ -115,7 +115,7 @@ export class AdminController {
   static async listAllArticles(req, res, next) {
     try {
       const { search, status, authorId, categoryId, page, limit, sort } = req.query;
-      const result = await AdminService.listAllArticles({ search, status, authorId, categoryId, page, limit, sort });
+      const result = await AdminService.listAllArticles({ search, status, authorId, categoryId, page, limit, sort }, req.user);
       res.status(200).json({
         success: true,
         data: result

@@ -7,5 +7,6 @@ export const authApi = {
   getMe: () => apiClient.get('/auth/me'),
   forgotPassword: (email) => apiClient.post('/auth/forgot-password', { email }),
   resetPassword: (data) => apiClient.post('/auth/reset-password', data),
-  verifyEmail: (token) => apiClient.get(`/auth/verify-email?token=${token}`)
+  verifyEmail: (token) => apiClient.get(`/auth/verify-email?token=${token}`),
+  getPublicSettings: () => apiClient.get('/admin/settings/public')
 };

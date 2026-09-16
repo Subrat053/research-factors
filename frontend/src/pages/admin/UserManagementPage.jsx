@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   UserCheck,
+  UserPlus,
   ChevronRight,
   MoreVertical,
   X,
@@ -22,8 +23,10 @@ import {
 
 export default function UserManagementPage() {
   const queryClient = useQueryClient();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
   const isSuperAdmin = currentUser?.roles?.includes('SUPER_ADMIN') || false;
+  const canCreateUser = isSuperAdmin || (hasPermission && hasPermission('user.create'));
+  const canToggleRegistration = isSuperAdmin || (hasPermission && (hasPermission('setting.manage') || hasPermission('user.create')));
 
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -40,6 +43,16 @@ export default function UserManagementPage() {
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [feedbackMsg, setFeedbackMsg] = useState(null);
 
+  // Helper with auto-dismiss after 5 seconds
+  const showFeedback = (msg) => {
+    setFeedbackMsg(msg);
+    if (msg) {
+      setTimeout(() => {
+        setFeedbackMsg((prev) => (prev === msg ? null : prev));
+      }, 5000);
+    }
+  };
+
   // 1. Fetch Users
   const { data, isLoading, error } = useQuery({
     queryKey: ['admin-users', { search, role: roleFilter, status: statusFilter, page }],
@@ -50,11 +63,71 @@ export default function UserManagementPage() {
   const users = data?.data?.users || [];
   const pagination = data?.data?.pagination || { total: 0, totalPages: 1 };
 
-  // 2. Fetch Roles Catalog for role modal
+  // 2. Fetch Registration Status
+  const { data: regData, isLoading: regLoading } = useQuery({
+    queryKey: ['admin-registration-status'],
+    queryFn: () => adminApi.getRegistrationStatus(),
+    enabled: !!canToggleRegistration
+  });
+  const allowRegistration = regData?.data?.allowRegistration ?? true;
+
+  const toggleRegMutation = useMutation({
+    mutationFn: (nextState) => adminApi.updateRegistrationStatus({ allowRegistration: nextState }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries(['admin-registration-status']);
+      showFeedback({
+        type: 'success',
+        text: `Public registration is now ${res.data?.allowRegistration ? 'Active (Open for public signup)' : 'Paused (Staff-only onboarding)'}`
+      });
+    },
+    onError: (err) => {
+      showFeedback({ type: 'error', text: err.message || 'Failed to update registration status' });
+    }
+  });
+
+  // 3. Create User Modal State & Mutation
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    bio: '',
+    roleNames: ['USER'],
+    emailVerified: true
+  });
+  const [createFormError, setCreateFormError] = useState(null);
+
+  const createUserMutation = useMutation({
+    mutationFn: (payload) => adminApi.createUser(payload),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries(['admin-users']);
+      setCreateModalOpen(false);
+      setCreateForm({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
+        bio: '',
+        roleNames: ['USER'],
+        emailVerified: true
+      });
+      setCreateFormError(null);
+      showFeedback({
+        type: 'success',
+        text: `User account created for ${res.data?.fullName || res.data?.email} with [${res.data?.roles?.join(', ')}] role(s).`
+      });
+    },
+    onError: (err) => {
+      setCreateFormError(err.message || 'Failed to create user account');
+    }
+  });
+
+  // 4. Fetch Roles Catalog for role modal & create modal
   const { data: rolesData } = useQuery({
     queryKey: ['admin-roles-list'],
     queryFn: () => adminApi.listRoles(),
-    enabled: isSuperAdmin
+    enabled: isSuperAdmin || canCreateUser
   });
   const availableRoles = rolesData?.data || [];
 
@@ -65,10 +138,10 @@ export default function UserManagementPage() {
       queryClient.invalidateQueries(['admin-users']);
       setStatusModalOpen(false);
       setStatusReason('');
-      setFeedbackMsg({ type: 'success', text: res.message || 'User status updated successfully' });
+      showFeedback({ type: 'success', text: res.message || 'User status updated successfully' });
     },
     onError: (err) => {
-      setFeedbackMsg({ type: 'error', text: err.message || 'Failed to update user status' });
+      showFeedback({ type: 'error', text: err.message || 'Failed to update user status' });
     }
   });
 
@@ -77,10 +150,10 @@ export default function UserManagementPage() {
     onSuccess: (res) => {
       queryClient.invalidateQueries(['admin-users']);
       setRoleModalOpen(false);
-      setFeedbackMsg({ type: 'success', text: 'Roles updated successfully' });
+      showFeedback({ type: 'success', text: 'Roles updated successfully' });
     },
     onError: (err) => {
-      setFeedbackMsg({ type: 'error', text: err.message || 'Failed to update user roles' });
+      showFeedback({ type: 'error', text: err.message || 'Failed to update user roles' });
     }
   });
 
@@ -111,6 +184,49 @@ export default function UserManagementPage() {
     <AdminLayout
       title="User Directory & Governance"
       subtitle="Manage reader accounts, staff credentials, suspension states, and role allocations"
+      actions={
+        <div className="flex flex-wrap items-center gap-3">
+          {canToggleRegistration && (
+            <div className="flex items-center space-x-2.5 bg-slate-800/80 border border-slate-700/70 rounded-xl px-3 py-1.5 shadow-xs">
+              <div className="flex items-center space-x-1.5 text-xs font-medium">
+                <span className={`w-2 h-2 rounded-full ${allowRegistration ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                <span className="text-slate-300 hidden sm:inline">Public Signup:</span>
+                <span className={allowRegistration ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>
+                  {allowRegistration ? 'Active' : 'Paused'}
+                </span>
+              </div>
+              <button
+                type="button"
+                disabled={toggleRegMutation.isPending || regLoading}
+                onClick={() => toggleRegMutation.mutate(!allowRegistration)}
+                title={allowRegistration ? 'Pause public signups' : 'Enable public signups'}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden disabled:opacity-50 ${
+                  allowRegistration ? 'bg-emerald-600' : 'bg-slate-700'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                    allowRegistration ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          )}
+
+          {canCreateUser && (
+            <button
+              onClick={() => {
+                setCreateModalOpen(true);
+                setCreateFormError(null);
+              }}
+              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-xs"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Create User</span>
+            </button>
+          )}
+        </div>
+      }
     >
       <Helmet>
         <title>User Management — Research Factors Admin</title>
@@ -471,6 +587,235 @@ export default function UserManagementPage() {
                 {roleMutation.isPending ? 'Saving...' : 'Update Roles'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create User Modal */}
+      {createModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-serif font-bold text-white">Create User Account</h3>
+                  <p className="text-xs text-slate-400">Directly provision reader, author, or staff credentials</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCreateModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {createFormError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-center justify-between">
+                <span>{createFormError}</span>
+                <button onClick={() => setCreateFormError(null)} className="p-1 hover:opacity-75">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setCreateFormError(null);
+                if (!createForm.firstName.trim() || !createForm.lastName.trim()) {
+                  setCreateFormError('First and last name are required');
+                  return;
+                }
+                if (!createForm.email.trim()) {
+                  setCreateFormError('Valid email address is required');
+                  return;
+                }
+                if (createForm.password.length < 8) {
+                  setCreateFormError('Password must be at least 8 characters long');
+                  return;
+                }
+                if (createForm.roleNames.length === 0) {
+                  setCreateFormError('Please select at least one role for this account');
+                  return;
+                }
+                createUserMutation.mutate(createForm);
+              }}
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={createForm.firstName}
+                    onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
+                    placeholder="Eleanor"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-blue-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Last Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={createForm.lastName}
+                    onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
+                    placeholder="Vance"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-blue-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                  placeholder="name@institution.edu"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-blue-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Initial Password *
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                  placeholder="Minimum 8 characters"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-blue-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Brief Bio / Academic Focus (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={createForm.bio}
+                  onChange={(e) => setCreateForm({ ...createForm, bio: e.target.value })}
+                  placeholder="e.g. Theoretical physicist focusing on quantum optics..."
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-blue-500 transition-colors resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Initial Role Assignment *
+                </label>
+                <div className="space-y-1.5">
+                  {['USER', 'AUTHOR', 'EDITOR', 'ADMIN', 'SUPER_ADMIN'].map((r) => {
+                    const isRestricted = !isSuperAdmin && ['ADMIN', 'SUPER_ADMIN'].includes(r);
+                    const isSelected = createForm.roleNames.includes(r);
+                    return (
+                      <div
+                        key={r}
+                        onClick={() => {
+                          if (isRestricted) return;
+                          const newRoles = isSelected
+                            ? createForm.roleNames.filter((item) => item !== r)
+                            : [...createForm.roleNames, r];
+                          setCreateForm({ ...createForm, roleNames: newRoles });
+                        }}
+                        className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition-colors ${
+                          isRestricted
+                            ? 'opacity-40 cursor-not-allowed bg-slate-800/20 border-slate-800 text-slate-500'
+                            : isSelected
+                            ? 'bg-blue-600/15 border-blue-500/40 text-white cursor-pointer'
+                            : 'bg-slate-800/40 border-slate-700/60 text-slate-300 hover:bg-slate-800/80 cursor-pointer'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            disabled={isRestricted}
+                            checked={isSelected}
+                            onChange={() => {}}
+                            className="rounded text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="font-semibold">{r}</span>
+                          {isRestricted && (
+                            <span className="text-[10px] text-amber-400 ml-1">
+                              (Super Admin Required)
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-slate-400">
+                          {r === 'USER' && 'Community reader'}
+                          {r === 'AUTHOR' && 'Accredited writer'}
+                          {r === 'EDITOR' && 'Publishing manager'}
+                          {r === 'ADMIN' && 'Staff administrator'}
+                          {r === 'SUPER_ADMIN' && 'Principal system custodian'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {isSuperAdmin ? (
+                <div className="pt-1">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={createForm.emailVerified}
+                      onChange={(e) => setCreateForm({ ...createForm, emailVerified: e.target.checked })}
+                      className="rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-xs text-slate-300">Mark email as pre-verified by Super Administrator</span>
+                  </label>
+                </div>
+              ) : (
+                <div className="pt-1 p-2.5 rounded-xl bg-slate-800/40 border border-slate-700/60 text-[11px] text-slate-400">
+                  Accounts created by non-super-admin staff will require the user to verify their email address before access is granted.
+                </div>
+              )}
+
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setCreateModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createUserMutation.isPending}
+                  className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-all shadow-xs"
+                >
+                  {createUserMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Creating User...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Create Account</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

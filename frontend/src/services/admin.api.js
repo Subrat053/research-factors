@@ -37,6 +37,15 @@ export const adminApi = {
   assignUserRoles: (id, data) =>
     apiClient.patch(`/admin/users/${id}/role`, data),
 
+  createUser: (data) =>
+    apiClient.post('/admin/users', data),
+
+  getRegistrationStatus: () =>
+    apiClient.get('/admin/settings/registration-status'),
+
+  updateRegistrationStatus: (data) =>
+    apiClient.patch('/admin/settings/registration-status', data),
+
   // Authors & Applications
   listAuthors: (params = {}) =>
     apiClient.get('/admin/authors', { params }),

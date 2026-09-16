@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { AlertCircle, Loader2, ArrowRight } from 'lucide-react';
+import { authApi } from '../../services/auth.api.js';
+import { AlertCircle, Loader2, ArrowRight, ShieldAlert } from 'lucide-react';
 
 const registerSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters').trim(),
@@ -17,7 +19,17 @@ const registerSchema = z.object({
 export default function RegisterPage() {
   const { register: registerUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [serverError, setServerError] = useState(null);
+
+  const { data: publicSettingsData, isLoading: isSettingsLoading } = useQuery({
+    queryKey: ['public-settings'],
+    queryFn: () => authApi.getPublicSettings(),
+    staleTime: 60 * 1000
+  });
+  const allowRegistration = publicSettingsData?.data?.allowRegistration ?? true;
+
+  const redirectUrl = new URLSearchParams(location.search).get('redirect') || '/';
 
   const {
     register,
@@ -31,7 +43,7 @@ export default function RegisterPage() {
     setServerError(null);
     try {
       await registerUser(data);
-      navigate('/account/profile', { replace: true });
+      navigate(redirectUrl, { replace: true });
     } catch (err) {
       setServerError(err.message || 'Registration failed. Please try again.');
     }
@@ -69,109 +81,137 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
-            <div className="grid grid-cols-2 gap-4">
+          {!allowRegistration ? (
+            <div className="text-center py-6">
+              <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-600 mx-auto mb-4 flex items-center justify-center border border-amber-500/20">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-serif font-bold text-ink-darkest mb-2">
+                Public Registration Paused
+              </h3>
+              <p className="text-xs text-ink-muted leading-relaxed mb-6">
+                Public registrations are currently closed by editorial administration. Accounts are provisioned directly by platform administrators or through verified institutional invitation.
+              </p>
+              <div className="space-y-3">
+                <Link
+                  to="/login"
+                  className="w-full flex justify-center items-center py-2.5 px-4 rounded-lg shadow-xs text-xs font-semibold text-white bg-rfblue hover:bg-rfblue-700 transition-all"
+                >
+                  Sign In to Existing Account
+                </Link>
+                <Link
+                  to="/contact"
+                  className="w-full flex justify-center items-center py-2.5 px-4 rounded-lg border border-paper-border text-xs font-semibold text-ink-muted hover:text-ink-darkest transition-colors"
+                >
+                  Contact Editorial Desk
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-ink-muted mb-2">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    {...register('firstName')}
+                    placeholder="Eleanor"
+                    className={`w-full px-3.5 py-2.5 rounded-lg border ${
+                      errors.firstName ? 'border-rfred bg-rfred-50/20' : 'border-paper-border'
+                    } focus:outline-none focus:ring-2 focus:ring-rfblue text-ink text-sm transition-all`}
+                  />
+                  {errors.firstName && (
+                    <p className="mt-1 text-xs text-rfred">{errors.firstName.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-ink-muted mb-2">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    {...register('lastName')}
+                    placeholder="Vance"
+                    className={`w-full px-3.5 py-2.5 rounded-lg border ${
+                      errors.lastName ? 'border-rfred bg-rfred-50/20' : 'border-paper-border'
+                    } focus:outline-none focus:ring-2 focus:ring-rfblue text-ink text-sm transition-all`}
+                  />
+                  {errors.lastName && (
+                    <p className="mt-1 text-xs text-rfred">{errors.lastName.message}</p>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-ink-muted mb-2">
-                  First Name
+                  Email address
                 </label>
                 <input
-                  type="text"
-                  {...register('firstName')}
-                  placeholder="Eleanor"
+                  type="email"
+                  {...register('email')}
+                  placeholder="name@university.edu"
                   className={`w-full px-3.5 py-2.5 rounded-lg border ${
-                    errors.firstName ? 'border-rfred bg-rfred-50/20' : 'border-paper-border'
+                    errors.email ? 'border-rfred bg-rfred-50/20' : 'border-paper-border'
                   } focus:outline-none focus:ring-2 focus:ring-rfblue text-ink text-sm transition-all`}
                 />
-                {errors.firstName && (
-                  <p className="mt-1 text-xs text-rfred">{errors.firstName.message}</p>
+                {errors.email && (
+                  <p className="mt-1 text-xs text-rfred">{errors.email.message}</p>
                 )}
               </div>
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-ink-muted mb-2">
-                  Last Name
+                  Password
                 </label>
                 <input
-                  type="text"
-                  {...register('lastName')}
-                  placeholder="Vance"
+                  type="password"
+                  {...register('password')}
+                  placeholder="Minimum 8 characters"
                   className={`w-full px-3.5 py-2.5 rounded-lg border ${
-                    errors.lastName ? 'border-rfred bg-rfred-50/20' : 'border-paper-border'
+                    errors.password ? 'border-rfred bg-rfred-50/20' : 'border-paper-border'
                   } focus:outline-none focus:ring-2 focus:ring-rfblue text-ink text-sm transition-all`}
                 />
-                {errors.lastName && (
-                  <p className="mt-1 text-xs text-rfred">{errors.lastName.message}</p>
+                {errors.password && (
+                  <p className="mt-1 text-xs text-rfred">{errors.password.message}</p>
                 )}
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-ink-muted mb-2">
-                Email address
-              </label>
-              <input
-                type="email"
-                {...register('email')}
-                placeholder="name@university.edu"
-                className={`w-full px-3.5 py-2.5 rounded-lg border ${
-                  errors.email ? 'border-rfred bg-rfred-50/20' : 'border-paper-border'
-                } focus:outline-none focus:ring-2 focus:ring-rfblue text-ink text-sm transition-all`}
-              />
-              {errors.email && (
-                <p className="mt-1 text-xs text-rfred">{errors.email.message}</p>
-              )}
-            </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink-muted mb-2">
+                  Brief Bio / Research Interests (Optional)
+                </label>
+                <textarea
+                  {...register('bio')}
+                  rows={2}
+                  placeholder="e.g. Theoretical physicist focusing on quantum optics..."
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-paper-border focus:outline-none focus:ring-2 focus:ring-rfblue text-ink text-sm transition-all resize-none"
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-ink-muted mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                {...register('password')}
-                placeholder="Minimum 8 characters"
-                className={`w-full px-3.5 py-2.5 rounded-lg border ${
-                  errors.password ? 'border-rfred bg-rfred-50/20' : 'border-paper-border'
-                } focus:outline-none focus:ring-2 focus:ring-rfblue text-ink text-sm transition-all`}
-              />
-              {errors.password && (
-                <p className="mt-1 text-xs text-rfred">{errors.password.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-ink-muted mb-2">
-                Brief Bio / Research Interests (Optional)
-              </label>
-              <textarea
-                {...register('bio')}
-                rows={2}
-                placeholder="e.g. Theoretical physicist focusing on quantum optics..."
-                className="w-full px-3.5 py-2.5 rounded-lg border border-paper-border focus:outline-none focus:ring-2 focus:ring-rfblue text-ink text-sm transition-all resize-none"
-              />
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full flex justify-center items-center py-3 px-4 rounded-lg shadow-sm text-sm font-semibold text-white bg-rfblue hover:bg-rfblue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rfblue transition-all disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating account...
-                  </>
-                ) : (
-                  <>
-                    Create Account
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
+              <div>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full flex justify-center items-center py-3 px-4 rounded-lg shadow-sm text-sm font-semibold text-white bg-rfblue hover:bg-rfblue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rfblue transition-all disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    <>
+                      Create Account
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>

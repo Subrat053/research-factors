@@ -86,10 +86,12 @@ import { commentRoutes } from './modules/comments/comment.routes.js';
 import { bookmarkRoutes } from './modules/bookmarks/bookmark.routes.js';
 import { adminRoutes } from './modules/admin/admin.routes.js';
 import { seoRoutes } from './modules/seo/seo.routes.js';
+import { userRoutes } from './modules/users/user.routes.js';
 
 app.use('/', seoRoutes);
 app.use('/api/v1/seo', seoRoutes);
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/articles', articleRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/search', searchRoutes);

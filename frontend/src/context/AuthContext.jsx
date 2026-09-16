@@ -48,6 +48,12 @@ export function AuthProvider({ children }) {
     return user.permissions?.includes(permission);
   };
 
+  const hasAnyPermission = (permissions = []) => {
+    if (!user) return false;
+    if (user.roles?.includes('SUPER_ADMIN')) return true;
+    return permissions.some(p => user.permissions?.includes(p));
+  };
+
   const hasRole = (role) => {
     if (!user) return false;
     return user.roles?.includes(role);
@@ -61,6 +67,7 @@ export function AuthProvider({ children }) {
     register,
     logout,
     hasPermission,
+    hasAnyPermission,
     hasRole,
     refetchUser: fetchCurrentUser
   };

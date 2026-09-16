@@ -56,4 +56,21 @@ export class UserAdminController {
       next(error);
     }
   }
+
+  static async createUser(req, res, next) {
+    try {
+      const { firstName, lastName, email, password, bio, roleNames, emailVerified } = req.body;
+      const result = await UserAdminService.createUser(
+        { firstName, lastName, email, password, bio, roleNames, emailVerified },
+        req.user
+      );
+      res.status(201).json({
+        success: true,
+        message: 'User created successfully',
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

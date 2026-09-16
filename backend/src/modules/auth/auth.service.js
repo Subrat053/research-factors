@@ -75,6 +75,12 @@ export class AuthService {
    * Registers a new user account
    */
   static async register({ email, password, firstName, lastName, bio }) {
+    // Check if public registration is enabled in platform policies
+    const policies = await prisma.systemSetting.findUnique({ where: { key: 'policies' } });
+    if (policies && policies.value && policies.value.allowRegistration === false) {
+      throw new AppError('Public registration is currently closed by system administration. Accounts are by invitation or administrative appointment only.', 403, 'REGISTRATION_DISABLED');
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       throw new AppError('An account with this email address already exists', 409, 'EMAIL_ALREADY_EXISTS');
@@ -161,6 +167,13 @@ export class AuthService {
     const isMatch = await this.comparePassword(password, user.passwordHash);
     if (!isMatch) {
       throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+    }
+
+    // Check if email verification is enforced by platform policy
+    const policies = await prisma.systemSetting.findUnique({ where: { key: 'policies' } });
+    const requireEmailVerification = policies?.value?.requireEmailVerification ?? false;
+    if (requireEmailVerification && !user.isEmailVerified) {
+      throw new AppError('Please verify your email address before signing in. Check your inbox for the verification link.', 403, 'EMAIL_NOT_VERIFIED');
     }
 
     const token = this.generateToken(user);

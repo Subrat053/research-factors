@@ -37,6 +37,7 @@ import ContactMessagesPage from './pages/admin/ContactMessagesPage.jsx';
 import AuditLogsPage from './pages/admin/AuditLogsPage.jsx';
 import RolesPermissionsPage from './pages/admin/RolesPermissionsPage.jsx';
 import SystemSettingsPage from './pages/admin/SystemSettingsPage.jsx';
+import AdminProfilePage from './pages/admin/AdminProfilePage.jsx';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -96,11 +97,27 @@ export default function App() {
                 }
               />
 
-              {/* Editorial Admin Backoffice */}
+              {/* Editorial Admin & Author Backoffice */}
               <Route
                 path="/admin"
                 element={
-                  <ProtectedRoute requiredPermission="article.approve">
+                  <ProtectedRoute
+                    requiredAnyPermission={[
+                      'article.create',
+                      'article.update_own',
+                      'article.approve',
+                      'comment.moderate',
+                      'user.read_list',
+                      'author.approve',
+                      'category.manage',
+                      'tag.manage',
+                      'media.manage',
+                      'contact.manage',
+                      'audit.read',
+                      'role.manage',
+                      'setting.manage'
+                    ]}
+                  >
                     <AdminDashboardPage />
                   </ProtectedRoute>
                 }
@@ -108,7 +125,14 @@ export default function App() {
               <Route
                 path="/admin/articles"
                 element={
-                  <ProtectedRoute requiredPermission="article.approve">
+                  <ProtectedRoute
+                    requiredAnyPermission={[
+                      'article.approve',
+                      'article.update_any',
+                      'article.create',
+                      'article.update_own'
+                    ]}
+                  >
                     <ArticleManagementPage />
                   </ProtectedRoute>
                 }
@@ -172,7 +196,7 @@ export default function App() {
               <Route
                 path="/admin/media"
                 element={
-                  <ProtectedRoute requiredPermission="media.manage">
+                  <ProtectedRoute requiredAnyPermission={['media.manage', 'media.upload']}>
                     <MediaLibraryPage />
                   </ProtectedRoute>
                 }
@@ -194,11 +218,11 @@ export default function App() {
                 }
               />
 
-              {/* Super Admin Exclusive Systems */}
+              {/* System Configuration & Access Control */}
               <Route
                 path="/admin/roles"
                 element={
-                  <ProtectedRoute requiredRole="SUPER_ADMIN">
+                  <ProtectedRoute requiredPermission="role.manage">
                     <RolesPermissionsPage />
                   </ProtectedRoute>
                 }
@@ -206,8 +230,16 @@ export default function App() {
               <Route
                 path="/admin/settings"
                 element={
-                  <ProtectedRoute requiredRole="SUPER_ADMIN">
+                  <ProtectedRoute requiredPermission="setting.manage">
                     <SystemSettingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/profile"
+                element={
+                  <ProtectedRoute>
+                    <AdminProfilePage />
                   </ProtectedRoute>
                 }
               />

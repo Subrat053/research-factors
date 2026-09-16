@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { authApi } from '../../services/auth.api.js';
 import { SearchModal } from '../search/SearchModal.jsx';
 import {
   Search,
@@ -15,11 +17,32 @@ import {
 } from 'lucide-react';
 
 export function Header() {
-  const { user, isAuthenticated, logout, hasPermission } = useAuth();
+  const { user, isAuthenticated, logout, hasPermission, hasAnyPermission } = useAuth();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const location = useLocation();
+
+  const { data: publicSettingsData } = useQuery({
+    queryKey: ['public-settings'],
+    queryFn: () => authApi.getPublicSettings(),
+    staleTime: 60 * 1000
+  });
+  const allowRegistration = publicSettingsData?.data?.allowRegistration ?? true;
+
+  const ADMIN_PERMISSIONS = [
+    'article.approve',
+    'comment.moderate',
+    'user.read_list',
+    'author.approve',
+    'category.manage',
+    'tag.manage',
+    'media.manage',
+    'contact.manage',
+    'audit.read',
+    'role.manage',
+    'setting.manage'
+  ];
 
   // Keyboard shortcut listener for Cmd+K / Ctrl+K
   useEffect(() => {
@@ -133,43 +156,45 @@ export function Header() {
                     {/* Write Article Link (if permitted) */}
                     {hasPermission('article.create') && (
                       <Link
-                        to="/author/articles/create"
+                        to="/editor"
                         onClick={() => setIsUserMenuOpen(false)}
                         className="flex items-center px-4 py-2 text-xs font-medium text-rfblue hover:bg-rfblue-50 transition-colors"
                       >
                         <PenTool className="w-3.5 h-3.5 mr-2" />
-                        Write Research Article
+                        Write Article
                       </Link>
                     )}
 
-                    {/* Admin Link (if admin) */}
-                    {(user?.roles?.includes('ADMIN') || user?.roles?.includes('SUPER_ADMIN')) && (
+                    {/* Unified Dashboard Link (dynamically labeled Author Studio vs Admin Dashboard) */}
+                    {(hasAnyPermission(ADMIN_PERMISSIONS) || hasPermission('article.create')) && (
                       <Link
                         to="/admin"
                         onClick={() => setIsUserMenuOpen(false)}
                         className="flex items-center px-4 py-2 text-xs font-medium text-ink-darkest hover:bg-paper transition-colors"
                       >
-                        <Shield className="w-3.5 h-3.5 mr-2 text-rfred" />
-                        Admin Dashboard
+                        <Shield className="w-3.5 h-3.5 mr-2 text-rfblue" />
+                        {hasPermission('article.approve') || hasPermission('user.read_list')
+                          ? 'Admin Dashboard'
+                          : 'Author Studio'}
                       </Link>
                     )}
 
                     <Link
-                      to="/account/bookmarks"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center px-4 py-2 text-xs text-ink-muted hover:bg-paper transition-colors"
-                    >
-                      <Bookmark className="w-3.5 h-3.5 mr-2" />
-                      Saved Research
-                    </Link>
-
-                    <Link
-                      to="/account/profile"
+                      to="/admin/profile"
                       onClick={() => setIsUserMenuOpen(false)}
                       className="flex items-center px-4 py-2 text-xs text-ink-muted hover:bg-paper transition-colors"
                     >
                       <User className="w-3.5 h-3.5 mr-2" />
                       Profile & Account
+                    </Link>
+
+                    <Link
+                      to="/bookmarks"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center px-4 py-2 text-xs text-ink-muted hover:bg-paper transition-colors"
+                    >
+                      <Bookmark className="w-3.5 h-3.5 mr-2" />
+                      Saved Research
                     </Link>
 
                     <div className="border-t border-paper-border/60 my-1" />
@@ -195,12 +220,14 @@ export function Header() {
                 >
                   Sign In
                 </Link>
-                <Link
-                  to="/register"
-                  className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold text-white bg-rfblue hover:bg-rfblue-700 rounded-full shadow-xs transition-colors"
-                >
-                  Join Platform
-                </Link>
+                {allowRegistration && (
+                  <Link
+                    to="/register"
+                    className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold text-white bg-rfblue hover:bg-rfblue-700 rounded-full shadow-xs transition-colors"
+                  >
+                    Join Platform
+                  </Link>
+                )}
               </div>
             )}
 

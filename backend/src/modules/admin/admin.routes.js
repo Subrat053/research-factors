@@ -9,7 +9,9 @@ import { ReportAdminController } from './report-admin.controller.js';
 import { ContactAdminController } from './contact-admin.controller.js';
 import { MediaAdminController } from './media-admin.controller.js';
 import { authenticate } from '../../middleware/authenticate.js';
-import { requirePermission, requireSuperAdmin } from '../../middleware/authorize.js';
+import { requirePermission, requireAnyPermission, requireSuperAdmin } from '../../middleware/authorize.js';
+import { validateRequest } from '../../middleware/validate.js';
+import { createAdminUserSchema, toggleRegistrationSchema } from './user-admin.validator.js';
 
 export const adminRoutes = Router();
 
@@ -22,7 +24,21 @@ adminRoutes.use(authenticate);
 // ================= DASHBOARD & OVERVIEW =================
 adminRoutes.get(
   '/stats',
-  requirePermission('article.approve'),
+  requireAnyPermission(
+    'article.create',
+    'article.update_own',
+    'article.approve',
+    'comment.moderate',
+    'user.read_list',
+    'author.approve',
+    'category.manage',
+    'tag.manage',
+    'media.manage',
+    'contact.manage',
+    'audit.read',
+    'role.manage',
+    'setting.manage'
+  ),
   AdminController.getStats
 );
 
@@ -35,7 +51,12 @@ adminRoutes.post(
 
 adminRoutes.get(
   '/articles',
-  requirePermission('article.approve'),
+  requireAnyPermission(
+    'article.approve',
+    'article.update_any',
+    'article.create',
+    'article.update_own'
+  ),
   AdminController.listAllArticles
 );
 
@@ -74,6 +95,13 @@ adminRoutes.get(
   '/users',
   requirePermission('user.read_list'),
   UserAdminController.getUsers
+);
+
+adminRoutes.post(
+  '/users',
+  requirePermission('user.create'),
+  validateRequest(createAdminUserSchema),
+  UserAdminController.createUser
 );
 
 adminRoutes.get(
@@ -255,6 +283,20 @@ adminRoutes.get(
   '/audit-logs',
   requirePermission('audit.read'),
   AdminController.getAuditLogs
+);
+
+// ================= REGISTRATION GOVERNANCE =================
+adminRoutes.get(
+  '/settings/registration-status',
+  requireAnyPermission('user.read_list', 'user.create', 'setting.manage'),
+  SettingsAdminController.getRegistrationStatus
+);
+
+adminRoutes.patch(
+  '/settings/registration-status',
+  requireAnyPermission('setting.manage', 'user.create'),
+  validateRequest(toggleRegistrationSchema),
+  SettingsAdminController.updateRegistrationStatus
 );
 
 // ================= SYSTEM CONFIGURATION & HEALTH (SUPER ADMIN EXCLUSIVE) =================

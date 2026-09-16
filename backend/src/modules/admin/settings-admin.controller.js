@@ -63,4 +63,30 @@ export class SettingsAdminController {
       next(error);
     }
   }
+
+  static async getRegistrationStatus(req, res, next) {
+    try {
+      const result = await SettingsAdminService.getRegistrationStatus();
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateRegistrationStatus(req, res, next) {
+    try {
+      const { allowRegistration } = req.body;
+      const result = await SettingsAdminService.updateRegistrationStatus(allowRegistration, req.user.id);
+      res.json({
+        success: true,
+        message: `Public registration successfully ${result.allowRegistration ? 'activated' : 'deactivated'}`,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

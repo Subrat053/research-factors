@@ -39,6 +39,12 @@ export class SettingsAdminService {
       result[s.key] = s.value;
     }
 
+    // Safely expose allowRegistration from policies setting
+    const policies = await prisma.systemSetting.findUnique({
+      where: { key: 'policies' }
+    });
+    result.allowRegistration = policies?.value?.allowRegistration ?? true;
+
     return result;
   }
 
@@ -177,6 +183,7 @@ export class SettingsAdminService {
       },
       system: {
         nodeVersion: process.version,
+        port: config.PORT,
         uptimeSeconds: Math.floor(process.uptime()),
         memory: {
           rssMb: Math.round(memoryUsage.rss / 1024 / 1024),
@@ -190,6 +197,75 @@ export class SettingsAdminService {
         media: totalMedia,
         auditLogs: totalLogs
       }
+    };
+  }
+
+  /**
+   * Retrieves current platform public registration status
+   */
+  static async getRegistrationStatus() {
+    const policies = await prisma.systemSetting.findUnique({
+      where: { key: 'policies' }
+    });
+
+    return {
+      allowRegistration: policies?.value?.allowRegistration ?? true
+    };
+  }
+
+  /**
+   * Toggles public registration on or off with audit tracking
+   */
+  static async updateRegistrationStatus(allowRegistration, actorId) {
+    const policies = await prisma.systemSetting.findUnique({
+      where: { key: 'policies' }
+    });
+
+    const currentPolicies = policies?.value || {
+      commentsEnabled: true,
+      maintenanceMode: false,
+      allowRegistration: true,
+      autoHideReportThreshold: 3,
+      requireEmailVerification: true
+    };
+
+    const updatedPolicies = {
+      ...currentPolicies,
+      allowRegistration: !!allowRegistration
+    };
+
+    await prisma.$transaction(async (tx) => {
+      await tx.systemSetting.upsert({
+        where: { key: 'policies' },
+        update: {
+          value: updatedPolicies,
+          updatedBy: actorId
+        },
+        create: {
+          key: 'policies',
+          value: updatedPolicies,
+          category: 'policies',
+          isPublic: false,
+          updatedBy: actorId
+        }
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'system.registration_status_toggled',
+          entityType: 'SystemSetting',
+          entityId: 'policies',
+          metadata: {
+            previousState: currentPolicies.allowRegistration ?? true,
+            newState: !!allowRegistration
+          }
+        }
+      });
+    });
+
+    return {
+      allowRegistration: !!allowRegistration
     };
   }
 }

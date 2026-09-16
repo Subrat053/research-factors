@@ -6,8 +6,69 @@ export class AdminService {
   /**
    * Aggregates platform-wide dashboard metrics
    */
-  static async getDashboardStats() {
-    // 1. Group article status counts in a single query
+  static async getDashboardStats(actor) {
+    const isStaff = actor?.isSuperAdmin || 
+      actor?.permissions?.has('article.approve') || 
+      actor?.permissions?.has('comment.moderate') || 
+      actor?.permissions?.has('user.read_list');
+
+    if (!isStaff && actor?.id) {
+      // Author-centric dashboard stats
+      const [articleCounts, totalArticles, myComments, recentArticles] = await Promise.all([
+        prisma.article.groupBy({
+          by: ['status'],
+          where: { authorId: actor.id },
+          _count: { id: true }
+        }),
+        prisma.article.count({ where: { authorId: actor.id } }),
+        prisma.comment.count({ where: { article: { authorId: actor.id } } }),
+        prisma.article.findMany({
+          where: { authorId: actor.id },
+          orderBy: { updatedAt: 'desc' },
+          take: 6,
+          include: {
+            author: { select: { firstName: true, lastName: true, avatarUrl: true } },
+            category: true
+          }
+        })
+      ]);
+
+      const statusMap = {};
+      for (const row of articleCounts) {
+        statusMap[row.status] = row._count.id;
+      }
+
+      const viewsAggregation = await prisma.article.aggregate({
+        where: { authorId: actor.id },
+        _sum: { viewCount: true }
+      });
+
+      return {
+        isAuthorView: true,
+        metrics: {
+          totalArticles,
+          publishedArticles: statusMap['PUBLISHED'] || 0,
+          pendingReviewArticles: statusMap['PENDING_REVIEW'] || 0,
+          draftArticles: statusMap['DRAFT'] || 0,
+          rejectedArticles: statusMap['REJECTED'] || 0,
+          archivedArticles: statusMap['ARCHIVED'] || 0,
+          totalComments: myComments,
+          totalViews: viewsAggregation._sum.viewCount || 0
+        },
+        recentActivity: recentArticles.map(a => ({
+          id: a.id,
+          title: a.title,
+          slug: a.slug,
+          status: a.status,
+          rejectionReason: a.rejectionReason,
+          author: `${a.author.firstName} ${a.author.lastName}`.trim(),
+          category: a.category?.name || 'Uncategorized',
+          updatedAt: a.updatedAt
+        }))
+      };
+    }
+
+    // 1. Group article status counts in a single query (Platform wide)
     const [articleCounts, totalArticles, totalComments, reportedComments] = await Promise.all([
       prisma.article.groupBy({
         by: ['status'],
@@ -38,7 +99,6 @@ export class AdminService {
       prisma.contactMessage.count({ where: { isRead: false } })
     ]);
 
-
     // Recent 6 articles submitted or published
     const recentArticles = await prisma.article.findMany({
       orderBy: { updatedAt: 'desc' },
@@ -52,6 +112,7 @@ export class AdminService {
     });
 
     return {
+      isAuthorView: false,
       metrics: {
         totalArticles,
         publishedArticles,
@@ -416,10 +477,7 @@ export class AdminService {
     return ArticleDTO.toPublicDetail(updated);
   }
 
-  /**
-   * Retrieves paginated articles across all statuses for editorial administration (PRD Section 25)
-   */
-  static async listAllArticles({ search = '', status = '', authorId = '', categoryId = '', page = 1, limit = 20, sort = 'updatedAt_desc' }) {
+  static async listAllArticles({ search = '', status = '', authorId = '', categoryId = '', page = 1, limit = 20, sort = 'updatedAt_desc' }, actor) {
     const skip = (Math.max(1, parseInt(page, 10)) - 1) * parseInt(limit, 10);
     const take = parseInt(limit, 10);
 
@@ -427,9 +485,18 @@ export class AdminService {
     if (status) {
       where.status = status;
     }
-    if (authorId) {
+
+    const canViewAny = actor?.isSuperAdmin || 
+      actor?.permissions?.has('article.approve') || 
+      actor?.permissions?.has('article.update_any');
+
+    if (!canViewAny && actor?.id) {
+      // Dynamic scope: non-editors automatically scoped to their own articles
+      where.authorId = actor.id;
+    } else if (authorId) {
       where.authorId = authorId;
     }
+
     if (categoryId) {
       where.categoryId = categoryId;
     }
@@ -482,6 +549,9 @@ export class AdminService {
         publishedAt: a.publishedAt,
         createdAt: a.createdAt,
         updatedAt: a.updatedAt,
+        rejectionReason: a.rejectionReason,
+        isFeatured: a.isFeatured,
+        coverImageUrl: a.coverImageUrl,
         author: {
           id: a.author.id,
           name: `${a.author.firstName} ${a.author.lastName}`.trim(),

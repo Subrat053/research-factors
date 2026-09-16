@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import {
@@ -11,12 +11,12 @@ import {
   Send,
   Loader2,
   ArrowLeft,
-  Filter
+  X,
+  Sparkles
 } from 'lucide-react';
 import { adminApi } from '../../services/admin.api.js';
+import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
 import { BlockRenderer } from '../../components/article/BlockRenderer.jsx';
-import { Header } from '../../components/layout/Header.jsx';
-import { Footer } from '../../components/layout/Footer.jsx';
 
 export default function ArticleReviewQueuePage() {
   const queryClient = useQueryClient();
@@ -26,6 +26,7 @@ export default function ArticleReviewQueuePage() {
   const [feedbackNotes, setFeedbackNotes] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [alertMsg, setAlertMsg] = useState(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['admin-review-queue', selectedStatus],
@@ -45,237 +46,298 @@ export default function ArticleReviewQueuePage() {
         feedback: feedbackNotes,
         isFeatured
       });
-      alert(`Article successfully updated: ${reviewAction}`);
+      setAlertMsg({
+        type: 'success',
+        text: `Manuscript successfully updated with action: ${reviewAction}${isFeatured ? ' (Featured on Homepage)' : ''}`
+      });
       setActiveArticle(null);
       setFeedbackNotes('');
       setIsFeatured(false);
       refetch();
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-article'] });
     } catch (err) {
-      alert(err.response?.data?.error?.message || 'Review action failed');
+      setAlertMsg({
+        type: 'error',
+        text: err.response?.data?.error?.message || 'Review action failed. Please try again.'
+      });
     } finally {
       setProcessing(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-paper text-ink">
+    <AdminLayout
+      title="Editorial Review Desk"
+      subtitle="Peer review incoming manuscripts, inspect empirical content blocks, request revisions, or publish featured research"
+      actions={
+        <Link
+          to="/admin/articles"
+          className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-slate-850 hover:bg-slate-800 hover:text-white border border-slate-750 transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>All Manuscripts</span>
+        </Link>
+      }
+    >
       <Helmet>
-        <title>Editorial Review Queue — Research Factors</title>
+        <title>Editorial Review Desk — Research Factors Admin</title>
       </Helmet>
 
-      <Header />
+      {/* Alert Banner */}
+      {alertMsg && (
+        <div
+          className={`mb-6 p-4 rounded-xl flex items-center justify-between text-xs font-medium border ${
+            alertMsg.type === 'success'
+              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+              : 'bg-red-500/10 text-red-300 border-red-500/30'
+          }`}
+        >
+          <span>{alertMsg.text}</span>
+          <button onClick={() => setAlertMsg(null)} className="p-1 hover:opacity-75">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
-        <div className="flex items-center space-x-3 mb-6">
-          <Link to="/admin" className="p-1.5 text-ink-muted hover:text-ink transition-colors rounded-lg">
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-rfblue">
-              Backoffice
-            </span>
-            <h1 className="text-3xl font-serif font-bold text-ink-darkest">
-              Editorial Review Desk
-            </h1>
+      {/* Status Filter Tabs */}
+      <div className="flex items-center space-x-2 pb-4 mb-6 border-b border-slate-800/80 overflow-x-auto">
+        {[
+          { key: 'PENDING_REVIEW', label: 'Pending Review' },
+          { key: 'APPROVED', label: 'Approved / Scheduled' },
+          { key: 'REJECTED', label: 'Changes Requested' },
+          { key: 'ALL', label: 'All Manuscripts' }
+        ].map((st) => (
+          <button
+            key={st.key}
+            onClick={() => setSelectedStatus(st.key)}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 ${
+              selectedStatus === st.key
+                ? 'bg-blue-600 text-white shadow-xs shadow-blue-600/30'
+                : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            {st.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Review Queue Table */}
+      <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl overflow-hidden shadow-xs">
+        {isLoading ? (
+          <div className="py-24 flex flex-col justify-center items-center text-slate-400">
+            <Loader2 className="w-7 h-7 animate-spin text-blue-500 mb-2" />
+            <span className="text-xs">Fetching review queue...</span>
           </div>
-        </div>
-
-        {/* Status Filters */}
-        <div className="flex items-center space-x-2 pb-4 mb-6 border-b border-paper-border overflow-x-auto">
-          {['PENDING_REVIEW', 'APPROVED', 'REJECTED', 'ALL'].map(st => (
-            <button
-              key={st}
-              onClick={() => setSelectedStatus(st)}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-colors shrink-0 ${
-                selectedStatus === st
-                  ? 'bg-ink-darkest text-white shadow-xs'
-                  : 'bg-white border border-paper-border text-ink-muted hover:text-ink'
-              }`}
-            >
-              {st === 'PENDING_REVIEW' ? 'Pending Review' :
-               st === 'APPROVED' ? 'Approved' :
-               st === 'REJECTED' ? 'Returned with Feedback' : 'All Manuscripts'}
-            </button>
-          ))}
-        </div>
-
-        {/* Manuscripts Table */}
-        <div className="bg-white rounded-3xl border border-paper-border shadow-xs overflow-hidden">
-          {isLoading ? (
-            <div className="py-20 flex justify-center items-center text-ink-muted">
-              <Loader2 className="w-6 h-6 animate-spin mr-2" />
-              <span className="text-sm">Fetching review queue...</span>
+        ) : articles.length === 0 ? (
+          <div className="py-24 text-center text-slate-400">
+            <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto mb-3 border border-emerald-500/20">
+              <CheckCircle className="w-6 h-6" />
             </div>
-          ) : articles.length === 0 ? (
-            <div className="py-20 text-center text-ink-muted">
-              <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-              <p className="text-base font-serif font-bold text-ink-darkest">
-                Review Queue Clear
-              </p>
-              <p className="text-xs text-ink-light mt-1">
-                No manuscripts currently match the selected status filter.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-paper border-b border-paper-border text-ink-light uppercase tracking-wider text-[10px]">
-                  <tr>
-                    <th className="px-6 py-3 font-semibold">Manuscript</th>
-                    <th className="px-6 py-3 font-semibold">Field</th>
-                    <th className="px-6 py-3 font-semibold">Author</th>
-                    <th className="px-6 py-3 font-semibold">Status</th>
-                    <th className="px-6 py-3 font-semibold text-right">Review Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-paper-border">
-                  {articles.map(article => (
-                    <tr key={article.id} className="hover:bg-paper/50 transition-colors">
-                      <td className="px-6 py-4 max-w-sm">
-                        <p className="font-bold text-ink-darkest truncate">{article.title}</p>
-                        <p className="text-ink-muted text-[11px] truncate mt-0.5">{article.excerpt}</p>
-                      </td>
-                      <td className="px-6 py-4 text-ink-muted">
-                        {article.category?.name || 'General'}
-                      </td>
-                      <td className="px-6 py-4 text-ink">
-                        {article.author?.fullName || 'Researcher'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-1.5">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                            article.status === 'PUBLISHED' ? 'bg-emerald-50 text-emerald-700' :
-                            article.status === 'PENDING_REVIEW' ? 'bg-amber-50 text-amber-700' :
-                            article.status === 'REJECTED' ? 'bg-red-50 text-red-700' :
-                            'bg-slate-100 text-slate-700'
-                          }`}>
-                            {article.status}
-                          </span>
-                          {article.isFeatured && (
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200">
-                              Featured
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => {
-                            setActiveArticle(article);
-                            setIsFeatured(Boolean(article.isFeatured));
-                          }}
-                          className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-rfblue hover:bg-rfblue-700 text-white font-semibold text-xs shadow-xs transition-colors"
+            <p className="text-base font-serif font-bold text-white">Review Queue Clear</p>
+            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+              No manuscripts currently match the selected status filter.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-850/60 border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="px-6 py-3 font-semibold">Manuscript</th>
+                  <th className="px-6 py-3 font-semibold">Field</th>
+                  <th className="px-6 py-3 font-semibold">Author</th>
+                  <th className="px-6 py-3 font-semibold">Status</th>
+                  <th className="px-6 py-3 font-semibold text-right">Review Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {articles.map((article) => (
+                  <tr key={article.id} className="hover:bg-slate-850/40 transition-colors">
+                    <td className="px-6 py-4 max-w-sm">
+                      <p className="font-bold text-white truncate">{article.title}</p>
+                      <p className="text-slate-400 text-[11px] truncate mt-0.5">
+                        {article.excerpt || 'No abstract summary provided'}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 text-slate-300">
+                      {article.category?.name || 'General'}
+                    </td>
+                    <td className="px-6 py-4 text-slate-200">
+                      {article.author?.fullName || 'Researcher'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-2">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                            article.status === 'PUBLISHED'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : article.status === 'PENDING_REVIEW'
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              : article.status === 'REJECTED'
+                              ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                              : 'bg-slate-800 text-slate-400'
+                          }`}
                         >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Inspect</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Review & Inspection Modal */}
-        {activeArticle && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-paper-border overflow-hidden">
-              {/* Modal Header */}
-              <div className="px-8 py-5 border-b border-paper-border flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-rfblue">
-                    Editorial Review Modal
-                  </span>
-                  <h3 className="text-lg font-bold font-serif text-ink-darkest">
-                    {activeArticle.title}
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setActiveArticle(null)}
-                  className="p-1.5 text-ink-light hover:text-ink rounded-lg"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Modal Body: Manuscript Prose Preview */}
-              <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
-                <div className="p-4 bg-paper rounded-2xl border border-paper-border flex items-center justify-between text-xs text-ink-muted">
-                  <span>Author: <strong>{activeArticle.author?.fullName}</strong></span>
-                  <span>Category: <strong>{activeArticle.category?.name}</strong></span>
-                  <span>Reading Time: <strong>{activeArticle.readingTimeMin} min</strong></span>
-                </div>
-
-                <div className="prose max-w-none">
-                  <p className="text-sm italic text-ink-muted border-l-2 border-rfblue pl-3">
-                    {activeArticle.excerpt}
-                  </p>
-                  <BlockRenderer blocks={activeArticle.blocks} />
-                </div>
-              </div>
-
-              {/* Modal Footer: Action Form */}
-              <form onSubmit={handleReviewSubmit} className="px-8 py-5 border-t border-paper-border bg-paper flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex-1 w-full">
-                  <input
-                    type="text"
-                    value={feedbackNotes}
-                    onChange={(e) => setFeedbackNotes(e.target.value)}
-                    placeholder="Feedback / internal editorial notes..."
-                    className="w-full text-xs p-2.5 rounded-xl border border-paper-border bg-white text-ink focus:outline-none focus:ring-1 focus:ring-rfblue"
-                  />
-                </div>
-
-                <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
-                  <label className="flex items-center space-x-1.5 text-xs font-semibold text-ink cursor-pointer select-none px-2 py-1 rounded-lg border border-paper-border bg-white hover:bg-paper">
-                    <input
-                      type="checkbox"
-                      checked={isFeatured}
-                      onChange={(e) => setIsFeatured(e.target.checked)}
-                      className="rounded text-rfblue focus:ring-rfblue w-3.5 h-3.5 border-paper-border"
-                    />
-                    <span>Featured</span>
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={() => { setReviewAction('REJECT'); }}
-                    className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${
-                      reviewAction === 'REJECT' ? 'bg-red-600 text-white border-red-600' : 'bg-white border-paper-border text-red-600 hover:bg-red-50'
-                    }`}
-                  >
-                    Reject with Notes
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => { setReviewAction('APPROVE'); }}
-                    className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${
-                      reviewAction === 'APPROVE' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border-paper-border text-emerald-700 hover:bg-emerald-50'
-                    }`}
-                  >
-                    Approve
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={processing}
-                    onClick={() => { setReviewAction('PUBLISH'); }}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-rfblue hover:bg-rfblue-700 text-white shadow-xs transition-colors disabled:opacity-50"
-                  >
-                    {processing ? 'Processing...' : 'Publish Live'}
-                  </button>
-                </div>
-              </form>
-            </div>
+                          {article.status === 'PENDING_REVIEW'
+                            ? 'Pending Review'
+                            : article.status === 'REJECTED'
+                            ? 'Changes Requested'
+                            : article.status === 'PUBLISHED'
+                            ? 'Published'
+                            : article.status}
+                        </span>
+                        {article.isFeatured && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            <Sparkles className="w-2.5 h-2.5 mr-1" />
+                            Featured
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => {
+                          setActiveArticle(article);
+                          setIsFeatured(Boolean(article.isFeatured));
+                        }}
+                        className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Inspect & Review</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-      </main>
+      </div>
 
-      <Footer />
-    </div>
+      {/* Review & Inspection Modal */}
+      {activeArticle && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-slate-900 rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-800 overflow-hidden text-slate-100">
+            {/* Modal Header */}
+            <div className="px-8 py-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-blue-400 block mb-0.5">
+                  Editorial Review Desk
+                </span>
+                <h3 className="text-lg font-bold font-serif text-white line-clamp-1">
+                  {activeArticle.title}
+                </h3>
+              </div>
+              <button
+                onClick={() => setActiveArticle(null)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body: Manuscript Details & Blocks */}
+            <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 bg-slate-950/40">
+              {/* Metadata Pill */}
+              <div className="p-4 bg-slate-850/80 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300">
+                <span>Author: <strong className="text-white">{activeArticle.author?.fullName}</strong></span>
+                <span>Category: <strong className="text-white">{activeArticle.category?.name || 'General'}</strong></span>
+                <span>Reading Time: <strong className="text-white">{activeArticle.readingTimeMin} min</strong></span>
+                <span>Current Status: <strong className="text-blue-400">{activeArticle.status}</strong></span>
+              </div>
+
+              {/* Excerpt */}
+              {activeArticle.excerpt && (
+                <div className="p-4 bg-slate-900/80 rounded-xl border border-slate-800">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                    Abstract / Executive Summary
+                  </span>
+                  <p className="text-sm italic text-slate-300 leading-relaxed">
+                    {activeArticle.excerpt}
+                  </p>
+                </div>
+              )}
+
+              {/* Manuscript Blocks Preview */}
+              <div className="bg-white text-ink p-8 rounded-2xl shadow-inner max-w-prose mx-auto">
+                <BlockRenderer blocks={activeArticle.blocks} />
+              </div>
+            </div>
+
+            {/* Modal Footer: Action Form */}
+            <form
+              onSubmit={handleReviewSubmit}
+              className="px-8 py-5 border-t border-slate-800 bg-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4"
+            >
+              <div className="flex-1 w-full">
+                <input
+                  type="text"
+                  value={feedbackNotes}
+                  onChange={(e) => setFeedbackNotes(e.target.value)}
+                  placeholder="Feedback / internal editorial notes..."
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-700 bg-slate-800/80 text-white placeholder-slate-400 focus:outline-hidden focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
+                {/* Featured Toggle */}
+                <label className="flex items-center space-x-1.5 text-xs font-semibold text-slate-200 cursor-pointer select-none px-3 py-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-750 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={isFeatured}
+                    onChange={(e) => setIsFeatured(e.target.checked)}
+                    className="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 border-slate-600 bg-slate-700"
+                  />
+                  <span>Featured</span>
+                </label>
+
+                {/* Reject */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReviewAction('REJECT');
+                  }}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${
+                    reviewAction === 'REJECT'
+                      ? 'bg-red-600 text-white border-red-600'
+                      : 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
+                  }`}
+                >
+                  Reject with Notes
+                </button>
+
+                {/* Approve */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReviewAction('APPROVE');
+                  }}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${
+                    reviewAction === 'APPROVE'
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
+                  }`}
+                >
+                  Approve
+                </button>
+
+                {/* Direct Publish Live */}
+                <button
+                  type="submit"
+                  disabled={processing}
+                  onClick={() => {
+                    setReviewAction('PUBLISH');
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors disabled:opacity-50"
+                >
+                  {processing ? 'Processing...' : 'Publish Live'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </AdminLayout>
   );
 }

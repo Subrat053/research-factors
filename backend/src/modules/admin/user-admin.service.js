@@ -1,5 +1,8 @@
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { prisma } from '../../config/db.js';
 import { AppError } from '../../middleware/errorHandler.js';
+import { emailService } from '../../email/EmailService.js';
 import { UserDTO } from '../users/user.dto.js';
 
 export class UserAdminService {
@@ -333,5 +336,114 @@ export class UserAdminService {
     });
 
     return UserDTO.toAdmin(updated);
+  }
+
+  /**
+   * Administratively creates a new user account with initial role assignment
+   */
+  static async createUser({ firstName, lastName, email, password, bio = null, roleNames, emailVerified = true }, actorUser) {
+    if (!Array.isArray(roleNames) || roleNames.length === 0) {
+      throw new AppError('At least one valid role name must be provided', 400, 'INVALID_ROLES');
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const existing = await prisma.user.findUnique({
+      where: { email: normalizedEmail }
+    });
+
+    if (existing) {
+      throw new AppError('An account with this email address already exists', 409, 'EMAIL_ALREADY_EXISTS');
+    }
+
+    const normalizedRoleNames = roleNames.map(r => r.toUpperCase());
+
+    // Anti-escalation check: Only Super Admin can assign ADMIN or SUPER_ADMIN
+    const includesElevatedRoles = normalizedRoleNames.some(r => ['SUPER_ADMIN', 'ADMIN'].includes(r));
+    if (includesElevatedRoles && !actorUser.isSuperAdmin) {
+      throw new AppError('Access denied: Standard administrators cannot grant Administrator or Super Administrator roles', 403, 'FORBIDDEN_ELEVATED_ROLE_ASSIGNMENT');
+    }
+
+    const rolesInDb = await prisma.role.findMany({
+      where: { name: { in: normalizedRoleNames } }
+    });
+
+    if (rolesInDb.length !== normalizedRoleNames.length) {
+      throw new AppError('One or more specified role names do not exist in the catalog', 400, 'ROLE_NOT_FOUND');
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    // Only Super Admin can pre-verify accounts; other staff with user.create cannot pre-verify
+    const isVerified = actorUser.isSuperAdmin ? !!emailVerified : false;
+    const emailVerifyToken = isVerified ? null : crypto.randomBytes(32).toString('hex');
+
+    const newUser = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          email: normalizedEmail,
+          passwordHash,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          bio: bio ? bio.trim() : null,
+          status: 'ACTIVE',
+          isEmailVerified: isVerified,
+          emailVerifyToken
+        }
+      });
+
+      // Assign roles
+      await tx.userRole.createMany({
+        data: rolesInDb.map(r => ({
+          userId: created.id,
+          roleId: r.id
+        }))
+      });
+
+      // If user has AUTHOR role, automatically create approved author profile
+      if (normalizedRoleNames.includes('AUTHOR')) {
+        await tx.authorProfile.create({
+          data: {
+            userId: created.id,
+            headline: bio ? bio.slice(0, 160) : '',
+            biography: bio ? bio.trim() : '',
+            isApproved: true
+          }
+        });
+      }
+
+      // Record Audit Log
+      await tx.auditLog.create({
+        data: {
+          actorId: actorUser.id,
+          action: 'user.admin_created',
+          entityType: 'User',
+          entityId: created.id,
+          metadata: {
+            email: normalizedEmail,
+            assignedRoles: normalizedRoleNames,
+            isEmailVerified: isVerified,
+            preVerifiedBySuperAdmin: actorUser.isSuperAdmin && isVerified
+          }
+        }
+      });
+
+      return tx.user.findUnique({
+        where: { id: created.id },
+        include: {
+          roles: { include: { role: true } },
+          authorProfile: true,
+          _count: {
+            select: { articles: true, comments: true, bookmarks: true, commentReports: true }
+          }
+        }
+      });
+    });
+
+    // Send verification email if not pre-verified
+    if (!isVerified && emailVerifyToken) {
+      emailService.sendVerificationEmail(normalizedEmail, emailVerifyToken, firstName).catch(() => {});
+    }
+
+    return UserDTO.toAdmin(newUser);
   }
 }

@@ -57,6 +57,7 @@ async function main() {
     { action: 'media.manage', module: 'media', description: 'Browse and inspect platform media library' },
 
     // User & Admin domain
+    { action: 'user.create', module: 'user', description: 'Create user accounts directly with initial role assignment' },
     { action: 'user.read_list', module: 'user', description: 'View user directory' },
     { action: 'user.suspend', module: 'user', description: 'Suspend or reactivate user' },
     { action: 'author.approve', module: 'user', description: 'Approve author applications' },

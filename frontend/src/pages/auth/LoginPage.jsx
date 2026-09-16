@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { authApi } from '../../services/auth.api.js';
 import { AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 
 const loginSchema = z.object({
@@ -16,6 +18,13 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [serverError, setServerError] = useState(null);
+
+  const { data: publicSettingsData } = useQuery({
+    queryKey: ['public-settings'],
+    queryFn: () => authApi.getPublicSettings(),
+    staleTime: 60 * 1000
+  });
+  const allowRegistration = publicSettingsData?.data?.allowRegistration ?? true;
 
   const redirectUrl = new URLSearchParams(location.search).get('redirect') || '/';
 
@@ -51,12 +60,18 @@ export default function LoginPage() {
         <h2 className="mt-6 text-3xl font-serif font-bold tracking-tight text-ink-darkest">
           Sign in to your account
         </h2>
-        <p className="mt-2 text-sm text-ink-muted">
-          Or{' '}
-          <Link to="/register" className="font-medium text-rfblue hover:text-rfblue-700 underline underline-offset-4">
-            create an account to comment and write
-          </Link>
-        </p>
+        {allowRegistration ? (
+          <p className="mt-2 text-sm text-ink-muted">
+            Or{' '}
+            <Link to="/register" className="font-medium text-rfblue hover:text-rfblue-700 underline underline-offset-4">
+              create an account to comment and write
+            </Link>
+          </p>
+        ) : (
+          <p className="mt-2 text-xs text-ink-muted">
+            Public registrations are currently paused by administration.
+          </p>
+        )}
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
