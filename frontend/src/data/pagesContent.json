@@ -1,0 +1,671 @@
+{
+  "about": {
+    "slug": "about",
+    "title": "About Research Factors",
+    "subtitle": "Know More. Choose Better.",
+    "lastUpdated": "September 22, 2026",
+    "intro": [
+      "Research Factors is a research-driven platform built to make complex choices easier to understand.",
+      "Every day, people compare products, services, companies, technologies, features, prices, and alternatives before making decisions. But finding useful information often means going through dozens of pages, conflicting opinions, promotional claims, and incomplete comparisons.",
+      "Research Factors was created to make that process simpler.",
+      "We bring research, comparisons, reviews, observations, and relevant information together in one place so readers can understand their options before making a decision."
+    ],
+    "sections": [
+      {
+        "id": "what-we-do",
+        "heading": "What We Do",
+        "paragraphs": [
+          "Research Factors publishes research-based articles, reviews, comparisons, guides, and analysis across different subjects and categories.",
+          "Our content may explore:",
+          "Rather than simply telling readers what to buy, our goal is to provide information that helps them understand why one option may differ from another."
+        ],
+        "bullets": [
+          "Products and their features",
+          "Product-to-product comparisons",
+          "Services and providers",
+          "Companies and platforms",
+          "Technologies and tools",
+          "Consumer choices",
+          "Industry developments",
+          "Practical buying considerations",
+          "Advantages and limitations",
+          "Real-world use cases",
+          "Questions people commonly ask before choosing"
+        ]
+      },
+      {
+        "id": "research-before-recommendation",
+        "heading": "Research Before Recommendation",
+        "paragraphs": [
+          "The internet is full of opinions. Research Factors focuses on the information behind those opinions.",
+          "When developing content, we may examine publicly available information, product specifications, company information, published documentation, user experiences, market information, and other relevant sources.",
+          "Depending on the subject, our research may include multiple perspectives and different factors that can affect a decision.",
+          "Our content is intended to help readers conduct their own evaluation rather than blindly follow a single recommendation."
+        ]
+      },
+      {
+        "id": "comparisons-with-context",
+        "heading": "Comparisons That Put Context First",
+        "paragraphs": [
+          "A product or service cannot always be judged by one feature.",
+          "Price, performance, usability, availability, features, limitations, support, compatibility, intended use, and other factors can all matter.",
+          "That is why our comparisons aim to provide context instead of focusing only on a single headline specification.",
+          "The right choice for one person may not be the right choice for another. Research Factors helps readers understand those differences."
+        ]
+      },
+      {
+        "id": "reviews-with-research-perspective",
+        "heading": "Reviews With a Research Perspective",
+        "paragraphs": [
+          "Reviews on Research Factors are designed to provide useful information about the subject being examined.",
+          "Depending on the topic, a review may discuss:",
+          "We aim to distinguish factual information from opinions and observations wherever practical."
+        ],
+        "bullets": [
+          "Key features",
+          "Important specifications",
+          "Benefits",
+          "Limitations",
+          "Use cases",
+          "Potential drawbacks",
+          "Alternatives",
+          "Value considerations",
+          "Who may find the option suitable"
+        ]
+      },
+      {
+        "id": "community-perspectives",
+        "heading": "Community Perspectives Matter",
+        "paragraphs": [
+          "Research is not limited to published information. Real experiences can provide useful context that specifications alone cannot provide.",
+          "Research Factors may allow readers to submit their own thoughts, experiences, reviews, or observations.",
+          "Community contributions can help present different perspectives and may give readers additional context when evaluating a product, service, or topic.",
+          "Submitted content may be moderated and may be edited for formatting, clarity, relevance, or compliance with our policies."
+        ]
+      },
+      {
+        "id": "independent-decision-making",
+        "heading": "Independent Decision-Making",
+        "paragraphs": [
+          "Research Factors does not believe that every decision has one universal answer.",
+          "Different people have different priorities, budgets, requirements, expectations, and circumstances.",
+          "Our role is to organize useful information and present relevant differences clearly. The final decision belongs to the reader."
+        ]
+      },
+      {
+        "id": "transparency-matters",
+        "heading": "Transparency Matters",
+        "paragraphs": [
+          "Trust is important when publishing research and comparison content.",
+          "Where applicable, Research Factors may disclose affiliate relationships, sponsored arrangements, commercial relationships, or other circumstances that could be relevant to how content is interpreted.",
+          "Third-party products, companies, trademarks, and services mentioned on our website belong to their respective owners."
+        ]
+      },
+      {
+        "id": "our-approach",
+        "heading": "Our Approach",
+        "paragraphs": [
+          "Our approach can be summarized in four core principles:"
+        ],
+        "subCards": [
+          {
+            "title": "Research",
+            "description": "We look beyond surface-level claims and gather relevant information before developing content."
+          },
+          {
+            "title": "Compare",
+            "description": "We examine meaningful differences rather than relying on a single feature or specification."
+          },
+          {
+            "title": "Explain",
+            "description": "We aim to present complicated information in a clear and understandable way."
+          },
+          {
+            "title": "Empower",
+            "description": "We give readers information they can use to make decisions that fit their own needs."
+          }
+        ]
+      },
+      {
+        "id": "why-we-exist",
+        "heading": "Why Research Factors Exists",
+        "paragraphs": [
+          "Choosing something today can require significant research.",
+          "Whether you are comparing a product, evaluating a service, exploring a company, selecting a technology, or simply trying to understand a topic, the amount of available information can quickly become overwhelming.",
+          "Research Factors exists to reduce that friction. We want to turn scattered information into structured research that is easier to understand and use."
+        ]
+      },
+      {
+        "id": "our-vision",
+        "heading": "Our Vision",
+        "paragraphs": [
+          "Our vision is to build a trusted research platform where people can explore options, understand differences, examine evidence, learn from other experiences, and make more informed decisions.",
+          "We believe better decisions start with better information."
+        ]
+      }
+    ],
+    "contactInfo": {
+      "email": "editorial@researchfactors.com",
+      "website": "https://researchfactors.com",
+      "company": "Research Factors Inc."
+    }
+  },
+  "terms": {
+    "slug": "terms",
+    "title": "Terms & Conditions",
+    "lastUpdated": "September 22, 2026",
+    "intro": [
+      "Welcome to Research Factors.",
+      "These Terms & Conditions govern your access to and use of the Research Factors website, content, features, and services. By accessing or using our website, you agree to comply with these Terms & Conditions. If you do not agree with any part of these terms, please do not use the website.",
+      "For the purposes of these Terms, 'Research Factors,' 'we,' 'us,' or 'our' refers to Research Factors, and 'you' or 'user' refers to any person accessing or using our website."
+    ],
+    "sections": [
+      {
+        "id": "about-research-factors",
+        "number": 1,
+        "heading": "About Research Factors",
+        "paragraphs": [
+          "Research Factors is a research and information platform that publishes articles, reviews, comparisons, analysis, guides, and other informational content covering products, services, companies, topics, and consumer-related decisions.",
+          "Our goal is to organize publicly available information and research into useful, understandable content that helps readers evaluate different options.",
+          "Research Factors does not guarantee that any particular product, service, company, or option is suitable for your individual needs."
+        ]
+      },
+      {
+        "id": "acceptance-of-terms",
+        "number": 2,
+        "heading": "Acceptance of These Terms",
+        "paragraphs": [
+          "By accessing Research Factors, you confirm that you have read, understood, and agreed to be legally bound by these terms.",
+          "If you do not agree with these terms, you must discontinue use of the website."
+        ],
+        "bullets": [
+          "You have read and understood these Terms & Conditions.",
+          "You agree to be legally bound by these terms.",
+          "You will use the website only for lawful purposes.",
+          "You will not use the website in a way that violates applicable laws or regulations."
+        ]
+      },
+      {
+        "id": "use-of-content",
+        "number": 3,
+        "heading": "Use of Website Content",
+        "paragraphs": [
+          "All content published on Research Factors is provided for general informational and research purposes.",
+          "Although we make reasonable efforts to maintain useful and accurate information, information can change over time.",
+          "You should independently verify important information before making a purchase, financial decision, business decision, or other significant decision."
+        ],
+        "bullets": [
+          "Research articles and comparative studies",
+          "Product reviews and benchmarks",
+          "Product comparisons and evaluation matrices",
+          "Company or service analysis",
+          "Buying guides and architectural overviews",
+          "Opinions and observations",
+          "User-submitted reviews or peer comments",
+          "Images, graphics, charts, tables, and other media",
+          "Other editorial or informational material"
+        ]
+      },
+      {
+        "id": "no-professional-advice",
+        "number": 4,
+        "heading": "No Professional Advice",
+        "paragraphs": [
+          "Research Factors is an informational and research platform.",
+          "Our content should not be considered professional, financial, legal, medical, investment, technical, or other specialized professional advice unless explicitly stated otherwise.",
+          "Where a decision could have significant financial, legal, health, safety, or other consequences, you should consult an appropriately qualified professional."
+        ]
+      },
+      {
+        "id": "accuracy-of-information",
+        "number": 5,
+        "heading": "Accuracy of Information",
+        "paragraphs": [
+          "We make reasonable efforts to research and present information accurately. However, we do not guarantee that:",
+          "Product specifications, pricing, availability, features, and other information may change without notice.",
+          "If you identify an inaccurate or outdated piece of information, you may contact us so that we can review it."
+        ],
+        "bullets": [
+          "Every article is completely error-free.",
+          "All information is current at all times.",
+          "Prices, specifications, availability, features, policies, or services remain unchanged.",
+          "Third-party information is always accurate.",
+          "Every comparison includes every available option in a particular market."
+        ]
+      },
+      {
+        "id": "comparisons-and-reviews",
+        "number": 6,
+        "heading": "Comparisons and Reviews",
+        "paragraphs": [
+          "Research Factors may compare products, services, companies, technologies, or other alternatives based on publicly available information, research, testing, editorial analysis, user feedback, or other relevant sources.",
+          "A comparison or review represents the information and analysis available to us at the time of publication or update.",
+          "The appearance of a product, company, or service on Research Factors does not necessarily mean that we recommend or endorse it.",
+          "Readers should consider their own requirements, budget, circumstances, and preferences before making a decision."
+        ]
+      },
+      {
+        "id": "user-submitted-content",
+        "number": 7,
+        "heading": "User-Submitted Content",
+        "paragraphs": [
+          "Research Factors may allow users to submit reviews, opinions, comments, experiences, ratings, or other content.",
+          "By submitting content, you represent that:",
+          "You remain responsible for the content you submit."
+        ],
+        "bullets": [
+          "The content is your own or you have permission to submit it.",
+          "The content does not unlawfully copy another person's work.",
+          "The content is not knowingly false or misleading.",
+          "The content does not violate another person's rights.",
+          "The content does not contain unlawful, abusive, threatening, defamatory, or harmful material.",
+          "You have the necessary rights and permissions for any images or other material you submit."
+        ]
+      },
+      {
+        "id": "rights-to-user-content",
+        "number": 8,
+        "heading": "Rights to User-Submitted Content",
+        "paragraphs": [
+          "By submitting content to Research Factors, you grant us a non-exclusive, worldwide, royalty-free license to use, reproduce, edit, format, publish, display, distribute, and otherwise use that content in connection with the operation and promotion of Research Factors.",
+          "We may modify formatting, spelling, grammar, length, or presentation where reasonably necessary.",
+          "We do not guarantee that every submission will be published.",
+          "We may remove, reject, restrict, or edit submitted content that we believe violates these Terms or is unsuitable for publication."
+        ]
+      },
+      {
+        "id": "prohibited-activities",
+        "number": 9,
+        "heading": "Prohibited Activities",
+        "paragraphs": [
+          "You agree not to engage in unauthorized or abusive behavior on the platform:",
+          "We reserve the right to restrict or terminate access where necessary to protect the website, users, or our rights."
+        ],
+        "bullets": [
+          "Use the website for unlawful purposes.",
+          "Attempt to gain unauthorized access to our systems.",
+          "Interfere with website functionality or security.",
+          "Upload malicious code, viruses, or harmful files.",
+          "Scrape or systematically reproduce substantial portions of our content without permission.",
+          "Impersonate another person or organization.",
+          "Submit fraudulent or intentionally misleading reviews.",
+          "Use automated systems to abuse website functionality.",
+          "Attempt to manipulate ratings, reviews, comments, or other website features.",
+          "Use Research Factors content to create misleading or fraudulent materials."
+        ]
+      },
+      {
+        "id": "intellectual-property",
+        "number": 10,
+        "heading": "Intellectual Property",
+        "paragraphs": [
+          "Unless otherwise stated, the Research Factors website and its original content, design, branding, graphics, text, layouts, databases, and other materials are owned by or licensed to Research Factors.",
+          "You may access and use website content for personal, non-commercial informational purposes.",
+          "You may not reproduce, republish, distribute, modify, sell, license, or commercially exploit substantial portions of our original content without prior written permission.",
+          "Third-party trademarks, logos, product names, and company names remain the property of their respective owners."
+        ]
+      },
+      {
+        "id": "third-party-links",
+        "number": 11,
+        "heading": "Third-Party Websites and Services",
+        "paragraphs": [
+          "Research Factors may contain links to third-party websites, products, services, retailers, companies, or other external resources.",
+          "These links are provided for convenience and informational purposes.",
+          "We do not control third-party websites and are not responsible for their content, accuracy, availability, privacy practices, security, products, or terms.",
+          "Your interaction with a third-party website is governed by that website's own terms and policies."
+        ]
+      },
+      {
+        "id": "commercial-relationships",
+        "number": 12,
+        "heading": "Affiliate and Commercial Relationships",
+        "paragraphs": [
+          "Research Factors may participate in affiliate programs or other commercial arrangements.",
+          "Where applicable, we may receive compensation when users purchase products or services through certain links or take certain actions.",
+          "Such relationships do not automatically determine the editorial content of our research or reviews.",
+          "Any applicable affiliate or commercial disclosure will be provided where required."
+        ]
+      },
+      {
+        "id": "website-availability",
+        "number": 13,
+        "heading": "Website Availability",
+        "paragraphs": [
+          "We attempt to keep Research Factors available and functional, but we do not guarantee uninterrupted access.",
+          "The website may occasionally be unavailable because of maintenance, updates, technical problems, hosting issues, security incidents, or third-party service interruptions."
+        ]
+      },
+      {
+        "id": "limitation-of-liability",
+        "number": 14,
+        "heading": "Limitation of Liability",
+        "paragraphs": [
+          "To the maximum extent permitted by applicable law, Research Factors and its owners, operators, contributors, and affiliates will not be responsible for losses or damages arising from your reliance on information available on the website.",
+          "This includes, where legally permitted, direct, indirect, incidental, consequential, or other losses resulting from the use of the website, reliance on published information, or transactions with third parties.",
+          "Nothing in these Terms is intended to exclude or limit liability where such exclusion or limitation is prohibited by applicable law."
+        ]
+      },
+      {
+        "id": "indemnification",
+        "number": 15,
+        "heading": "Indemnification",
+        "paragraphs": [
+          "To the extent permitted by applicable law, you agree to indemnify and hold harmless Research Factors and its owners, operators, contributors, and affiliates from claims, liabilities, damages, losses, and expenses arising from your violation of these Terms, misuse of the website, violation of third-party rights, or content submitted by you."
+        ]
+      },
+      {
+        "id": "changes-to-terms",
+        "number": 16,
+        "heading": "Changes to These Terms",
+        "paragraphs": [
+          "We may update these Terms & Conditions from time to time.",
+          "When changes are made, we may update the 'Last Updated' date at the top of this page.",
+          "Your continued use of Research Factors after updated terms are published constitutes acceptance of the revised terms, to the extent permitted by applicable law."
+        ]
+      },
+      {
+        "id": "governing-law",
+        "number": 17,
+        "heading": "Governing Law",
+        "paragraphs": [
+          "These Terms shall be governed by and interpreted in accordance with the applicable laws of India, unless applicable law requires otherwise.",
+          "Any disputes shall be subject to the jurisdiction of the appropriate courts having jurisdiction over the matter."
+        ]
+      },
+      {
+        "id": "contact-us",
+        "number": 18,
+        "heading": "Contact Us",
+        "paragraphs": [
+          "If you have questions, concerns, corrections, or requests regarding these Terms & Conditions, please contact us:",
+          "Email: legal@researchfactors.com",
+          "Website: https://researchfactors.com",
+          "Company: Research Factors Inc."
+        ]
+      }
+    ]
+  },
+  "privacy-policy": {
+    "slug": "privacy-policy",
+    "title": "Privacy Policy",
+    "lastUpdated": "September 22, 2026",
+    "intro": [
+      "At Research Factors, we respect your privacy and are committed to handling personal information responsibly.",
+      "This Privacy Policy explains what information we may collect, how we use it, when we may share it, how we protect it, and the choices available to you when you use our website.",
+      "By using Research Factors, you acknowledge the practices described in this Privacy Policy."
+    ],
+    "sections": [
+      {
+        "id": "information-collected",
+        "number": 1,
+        "heading": "Information We May Collect",
+        "paragraphs": [
+          "Depending on how you interact with Research Factors, we may collect different types of information."
+        ],
+        "subSections": [
+          {
+            "title": "Information You Provide Directly",
+            "content": "You may voluntarily provide information when you submit a review or opinion, contact us, submit a correction or feedback, subscribe to newsletters, or participate in website features. This information may include your name, email address, username, review content, and other information you choose to provide."
+          },
+          {
+            "title": "Automatically Collected Information",
+            "content": "When you visit our website, certain technical information may be collected automatically, including IP address, browser type, device type, operating system, approximate location derived from technical data, referring website, pages visited, date and time of access, and general performance telemetry."
+          }
+        ]
+      },
+      {
+        "id": "how-we-use-information",
+        "number": 2,
+        "heading": "How We Use Information",
+        "paragraphs": [
+          "We use personal information only for legitimate purposes consistent with applicable law, including:"
+        ],
+        "bullets": [
+          "Operating and maintaining Research Factors.",
+          "Providing website functionality and caching performance.",
+          "Publishing and managing user-submitted content.",
+          "Responding to enquiries and feedback.",
+          "Reviewing and moderating submissions.",
+          "Improving website content, search indexing, and usability.",
+          "Understanding website readership and audience trends.",
+          "Detecting and preventing fraud, abuse, and security incidents.",
+          "Complying with applicable legal and regulatory requirements."
+        ]
+      },
+      {
+        "id": "user-reviews-public-content",
+        "number": 3,
+        "heading": "User Reviews and Public Content",
+        "paragraphs": [
+          "Research Factors may allow users to submit reviews, thoughts, comments, opinions, or other content.",
+          "If you submit content intended for public publication, some information associated with that submission may become publicly visible.",
+          "Before submitting content, consider whether you want to disclose personal information. Do not include sensitive personal information, passwords, financial account data, or confidential materials."
+        ]
+      },
+      {
+        "id": "cookies-technologies",
+        "number": 4,
+        "heading": "Cookies and Similar Technologies",
+        "paragraphs": [
+          "Research Factors may use cookies and similar technologies to operate the website, remember preferences, understand website usage, improve performance, measure traffic, and support certain third-party services.",
+          "For complete details on our cookie classification, please review our Cookie Policy."
+        ]
+      },
+      {
+        "id": "analytics",
+        "number": 5,
+        "heading": "Analytics",
+        "paragraphs": [
+          "We may use privacy-respecting analytics services to understand how visitors interact with Research Factors.",
+          "The information collected helps us understand which pages receive traffic, how visitors navigate the publication, general engagement patterns, website performance, and technical bottlenecks.",
+          "Analytics providers process information according to their own privacy policies and applicable legal terms."
+        ]
+      },
+      {
+        "id": "third-party-services",
+        "number": 6,
+        "heading": "Third-Party Services and Links",
+        "paragraphs": [
+          "Research Factors may use third-party services to support website hosting, security, communications, and affiliate tracking.",
+          "Once you leave Research Factors and visit a third-party website, that website's own privacy policy and terms apply.",
+          "We are not responsible for the privacy practices of external websites that we do not control."
+        ]
+      },
+      {
+        "id": "sharing-of-information",
+        "number": 7,
+        "heading": "Sharing of Information",
+        "paragraphs": [
+          "We do not sell your personal information simply because you use Research Factors.",
+          "We may share information with service providers and trusted partners when reasonably necessary to operate our platform:",
+          "We may also disclose information when required by law, legal process, court order, governmental request, or to protect our rights, users, and safety."
+        ],
+        "bullets": [
+          "Website hosting and infrastructure providers",
+          "Security, anti-spam, and CAPTCHA shields",
+          "Email and newsletter dispatch services",
+          "Database management and backup providers",
+          "Fraud prevention and technical audit services"
+        ]
+      },
+      {
+        "id": "data-retention",
+        "number": 8,
+        "heading": "Data Retention",
+        "paragraphs": [
+          "We retain personal information only for as long as reasonably necessary for the purposes described in this Privacy Policy, unless a longer retention period is required or permitted by applicable law.",
+          "Retention periods depend on the purpose of collection, legal and regulatory requirements, security safeguards, and operational needs."
+        ]
+      },
+      {
+        "id": "data-security",
+        "number": 9,
+        "heading": "Data Security",
+        "paragraphs": [
+          "We take reasonable technical and organizational measures to protect information from unauthorized access, misuse, alteration, disclosure, or destruction.",
+          "These include encrypted HTTPS transport, secure database storage, salted password hashing (Argon2/Bcrypt), and access-controlled administrative privileges.",
+          "However, no internet transmission or electronic storage system can be guaranteed to be 100% secure."
+        ]
+      },
+      {
+        "id": "childrens-privacy",
+        "number": 10,
+        "heading": "Children's Privacy",
+        "paragraphs": [
+          "Research Factors is intended for a general audience. We do not knowingly seek to collect personal information from children where prohibited by applicable law.",
+          "If you believe that a child has provided personal information to us without appropriate consent, please contact us so that we can take prompt corrective action."
+        ]
+      },
+      {
+        "id": "privacy-rights",
+        "number": 11,
+        "heading": "Your Privacy Rights",
+        "paragraphs": [
+          "Depending on your location and applicable law (such as GDPR, CCPA/CPRA, or local privacy laws), you may have rights relating to your personal data:"
+        ],
+        "bullets": [
+          "Request access to personal information we hold about you.",
+          "Request correction of inaccurate or incomplete information.",
+          "Request deletion of your data where legally applicable.",
+          "Withdraw consent at any time where processing is based on consent.",
+          "Object to or request restriction of certain processing activities.",
+          "Receive an export of your information in a structured, machine-readable format."
+        ]
+      },
+      {
+        "id": "international-transfers",
+        "number": 12,
+        "heading": "International Data Processing",
+        "paragraphs": [
+          "Depending on the services and cloud infrastructure used by Research Factors, personal information may be processed or stored in countries other than your home country.",
+          "Where required, we take appropriate contractual and technical steps in accordance with applicable law regarding international data transfers."
+        ]
+      },
+      {
+        "id": "external-links",
+        "number": 13,
+        "heading": "External Links",
+        "paragraphs": [
+          "Research Factors may link to external websites, including product manufacturers, academic journals, retailers, and research institutions.",
+          "We do not control the privacy practices of external websites and recommend reviewing their privacy policies directly."
+        ]
+      },
+      {
+        "id": "policy-changes",
+        "number": 14,
+        "heading": "Changes to This Privacy Policy",
+        "paragraphs": [
+          "We may update this Privacy Policy periodically. When changes are made, we will update the 'Last Updated' date at the top of this page.",
+          "We encourage readers to periodically review this page to stay informed about our privacy practices."
+        ]
+      },
+      {
+        "id": "contact-us",
+        "number": 15,
+        "heading": "Contact Us",
+        "paragraphs": [
+          "If you have questions, concerns, requests, or complaints regarding this Privacy Policy or the handling of your personal information, contact us:",
+          "Email: privacy@researchfactors.com",
+          "Website: https://researchfactors.com",
+          "Company: Research Factors Inc."
+        ]
+      }
+    ]
+  },
+  "cookie-policy": {
+    "slug": "cookie-policy",
+    "title": "Cookie Policy",
+    "lastUpdated": "September 22, 2026",
+    "intro": [
+      "This Cookie Policy explains how Research Factors uses cookies and similar technologies when you visit or use our website.",
+      "By continuing to use our website, you acknowledge that cookies and similar technologies may be used as described in this policy, subject to applicable law and any consent choices available to you."
+    ],
+    "sections": [
+      {
+        "id": "what-are-cookies",
+        "number": 1,
+        "heading": "What Are Cookies?",
+        "paragraphs": [
+          "Cookies are small text files that websites store on your device when you visit them.",
+          "Cookies help websites remember preferences, maintain authentication sessions, understand traffic flows, improve performance, provide relevant features, and maintain cybersecurity.",
+          "Cookies may be temporary (session cookies) that expire when you close your browser, or persistent cookies that remain on your device until they expire or are deleted."
+        ]
+      },
+      {
+        "id": "how-we-use-cookies",
+        "number": 2,
+        "heading": "How Research Factors Uses Cookies",
+        "paragraphs": [
+          "Research Factors uses cookies and similar technologies across several categories:"
+        ],
+        "subSections": [
+          {
+            "title": "Essential Cookies",
+            "content": "These cookies are strictly necessary for the website to function properly. They support security authentication, CSRF token validation, session persistence, and basic navigation. Because these cookies are essential, they cannot be switched off."
+          },
+          {
+            "title": "Preference Cookies",
+            "content": "These cookies enable the website to remember your personalized settings (such as dark/light paper theme mode, text density, and reading width) to deliver a more convenient, consistent experience."
+          },
+          {
+            "title": "Analytics Cookies",
+            "content": "Analytics technologies help us understand how visitors interact with Research Factors, which research categories are most popular, time spent on articles, and potential error pages. All data is aggregated and anonymized."
+          },
+          {
+            "title": "Advertising or Marketing Cookies",
+            "content": "If Research Factors participates in affiliate programs or campaign measurements, these technologies use identifiers to track referrals or evaluate campaign effectiveness. They do not store personal details directly."
+          }
+        ]
+      },
+      {
+        "id": "third-party-cookies",
+        "number": 3,
+        "heading": "Third-Party Cookies",
+        "paragraphs": [
+          "Some cookies may be placed by third-party services that appear on or support our website, such as analytics tools, cloud hosting infrastructure, or embedded diagrams.",
+          "Third-party providers process information according to their own privacy policies. We recommend reviewing the privacy notices of relevant third-party services for additional information."
+        ]
+      },
+      {
+        "id": "managing-cookies",
+        "number": 4,
+        "heading": "Managing Cookies",
+        "paragraphs": [
+          "You have the right to decide whether to accept or reject non-essential cookies. You can exercise your preferences by changing your browser settings.",
+          "Most modern web browsers (Chrome, Firefox, Safari, Edge) allow you to view stored cookies, delete existing cookies, block third-party cookies, or configure cookie warnings.",
+          "Please note that disabling certain essential cookies may affect the website's functionality or prevent you from accessing authenticated features."
+        ]
+      },
+      {
+        "id": "similar-technologies",
+        "number": 5,
+        "heading": "Similar Technologies",
+        "paragraphs": [
+          "In addition to cookies, Research Factors or third-party providers may use technologies such as web beacons, pixels, local storage (localStorage and sessionStorage), and session identifiers.",
+          "These technologies perform functions similar to cookies and help store your preferences and cached article drafts locally on your device."
+        ]
+      },
+      {
+        "id": "changes-to-policy",
+        "number": 6,
+        "heading": "Changes to This Cookie Policy",
+        "paragraphs": [
+          "We may update this Cookie Policy from time to time to reflect changes in our website technologies, legal regulations, or privacy best practices.",
+          "The updated version will be published on this page with a revised 'Last Updated' date."
+        ]
+      },
+      {
+        "id": "contact-us",
+        "number": 7,
+        "heading": "Contact Us",
+        "paragraphs": [
+          "If you have questions about our use of cookies or similar technologies, contact us:",
+          "Email: privacy@researchfactors.com",
+          "Website: https://researchfactors.com",
+          "Company: Research Factors Inc."
+        ]
+      }
+    ]
+  }
+}

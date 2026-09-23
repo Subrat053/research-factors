@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { authApi } from '../../services/auth.api.js';
+import { LOGO_URL } from '../../services/media.api.js';
 import { AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 
 const loginSchema = z.object({
@@ -52,12 +53,12 @@ export default function LoginPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <Link to="/" className="inline-block group py-1">
           <img
-            src="/logo.png"
+            src={LOGO_URL}
             alt="Research Factors"
             className="h-11 w-auto mx-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
           />
         </Link>
-        <h2 className="mt-6 text-3xl font-serif font-bold tracking-tight text-ink-darkest">
+        <h2 className="mt-6 text-3xl font-bold tracking-tight text-ink-darkest">
           Sign in to your account
         </h2>
         {allowRegistration ? (

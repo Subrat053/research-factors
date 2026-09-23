@@ -87,7 +87,7 @@ export class CommentController {
     try {
       const { commentId } = req.params;
       const userId = req.user.id;
-      const hasModeratorRights = req.user.permissions?.includes('comment.moderate') || false;
+      const hasModeratorRights = req.user.isSuperAdmin || req.user.permissions?.has('comment.moderate') || false;
 
       await CommentService.deleteComment(commentId, userId, hasModeratorRights);
 

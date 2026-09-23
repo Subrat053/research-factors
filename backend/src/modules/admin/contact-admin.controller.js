@@ -3,8 +3,8 @@ import { ContactAdminService } from './contact-admin.service.js';
 export class ContactAdminController {
   static async listMessages(req, res, next) {
     try {
-      const { status, search, page, limit } = req.query;
-      const result = await ContactAdminService.listMessages({ status, search, page, limit });
+      const { status, search, page, limit, type } = req.query;
+      const result = await ContactAdminService.listMessages({ status, search, page, limit, type });
       res.json({
         success: true,
         data: result

@@ -172,32 +172,32 @@ export default function AdminProfilePage() {
         <div
           className={`mb-6 p-4 rounded-xl flex items-center justify-between text-xs font-medium transition-all ${
             feedback.type === 'error'
-              ? 'bg-red-500/10 border border-red-500/20 text-red-300'
-              : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-300'
+              ? 'bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-300'
+              : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-300'
           }`}
         >
           <div className="flex items-center space-x-2">
             {feedback.type === 'error' ? (
-              <AlertCircle className="w-4 h-4 text-red-400" />
+              <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
             ) : (
-              <CheckCircle className="w-4 h-4 text-emerald-400" />
+              <CheckCircle className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
             )}
             <span>{feedback.text}</span>
           </div>
-          <button onClick={() => setFeedback(null)} className="p-1 hover:text-white">
+          <button onClick={() => setFeedback(null)} className="p-1 hover:text-slate-900 dark:hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex items-center space-x-2 border-b border-slate-800 mb-8">
+      <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 mb-8">
         <button
           onClick={() => setActiveTab('profile')}
           className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
             activeTab === 'profile'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
           }`}
         >
           Profile & Researcher Bio
@@ -206,8 +206,8 @@ export default function AdminProfilePage() {
           onClick={() => setActiveTab('security')}
           className={`px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
             activeTab === 'security'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-blue-600 dark:border-blue-500 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
           }`}
         >
           Account Security & Password
@@ -215,21 +215,21 @@ export default function AdminProfilePage() {
       </div>
 
       {isLoading ? (
-        <div className="p-20 flex justify-center items-center text-slate-400 space-x-2">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+        <div className="p-20 flex justify-center items-center text-slate-500 dark:text-slate-400 space-x-2">
+          <Loader2 className="w-6 h-6 animate-spin text-blue-600 dark:text-blue-400" />
           <span className="text-xs">Loading profile details...</span>
         </div>
       ) : activeTab === 'profile' ? (
         <form onSubmit={handleProfileSubmit(onSaveProfile)} className="space-y-8">
           {/* Avatar Section */}
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6">
-            <h3 className="text-sm font-semibold text-white mb-1">Profile Photo</h3>
-            <p className="text-xs text-slate-400 mb-4">
+          <div className="admin-card p-6">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Profile Photo</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
               Your avatar is displayed on published articles, author bylines, and peer comments.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-6">
-              <div className="w-20 h-20 rounded-full bg-slate-800 border-2 border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
+              <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
                 {avatarWatch ? (
                   <img
                     src={avatarWatch}
@@ -240,13 +240,13 @@ export default function AdminProfilePage() {
                     }}
                   />
                 ) : (
-                  <User className="w-8 h-8 text-slate-500" />
+                  <User className="w-8 h-8 text-slate-400 dark:text-slate-500" />
                 )}
               </div>
 
               <div className="flex-1 space-y-2 w-full">
                 <div className="flex flex-wrap items-center gap-3">
-                  <label className="cursor-pointer inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition-colors">
+                  <label className="cursor-pointer inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-white border border-slate-200 dark:border-slate-700 transition-colors">
                     {uploadingAvatar ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
@@ -265,7 +265,7 @@ export default function AdminProfilePage() {
                     <button
                       type="button"
                       onClick={() => setProfileValue('avatarUrl', '', { shouldDirty: true })}
-                      className="px-3 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-red-400 transition-colors"
+                      className="px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors"
                     >
                       Remove Photo
                     </button>
@@ -275,95 +275,95 @@ export default function AdminProfilePage() {
                   type="text"
                   placeholder="Or paste an image URL..."
                   {...registerProfile('avatarUrl')}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-blue-500"
+                  className="admin-input"
                 />
                 {profileErrors.avatarUrl && (
-                  <p className="text-[11px] text-red-400">{profileErrors.avatarUrl.message}</p>
+                  <p className="text-[11px] text-red-500 dark:text-red-400">{profileErrors.avatarUrl.message}</p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Identity & Basic Info */}
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-white mb-1">Personal Details</h3>
+          <div className="admin-card p-6 space-y-4">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Personal Details</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                   First Name
                 </label>
                 <input
                   type="text"
                   {...registerProfile('firstName')}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-white focus:outline-hidden focus:border-blue-500"
+                  className="admin-input"
                 />
                 {profileErrors.firstName && (
-                  <p className="text-[11px] text-red-400 mt-1">{profileErrors.firstName.message}</p>
+                  <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.firstName.message}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                   Last Name
                 </label>
                 <input
                   type="text"
                   {...registerProfile('lastName')}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-white focus:outline-hidden focus:border-blue-500"
+                  className="admin-input"
                 />
                 {profileErrors.lastName && (
-                  <p className="text-[11px] text-red-400 mt-1">{profileErrors.lastName.message}</p>
+                  <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.lastName.message}</p>
                 )}
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                   Email Address
                 </label>
                 <input
                   type="email"
                   value={profile?.email || ''}
                   disabled
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950/40 border border-slate-800 text-xs text-slate-400 cursor-not-allowed"
+                  className="admin-input bg-slate-100/50 dark:bg-slate-950/40 text-slate-500 dark:text-slate-400 cursor-not-allowed"
                 />
-                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 block">
                   Email changes require security verification via administrative contact.
                 </span>
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                   Short Bio
                 </label>
                 <textarea
                   rows={3}
                   placeholder="Tell readers about yourself..."
                   {...registerProfile('bio')}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-blue-500"
+                  className="admin-input"
                 />
                 {profileErrors.bio && (
-                  <p className="text-[11px] text-red-400 mt-1">{profileErrors.bio.message}</p>
+                  <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.bio.message}</p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Academic & Author Accreditation Section */}
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 space-y-4">
+          <div className="admin-card p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-white">Researcher Credentials & Byline</h3>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Researcher Credentials & Byline</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Displayed on your public author profile and article header bylines.
                 </p>
               </div>
               {authorProfile?.isApproved ? (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-                  <ShieldCheck className="w-3.5 h-3.5 mr-1 text-emerald-400" />
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                  <ShieldCheck className="w-3.5 h-3.5 mr-1 text-emerald-500 dark:text-emerald-400" />
                   Verified Author
                 </span>
               ) : (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25">
                   Accreditation Pending
                 </span>
               )}
@@ -371,38 +371,38 @@ export default function AdminProfilePage() {
 
             <div className="space-y-4 pt-2">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                   Professional / Academic Headline
                 </label>
                 <input
                   type="text"
                   placeholder="e.g. Senior Research Fellow in Quantum Optics, Stanford University"
                   {...registerProfile('headline')}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-blue-500"
+                  className="admin-input"
                 />
                 {profileErrors.headline && (
-                  <p className="text-[11px] text-red-400 mt-1">{profileErrors.headline.message}</p>
+                  <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.headline.message}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                   Full Researcher Biography & Focus
                 </label>
                 <textarea
                   rows={5}
                   placeholder="Detail your scientific investigation focus, prior publications, and laboratory affiliation..."
                   {...registerProfile('biography')}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-blue-500 leading-relaxed"
+                  className="admin-input leading-relaxed"
                 />
                 {profileErrors.biography && (
-                  <p className="text-[11px] text-red-400 mt-1">{profileErrors.biography.message}</p>
+                  <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.biography.message}</p>
                 )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center space-x-1">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center space-x-1">
                     <Globe className="w-3.5 h-3.5 text-slate-400" />
                     <span>Personal / Lab Website</span>
                   </label>
@@ -410,58 +410,58 @@ export default function AdminProfilePage() {
                     type="url"
                     placeholder="https://yourlaboratory.edu"
                     {...registerProfile('websiteUrl')}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-blue-500"
+                    className="admin-input"
                   />
                   {profileErrors.websiteUrl && (
-                    <p className="text-[11px] text-red-400 mt-1">{profileErrors.websiteUrl.message}</p>
+                    <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.websiteUrl.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center space-x-1">
-                    <Linkedin className="w-3.5 h-3.5 text-blue-400" />
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center space-x-1">
+                    <Linkedin className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
                     <span>LinkedIn Profile</span>
                   </label>
                   <input
                     type="url"
                     placeholder="https://linkedin.com/in/username"
                     {...registerProfile('linkedinUrl')}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-blue-500"
+                    className="admin-input"
                   />
                   {profileErrors.linkedinUrl && (
-                    <p className="text-[11px] text-red-400 mt-1">{profileErrors.linkedinUrl.message}</p>
+                    <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.linkedinUrl.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center space-x-1">
-                    <Twitter className="w-3.5 h-3.5 text-sky-400" />
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center space-x-1">
+                    <Twitter className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
                     <span>Twitter / X Profile</span>
                   </label>
                   <input
                     type="url"
                     placeholder="https://x.com/username"
                     {...registerProfile('twitterUrl')}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-blue-500"
+                    className="admin-input"
                   />
                   {profileErrors.twitterUrl && (
-                    <p className="text-[11px] text-red-400 mt-1">{profileErrors.twitterUrl.message}</p>
+                    <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.twitterUrl.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center space-x-1">
-                    <Github className="w-3.5 h-3.5 text-slate-300" />
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center space-x-1">
+                    <Github className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
                     <span>GitHub Profile</span>
                   </label>
                   <input
                     type="url"
                     placeholder="https://github.com/username"
                     {...registerProfile('githubUrl')}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-blue-500"
+                    className="admin-input"
                   />
                   {profileErrors.githubUrl && (
-                    <p className="text-[11px] text-red-400 mt-1">{profileErrors.githubUrl.message}</p>
+                    <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.githubUrl.message}</p>
                   )}
                 </div>
               </div>
@@ -483,53 +483,53 @@ export default function AdminProfilePage() {
         <div className="max-w-xl">
           <form
             onSubmit={handlePasswordSubmit(onChangePassword)}
-            className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 space-y-4"
+            className="admin-card p-6 space-y-4"
           >
-            <div className="flex items-center space-x-2 text-sm font-semibold text-white mb-2">
-              <KeyRound className="w-4 h-4 text-blue-400" />
+            <div className="flex items-center space-x-2 text-sm font-semibold text-slate-900 dark:text-white mb-2">
+              <KeyRound className="w-4 h-4 text-blue-500 dark:text-blue-400" />
               <span>Change Password</span>
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                 Current Password
               </label>
               <input
                 type="password"
                 {...registerPassword('currentPassword')}
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-white focus:outline-hidden focus:border-blue-500"
+                className="admin-input"
               />
               {passwordErrors.currentPassword && (
-                <p className="text-[11px] text-red-400 mt-1">{passwordErrors.currentPassword.message}</p>
+                <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{passwordErrors.currentPassword.message}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                 New Password
               </label>
               <input
                 type="password"
                 placeholder="At least 8 characters..."
                 {...registerPassword('newPassword')}
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-white focus:outline-hidden focus:border-blue-500"
+                className="admin-input"
               />
               {passwordErrors.newPassword && (
-                <p className="text-[11px] text-red-400 mt-1">{passwordErrors.newPassword.message}</p>
+                <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{passwordErrors.newPassword.message}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                 Confirm New Password
               </label>
               <input
                 type="password"
                 {...registerPassword('confirmPassword')}
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-white focus:outline-hidden focus:border-blue-500"
+                className="admin-input"
               />
               {passwordErrors.confirmPassword && (
-                <p className="text-[11px] text-red-400 mt-1">{passwordErrors.confirmPassword.message}</p>
+                <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{passwordErrors.confirmPassword.message}</p>
               )}
             </div>
 

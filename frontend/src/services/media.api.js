@@ -30,6 +30,10 @@ export const mediaApi = {
   delete: (id) => apiClient.delete(`/media/${id}`)
 };
 
+// Static platform branding assets respecting Vite subfolder/root base path
+export const LOGO_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$/, '')}/logo.png`;
+export const LOGO_ICON_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$/, '')}/logo-icon.png`;
+
 /**
  * Normalizes media asset URLs to handle dynamic port shifts and relative paths
  * @param {string} url - Image source URL
@@ -38,6 +42,17 @@ export const mediaApi = {
 export function normalizeMediaUrl(url) {
   if (!url || typeof url !== 'string') return '';
   const storageUrl = import.meta.env.VITE_STORAGE_URL || 'http://localhost:5005/uploads';
+  const baseUrl = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
+
+  // If already absolute URL
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('//')) {
+    return url;
+  }
+
+  // Handle local public assets (/images/, /logo.png, etc.) for root or subfolder deployments
+  if (url.startsWith('/') && !url.startsWith('/uploads')) {
+    return `${baseUrl}${url}`;
+  }
 
   // Replace any legacy localhost:5000 variations with active storage URL
   if (url.includes(':5000/uploads')) {

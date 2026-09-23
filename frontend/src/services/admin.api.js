@@ -18,6 +18,9 @@ export const adminApi = {
   scheduleArticle: (id, data) =>
     apiClient.post(`/admin/articles/${id}/schedule`, data),
 
+  publishArticle: (id) =>
+    apiClient.post(`/admin/articles/${id}/publish`),
+
   archiveArticle: (id) =>
     apiClient.post(`/admin/articles/${id}/archive`),
 
@@ -103,6 +106,9 @@ export const adminApi = {
 
   createCategory: (data) =>
     apiClient.post('/categories', data),
+
+  mergeCategories: (data) =>
+    apiClient.post('/categories/merge', data),
 
   updateCategory: (id, data) =>
     apiClient.put(`/categories/${id}`, data),

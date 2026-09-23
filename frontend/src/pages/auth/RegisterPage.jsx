@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { authApi } from '../../services/auth.api.js';
+import { LOGO_URL } from '../../services/media.api.js';
 import { AlertCircle, Loader2, ArrowRight, ShieldAlert } from 'lucide-react';
 
 const registerSchema = z.object({
@@ -54,12 +55,12 @@ export default function RegisterPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <Link to="/" className="inline-block group py-1">
           <img
-            src="/logo.png"
+            src={LOGO_URL}
             alt="Research Factors"
             className="h-11 w-auto mx-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
           />
         </Link>
-        <h2 className="mt-6 text-3xl font-serif font-bold tracking-tight text-ink-darkest">
+        <h2 className="mt-6 text-3xl font-bold tracking-tight text-ink-darkest">
           Join Research Factors
         </h2>
         <p className="mt-2 text-sm text-ink-muted">
@@ -86,7 +87,7 @@ export default function RegisterPage() {
               <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-600 mx-auto mb-4 flex items-center justify-center border border-amber-500/20">
                 <ShieldAlert className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-serif font-bold text-ink-darkest mb-2">
+              <h3 className="text-lg font-bold text-ink-darkest mb-2">
                 Public Registration Paused
               </h3>
               <p className="text-xs text-ink-muted leading-relaxed mb-6">

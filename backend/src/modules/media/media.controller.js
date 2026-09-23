@@ -23,7 +23,7 @@ export class MediaController {
   static async delete(req, res, next) {
     try {
       const { id } = req.params;
-      const hasAdminRights = req.user.permissions?.includes('media.manage') || false;
+      const hasAdminRights = req.user.isSuperAdmin || req.user.permissions?.has('media.manage') || false;
       await MediaService.deleteMedia(id, req.user.id, hasAdminRights);
 
       res.status(200).json({

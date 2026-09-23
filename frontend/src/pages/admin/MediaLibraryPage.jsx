@@ -81,7 +81,7 @@ export default function MediaLibraryPage() {
       )}
 
       {/* Toolbar */}
-      <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="admin-toolbar mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1 relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -92,7 +92,7 @@ export default function MediaLibraryPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-white placeholder-slate-400 focus:outline-hidden focus:border-blue-500"
+            className="admin-input w-full pl-10 pr-4 py-2 rounded-xl text-xs"
           />
         </div>
 
@@ -102,7 +102,7 @@ export default function MediaLibraryPage() {
             setProviderFilter(e.target.value);
             setPage(1);
           }}
-          className="px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-slate-200 focus:outline-hidden focus:border-blue-500"
+          className="admin-input px-3 py-2 rounded-xl text-xs"
         >
           <option value="">All Storage Providers</option>
           <option value="local">Local Disk</option>
@@ -113,25 +113,25 @@ export default function MediaLibraryPage() {
 
       {/* Media Grid */}
       {isLoading ? (
-        <div className="p-20 flex flex-col items-center justify-center space-y-3 bg-slate-900/60 rounded-2xl border border-slate-800">
+        <div className="admin-card rounded-2xl p-20 flex flex-col items-center justify-center space-y-3">
           <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-          <p className="text-xs text-slate-400">Loading digital assets...</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Loading digital assets...</p>
         </div>
       ) : media.length === 0 ? (
-        <div className="p-20 text-center bg-slate-900/60 rounded-2xl border border-slate-800">
-          <ImageIcon className="w-10 h-10 text-slate-500 mx-auto mb-3" />
-          <h3 className="text-sm font-semibold text-white">No Media Assets Found</h3>
-          <p className="text-xs text-slate-400 mt-1">Uploaded manuscript figures and hero images will appear here.</p>
+        <div className="admin-card rounded-2xl p-20 text-center">
+          <ImageIcon className="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">No Media Assets Found</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Uploaded manuscript figures and hero images will appear here.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {media.map((m) => (
             <div
               key={m.id}
-              className="bg-slate-900/70 border border-slate-800/90 rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between hover:border-slate-700 transition-colors group"
+              className="admin-card rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between hover:border-blue-500/40 transition-colors group"
             >
               {/* Image Preview Thumbnail */}
-              <div className="aspect-video bg-slate-950 relative overflow-hidden flex items-center justify-center">
+              <div className="aspect-video bg-slate-100 dark:bg-slate-950 relative overflow-hidden flex items-center justify-center border-b border-slate-200 dark:border-slate-800">
                 <img
                   src={m.publicUrl}
                   alt={m.altText || m.originalName}
@@ -146,30 +146,30 @@ export default function MediaLibraryPage() {
               {/* Asset Metadata */}
               <div className="p-4 flex-1 flex flex-col justify-between">
                 <div>
-                  <h4 className="text-xs font-semibold text-white truncate" title={m.originalName}>
+                  <h4 className="text-xs font-semibold text-slate-900 dark:text-white truncate" title={m.originalName}>
                     {m.originalName}
                   </h4>
-                  <div className="flex items-center space-x-2 text-[11px] text-slate-400 mt-1">
+                  <div className="flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                     <span>{m.width && m.height ? `${m.width}x${m.height}` : 'Vector/WebP'}</span>
                     <span>·</span>
                     <span>{Math.round((m.sizeBytes || 0) / 1024)} KB</span>
                   </div>
                   {m.uploader && (
-                    <span className="text-[10px] text-slate-500 block mt-1">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 block mt-1">
                       Uploaded by {m.uploader.name}
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-800/80">
+                <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-200 dark:border-slate-800/80">
                   <div className="flex items-center space-x-1.5">
                     <button
                       onClick={() => handleCopyUrl(m.publicUrl, m.id)}
-                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
                       title="Copy Public URL"
                     >
                       {copiedId === m.id ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
                       ) : (
                         <Copy className="w-3.5 h-3.5" />
                       )}
@@ -178,7 +178,7 @@ export default function MediaLibraryPage() {
                       href={m.publicUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
                       title="Open Full Resolution"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -191,7 +191,7 @@ export default function MediaLibraryPage() {
                         deleteMutation.mutate(m.id);
                       }
                     }}
-                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
+                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-red-100 dark:bg-slate-800 dark:hover:bg-red-500/20 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer"
                     title="Force Delete Asset"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -205,21 +205,21 @@ export default function MediaLibraryPage() {
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div className="mt-6 flex items-center justify-between text-xs text-slate-400 bg-slate-900/40 p-4 rounded-xl border border-slate-800">
+        <div className="mt-6 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
           <span>Showing {media.length} of {pagination.total} assets</span>
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 disabled:opacity-30"
+              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-30 cursor-pointer"
             >
               Previous
             </button>
-            <span className="font-semibold text-white">{page} / {pagination.totalPages}</span>
+            <span className="font-semibold text-slate-900 dark:text-white">{page} / {pagination.totalPages}</span>
             <button
               onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
               disabled={page === pagination.totalPages}
-              className="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 disabled:opacity-30"
+              className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-30 cursor-pointer"
             >
               Next
             </button>

@@ -35,6 +35,7 @@ Permissions are atomic string identifiers grouped by business domain:
 | | `comment.report` | Report a comment for moderation review. |
 | | `comment.moderate` | Hide, restore, or delete any user comment. |
 | **Categories & Tags** | `category.manage` | Create, edit, and archive categories. |
+| | `category.merge` | Merge redundant categories and reassign articles transactionally. |
 | | `tag.manage` | Create, edit, and merge tags. |
 | **Media** | `media.upload` | Upload images and media assets. |
 | | `media.delete_own` | Delete self-uploaded media not linked to published articles. |
@@ -74,6 +75,7 @@ Permissions are atomic string identifiers grouped by business domain:
 | `article.schedule` | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | `comment.moderate` | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | `category.manage` | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| `category.merge` | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | `tag.manage` | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | `user.create` | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | `user.read_list` | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '../../context/AuthContext.jsx';
 import {
@@ -29,22 +29,28 @@ import {
   ExternalLink,
   SplitSquareVertical,
   AlertCircle,
-  Clock
+  Clock,
+  Globe,
+  Archive
 } from 'lucide-react';
 import { articlesApi } from '../../services/articles.api.js';
+import { adminApi } from '../../services/admin.api.js';
 import { mediaApi, normalizeMediaUrl } from '../../services/media.api.js';
 import { BlockRenderer } from '../../components/article/BlockRenderer.jsx';
-import { Footer } from '../../components/layout/Footer.jsx';
+import { RichTextEditor } from '../../components/article/RichTextEditor.jsx';
+import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
 
 export default function ArticleEditorPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, hasPermission } = useAuth();
 
   // Dynamic RBAC Permission Checks
   const canCreate = hasPermission('article.create');
   const canSubmit = hasPermission('article.submit');
   const canUploadMedia = hasPermission('media.upload');
+  const canPublish = hasPermission('article.publish');
 
   const [currentId, setCurrentId] = useState(id && id !== 'new' ? id : null);
   const [article, setArticle] = useState({
@@ -54,6 +60,8 @@ export default function ArticleEditorPage() {
     coverImageUrl: '',
     coverImageAlt: '',
     categoryId: '',
+    type: 'RESEARCH',
+    tags: [],
     status: 'DRAFT',
     rejectionReason: null,
     blocks: [
@@ -69,7 +77,6 @@ export default function ArticleEditorPage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState('saved'); // 'saved', 'saving', 'unsaved'
-  const [isPreview, setIsPreview] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -77,7 +84,29 @@ export default function ArticleEditorPage() {
   const [activeAlert, setActiveAlert] = useState(null); // { type: 'error' | 'success', message: '' }
   const [uploadingBlockIndex, setUploadingBlockIndex] = useState(null);
 
+  // Dynamic Category & Topic Tags states
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [customCategoryName, setCustomCategoryName] = useState('');
+  const [tagInput, setTagInput] = useState('');
+  const [suggestedTags, setSuggestedTags] = useState([]);
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+
   const autosaveTimerRef = useRef(null);
+
+  // Dynamic Tag Autocomplete search
+  useEffect(() => {
+    if (!tagInput || tagInput.trim().length < 1) {
+      setSuggestedTags([]);
+      return;
+    }
+    const cleanQuery = tagInput.trim().replace(/^#+/, '');
+    const timer = setTimeout(() => {
+      articlesApi.getTags({ search: cleanQuery, limit: 6 })
+        .then(res => setSuggestedTags(res.data || []))
+        .catch(() => setSuggestedTags([]));
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [tagInput]);
 
   // Auto-dismiss alert banners after 5 seconds
   useEffect(() => {
@@ -111,6 +140,8 @@ export default function ArticleEditorPage() {
               coverImageUrl: normalizeMediaUrl(data.coverImageUrl || ''),
               coverImageAlt: data.coverImageAlt || '',
               categoryId: data.category?.id || data.categoryId || '',
+              type: data.type || 'RESEARCH',
+              tags: Array.isArray(data.tags) ? data.tags : [],
               status: data.status || 'DRAFT',
               rejectionReason: data.rejectionReason || null,
               blocks: Array.isArray(data.blocks) && data.blocks.length > 0
@@ -146,6 +177,8 @@ export default function ArticleEditorPage() {
                   coverImageUrl: normalizeMediaUrl(found.coverImageUrl || ''),
                   coverImageAlt: found.coverImageAlt || '',
                   categoryId: found.category?.id || found.categoryId || '',
+                  type: found.type || 'RESEARCH',
+                  tags: Array.isArray(found.tags) ? found.tags : [],
                   status: found.status || 'DRAFT',
                   rejectionReason: found.rejectionReason || null,
                   blocks: Array.isArray(found.blocks) && found.blocks.length > 0
@@ -196,6 +229,38 @@ export default function ArticleEditorPage() {
     const updated = { ...article, [field]: value };
     setArticle(updated);
     triggerAutosave(updated);
+  };
+
+  const handleAddTag = (tagToAdd) => {
+    const raw = (typeof tagToAdd === 'string' ? tagToAdd : (tagToAdd.name || tagToAdd.slug || '')).trim();
+    if (!raw) return;
+
+    // Normalize for comparison
+    const cleanSlug = raw.replace(/^#+/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const existingSlugs = (article.tags || []).map(t =>
+      (typeof t === 'string' ? t.replace(/^#+/, '') : (t.slug || t.name || '')).toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    );
+
+    if (existingSlugs.includes(cleanSlug)) {
+      setTagInput('');
+      setShowTagSuggestions(false);
+      return;
+    }
+
+    if ((article.tags || []).length >= 8) {
+      setActiveAlert({ type: 'error', message: 'Maximum 8 topic tags allowed per manuscript.' });
+      return;
+    }
+
+    const updatedTags = [...(article.tags || []), tagToAdd];
+    handleChange('tags', updatedTags);
+    setTagInput('');
+    setShowTagSuggestions(false);
+  };
+
+  const handleRemoveTag = (indexToRemove) => {
+    const updatedTags = (article.tags || []).filter((_, idx) => idx !== indexToRemove);
+    handleChange('tags', updatedTags);
   };
 
   const handleBlockContentChange = (index, newContent) => {
@@ -371,19 +436,29 @@ export default function ArticleEditorPage() {
       return null;
     }
 
-    if (!article.categoryId) {
+    const hasCategory = article.categoryId || (isCustomCategory && customCategoryName.trim().length >= 2);
+    if (!hasCategory) {
       setActiveAlert({
         type: 'error',
-        message: 'Please select a primary research category for your manuscript.'
+        message: 'Please select or specify a primary research category for your manuscript.'
       });
       return null;
     }
 
     setSavingDraft(true);
     setSaveStatus('saving');
+
+    const payload = {
+      ...article,
+      tags: article.tags || [],
+      ...(isCustomCategory && customCategoryName.trim()
+        ? { categoryName: customCategoryName.trim(), categoryId: '' }
+        : { categoryId: article.categoryId })
+    };
+
     try {
       if (!currentId) {
-        const res = await articlesApi.createDraft(article);
+        const res = await articlesApi.createDraft(payload);
         const newId = res.data.id;
         setCurrentId(newId);
         setSaveStatus('saved');
@@ -391,10 +466,10 @@ export default function ArticleEditorPage() {
           type: 'success',
           message: 'Manuscript draft created and saved successfully!'
         });
-        navigate(`/editor/${newId}`, { replace: true });
+        navigate(`/admin/editor/${newId}`, { replace: true });
         return newId;
       } else {
-        await articlesApi.updateDraft(currentId, article);
+        await articlesApi.updateDraft(currentId, payload);
         setSaveStatus('saved');
         setActiveAlert({
           type: 'success',
@@ -411,6 +486,17 @@ export default function ArticleEditorPage() {
       return null;
     } finally {
       setSavingDraft(false);
+    }
+  };
+
+  // Open live production simulation in a separate tab
+  const handlePreviewInNewTab = async () => {
+    let targetId = currentId;
+    if (!targetId || saveStatus === 'unsaved') {
+      targetId = await handleSaveDraft();
+    }
+    if (targetId) {
+      window.open(`/research/preview/${targetId}`, '_blank');
     }
   };
 
@@ -434,10 +520,11 @@ export default function ArticleEditorPage() {
       return;
     }
 
-    if (!article.categoryId) {
+    const hasCategory = article.categoryId || (isCustomCategory && customCategoryName.trim().length >= 2);
+    if (!hasCategory) {
       setActiveAlert({
         type: 'error',
-        message: 'Please select a primary category before submitting for review.'
+        message: 'Please select or specify a primary category before submitting for review.'
       });
       return;
     }
@@ -459,14 +546,22 @@ export default function ArticleEditorPage() {
     }
 
     setSubmitting(true);
+    const payload = {
+      ...article,
+      tags: article.tags || [],
+      ...(isCustomCategory && customCategoryName.trim()
+        ? { categoryName: customCategoryName.trim(), categoryId: '' }
+        : { categoryId: article.categoryId })
+    };
+
     try {
       let targetId = currentId;
       if (!targetId) {
-        const res = await articlesApi.createDraft(article);
+        const res = await articlesApi.createDraft(payload);
         targetId = res.data.id;
         setCurrentId(targetId);
       } else {
-        await articlesApi.updateDraft(targetId, article);
+        await articlesApi.updateDraft(targetId, payload);
       }
 
       await articlesApi.submitForReview(targetId);
@@ -486,136 +581,272 @@ export default function ArticleEditorPage() {
     }
   };
 
+  // Direct publish for admin / publisher
+  const handleDirectPublish = async () => {
+    setActiveAlert(null);
+
+    if (!canPublish) {
+      setActiveAlert({
+        type: 'error',
+        message: 'Permission denied: Your account role does not have permission to publish articles directly.'
+      });
+      return;
+    }
+
+    if (!article.title || article.title.trim().length < 3) {
+      setActiveAlert({
+        type: 'error',
+        message: 'Manuscript title must be at least 3 characters long before publishing.'
+      });
+      return;
+    }
+
+    const hasCategory = article.categoryId || (isCustomCategory && customCategoryName.trim().length >= 2);
+    if (!hasCategory) {
+      setActiveAlert({
+        type: 'error',
+        message: 'Please select or specify a primary category before publishing.'
+      });
+      return;
+    }
+
+    if (!article.blocks || article.blocks.length === 0) {
+      setActiveAlert({
+        type: 'error',
+        message: 'Please add at least one content block to your manuscript before publishing.'
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    const payload = {
+      ...article,
+      tags: article.tags || [],
+      ...(isCustomCategory && customCategoryName.trim()
+        ? { categoryName: customCategoryName.trim(), categoryId: '' }
+        : { categoryId: article.categoryId })
+    };
+
+    try {
+      let targetId = currentId;
+      if (!targetId) {
+        const res = await articlesApi.createDraft(payload);
+        targetId = res.data.id;
+        setCurrentId(targetId);
+        navigate(`/admin/editor/${targetId}`, { replace: true });
+      } else {
+        await articlesApi.updateDraft(targetId, payload);
+      }
+
+      await adminApi.publishArticle(targetId);
+      setArticle(prev => ({ ...prev, status: 'PUBLISHED' }));
+      setSaveStatus('saved');
+      setActiveAlert({
+        type: 'success',
+        message: 'Manuscript published live to public magazine successfully!'
+      });
+    } catch (err) {
+      setActiveAlert({
+        type: 'error',
+        message: err.response?.data?.error?.message || err.message || 'Failed to publish article.'
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Unpublish / archive for admin / publisher
+  const handleUnpublish = async () => {
+    if (!currentId) return;
+    if (!window.confirm(`Unpublish '${article.title || 'this manuscript'}' and return to archive?`)) {
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await adminApi.archiveArticle(currentId);
+      setArticle(prev => ({ ...prev, status: 'ARCHIVED' }));
+      setSaveStatus('saved');
+      setActiveAlert({
+        type: 'success',
+        message: 'Article unpublished and moved to archive.'
+      });
+    } catch (err) {
+      setActiveAlert({
+        type: 'error',
+        message: err.response?.data?.error?.message || err.message || 'Failed to unpublish article.'
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Calculate total manuscript words and estimated reading time
+  const totalWords = [
+    article.title || '',
+    article.subtitle || '',
+    article.excerpt || '',
+    ...(article.blocks || []).map(b => {
+      if (b.blockType === 'paragraph' || b.blockType === 'heading') return b.content?.text || '';
+      if (b.blockType === 'quote') return b.content?.quote || '';
+      if (b.blockType === 'callout') return `${b.content?.title || ''} ${b.content?.text || ''}`;
+      return '';
+    })
+  ].join(' ').trim().split(/\s+/).filter(Boolean).length;
+
+  const estimatedReadingTime = Math.max(1, Math.ceil(totalWords / 200));
+
+  const editorActions = (
+    <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+      {/* Save status indicator */}
+      <span
+        className={`text-[11px] px-2.5 py-1 rounded-full font-semibold border ${
+          saveStatus === 'saved'
+            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+            : saveStatus === 'saving'
+            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 animate-pulse'
+            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
+        }`}
+      >
+        {saveStatus === 'saved' ? '● Saved' : saveStatus === 'saving' ? 'Saving...' : '● Unsaved'}
+      </span>
+
+      {/* Article publication status */}
+      <span
+        className={`text-[11px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider border ${
+          article.status === 'PUBLISHED'
+            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+            : article.status === 'PENDING_REVIEW'
+            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
+            : article.status === 'REJECTED'
+            ? 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30'
+            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+        }`}
+      >
+        {article.status === 'PENDING_REVIEW'
+          ? 'Under Review'
+          : article.status === 'REJECTED'
+          ? 'Changes Requested'
+          : article.status === 'PUBLISHED'
+          ? 'Published'
+          : 'Draft'}
+      </span>
+
+      {/* Live Production Preview in New Tab */}
+      <button
+        type="button"
+        onClick={handlePreviewInNewTab}
+        disabled={savingDraft || submitting}
+        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+        title="Open production-accurate live simulation in a new browser tab"
+      >
+        <ExternalLink className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+        <span className="hidden sm:inline">Preview Live</span>
+        <span className="sm:hidden">Preview</span>
+      </button>
+
+      {/* Manual Save Draft Button */}
+      <button
+        type="button"
+        onClick={handleSaveDraft}
+        disabled={savingDraft || submitting}
+        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white text-xs font-semibold transition-all disabled:opacity-50 cursor-pointer shadow-2xs"
+      >
+        {savingDraft ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+        <span>Save Draft</span>
+      </button>
+
+      {/* Direct Publish / Unpublish for Admin, or Review actions for Authors */}
+      {canPublish ? (
+        article.status === 'PUBLISHED' ? (
+          <button
+            type="button"
+            onClick={handleUnpublish}
+            disabled={submitting}
+            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+            title="Unpublish article back to archive"
+          >
+            {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Archive className="w-3.5 h-3.5" />}
+            <span>Unpublish</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleDirectPublish}
+            disabled={submitting}
+            title="Direct publish manuscript live to public magazine"
+            className="inline-flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
+            <span>Publish Live</span>
+          </button>
+        )
+      ) : article.status === 'PENDING_REVIEW' ? (
+        <button
+          type="button"
+          disabled
+          title="This manuscript is currently undergoing editorial review."
+          className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold cursor-not-allowed"
+        >
+          <Clock className="w-3.5 h-3.5" />
+          <span>Under Review</span>
+        </button>
+      ) : article.status === 'PUBLISHED' ? (
+        <button
+          type="button"
+          disabled
+          title="This manuscript is already published live."
+          className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold cursor-not-allowed"
+        >
+          <Check className="w-3.5 h-3.5" />
+          <span>Published</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={handleSubmitForReview}
+          disabled={submitting || !canSubmit}
+          title={!canSubmit ? 'You do not have permission to submit manuscripts' : 'Submit for peer editorial review'}
+          className="inline-flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+        >
+          {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+          <span>{article.status === 'REJECTED' ? 'Re-submit for Review' : 'Submit for Review'}</span>
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <div className="min-h-screen flex flex-col bg-paper text-ink">
+    <AdminLayout
+      title={currentId ? 'Manuscript Editor' : 'Write Article'}
+      subtitle={article.title ? `Draft: "${article.title}"` : 'Draft, structure content blocks, and submit manuscripts for peer editorial review.'}
+      actions={editorActions}
+    >
       <Helmet>
-        <title>Research Workspace & Editor — Research Factors</title>
+        <title>{article.title ? `${article.title} — Editor` : 'Write Article'} — Research Factors Admin</title>
       </Helmet>
 
-      {/* Editor Top Command Bar */}
-      <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-paper-border px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-xs">
-        <div className="flex items-center space-x-4">
-          <Link to="/" className="p-1.5 text-ink-muted hover:text-ink transition-colors rounded-lg">
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-rfblue">
-              Manuscript Studio
-            </span>
-            <div className="flex items-center space-x-2">
-              <h2 className="text-sm font-bold text-ink-darkest truncate max-w-[180px] sm:max-w-md">
-                {article.title || 'Untitled Draft'}
-              </h2>
-              <span
-                className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                  saveStatus === 'saved'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : saveStatus === 'saving'
-                    ? 'bg-amber-50 text-amber-700 animate-pulse'
-                    : 'bg-slate-100 text-slate-600'
-                }`}
-              >
-                {saveStatus === 'saved' ? '● Saved' : saveStatus === 'saving' ? 'Saving...' : '● Unsaved'}
-              </span>
-              <span
-                className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                  article.status === 'PUBLISHED'
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : article.status === 'PENDING_REVIEW'
-                    ? 'bg-amber-100 text-amber-800'
-                    : article.status === 'REJECTED'
-                    ? 'bg-red-100 text-red-800'
-                    : 'bg-slate-100 text-slate-600'
-                }`}
-              >
-                {article.status === 'PENDING_REVIEW' ? 'Under Review' :
-                 article.status === 'REJECTED' ? 'Changes Requested' :
-                 article.status === 'PUBLISHED' ? 'Published' : 'Draft'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-2.5">
-          {/* Preview Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsPreview(!isPreview)}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg border border-paper-border text-xs font-semibold text-ink-muted hover:text-ink hover:bg-paper transition-all"
-          >
-            {isPreview ? <Edit3 className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            <span>{isPreview ? 'Edit' : 'Preview'}</span>
-          </button>
-
-          {/* Manual Save Draft Button */}
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            disabled={savingDraft || submitting}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg border border-paper-border hover:border-rfblue hover:text-rfblue text-xs font-semibold text-ink transition-all disabled:opacity-50"
-          >
-            {savingDraft ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            <span>Save Draft</span>
-          </button>
-
-          {/* Submit for Review Button */}
-          {article.status === 'PENDING_REVIEW' ? (
-            <button
-              type="button"
-              disabled
-              title="This manuscript is currently undergoing editorial review."
-              className="inline-flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-amber-100 text-amber-800 text-xs font-semibold cursor-not-allowed"
-            >
-              <Clock className="w-3.5 h-3.5" />
-              <span>Under Review</span>
-            </button>
-          ) : article.status === 'PUBLISHED' ? (
-            <button
-              type="button"
-              disabled
-              title="This manuscript is already published live."
-              className="inline-flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-semibold cursor-not-allowed"
-            >
-              <Check className="w-3.5 h-3.5" />
-              <span>Published</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleSubmitForReview}
-              disabled={submitting || !canSubmit}
-              title={!canSubmit ? 'You do not have permission to submit manuscripts' : 'Submit for peer editorial review'}
-              className="inline-flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-rfblue hover:bg-rfblue-700 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50"
-            >
-              {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              <span>{article.status === 'REJECTED' ? 'Re-submit for Review' : 'Submit for Review'}</span>
-            </button>
-          )}
-        </div>
-      </nav>
-
-      {/* Main Studio Viewport */}
-      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 py-8 w-full">
+      <div className="max-w-5xl mx-auto space-y-6">
         {/* Dynamic Alert Banner */}
         {activeAlert && (
           <div
-            className={`mb-6 p-4 rounded-2xl flex items-start justify-between border ${
+            className={`p-4 rounded-2xl flex items-start justify-between border ${
               activeAlert.type === 'error'
-                ? 'bg-red-50 border-red-200 text-red-800'
-                : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
             }`}
           >
             <div className="flex items-start space-x-2.5">
               {activeAlert.type === 'error' ? (
-                <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
               ) : (
-                <Check className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
               )}
               <p className="text-sm font-medium">{activeAlert.message}</p>
             </div>
             <button
               onClick={() => setActiveAlert(null)}
-              className="p-1 text-ink-muted hover:text-ink rounded-md transition-colors"
+              className="p-1 text-slate-400 hover:text-white rounded-md transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -624,74 +855,120 @@ export default function ArticleEditorPage() {
 
         {/* Rejection Feedback Banner */}
         {article.status === 'REJECTED' && article.rejectionReason && (
-          <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800 flex items-start space-x-3">
-            <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-red-900 mb-0.5">
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-0.5">
                 Editorial Feedback & Revision Notes
               </p>
-              <p className="text-sm">{article.rejectionReason}</p>
+              <p className="text-sm text-slate-200">{article.rejectionReason}</p>
             </div>
           </div>
         )}
 
         {loading ? (
           <div className="py-24 text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-rfblue mx-auto mb-3" />
-            <p className="text-sm text-ink-muted">Loading manuscript workspace...</p>
-          </div>
-        ) : isPreview ? (
-          /* Preview Mode Rendering */
-          <div className="bg-white rounded-3xl p-8 sm:p-12 border border-paper-border shadow-sm max-w-prose mx-auto">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-rfblue">
-                Article Preview
-              </span>
-              {article.categoryId && (
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rfblue-50 text-rfblue border border-rfblue-100">
-                  {categories.find(c => c.id === article.categoryId)?.name || 'Research'}
-                </span>
-              )}
-            </div>
-
-            {article.coverImageUrl && (
-              <div className="rounded-2xl overflow-hidden mb-8 border border-paper-border max-h-[400px]">
-                <img
-                  src={normalizeMediaUrl(article.coverImageUrl)}
-                  alt={article.coverImageAlt || article.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-
-            <h1 className="text-3xl sm:text-4xl font-serif font-bold text-ink-darkest mb-4">
-              {article.title || 'Untitled Manuscript'}
-            </h1>
-            {article.subtitle && (
-              <h2 className="text-lg sm:text-xl font-light text-ink-muted mb-6">
-                {article.subtitle}
-              </h2>
-            )}
-            {article.excerpt && (
-              <p className="text-base text-ink-muted font-light leading-relaxed mb-8 italic border-l-2 border-rfblue pl-4">
-                {article.excerpt}
-              </p>
-            )}
-            <BlockRenderer blocks={article.blocks} />
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-3" />
+            <p className="text-sm text-slate-400">Loading manuscript workspace...</p>
           </div>
         ) : (
           /* Live Block Authoring Mode */
-          <div className="space-y-8">
-            {/* Metadata Card */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-paper-border shadow-xs space-y-5">
+          <div className="space-y-6">
+            {/* 1. TOP TAXONOMY & READING TIME BAR (Matches Breadcrumbs & Format Badge on Public Frontend) */}
+            <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800/80 shadow-xs transition-colors">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                {/* Primary Research Category Selector */}
+                <div className="md:col-span-5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Primary Research Category <span className="text-red-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomCategory(!isCustomCategory);
+                        if (!isCustomCategory) {
+                          handleChange('categoryId', '');
+                        } else {
+                          setCustomCategoryName('');
+                        }
+                      }}
+                      className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                    >
+                      {isCustomCategory ? 'Select Existing' : '+ Custom Category'}
+                    </button>
+                  </div>
+                  {isCustomCategory ? (
+                    <input
+                      type="text"
+                      value={customCategoryName}
+                      onChange={(e) => {
+                        setCustomCategoryName(e.target.value);
+                        handleChange('categoryName', e.target.value);
+                      }}
+                      placeholder="e.g. Quantum Cryptography, Bioengineering..."
+                      className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium placeholder-slate-400 dark:placeholder-slate-500"
+                    />
+                  ) : (
+                    <select
+                      value={article.categoryId}
+                      onChange={(e) => handleChange('categoryId', e.target.value)}
+                      className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
+                    >
+                      <option value="">Select Field of Study...</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Article Format / Genre Selector */}
+                <div className="md:col-span-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Article Format / Type <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">Editorial genre</span>
+                  </div>
+                  <select
+                    value={article.type || 'RESEARCH'}
+                    onChange={(e) => handleChange('type', e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
+                  >
+                    <option value="RESEARCH">Research (Empirical / Experimental)</option>
+                    <option value="REVIEW">Review (Literature / Technology)</option>
+                    <option value="COMPARISON">Comparison (Benchmarks / Matrix)</option>
+                    <option value="ANALYSIS">Analysis (Architectural / Economic)</option>
+                    <option value="GUIDE">Guide (Methodology / Technical)</option>
+                    <option value="OPINION">Opinion (Perspective / Commentary)</option>
+                  </select>
+                </div>
+
+                {/* Estimated Reading Time Indicator */}
+                <div className="md:col-span-3 flex md:justify-end items-end pt-2 md:pt-0">
+                  <div className="inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs text-slate-600 dark:text-slate-400 font-medium shadow-2xs">
+                    <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span>~{estimatedReadingTime} min read</span>
+                    <span className="text-slate-300 dark:text-slate-700">•</span>
+                    <span className="text-[11px] text-slate-500">{totalWords} words</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. MANUSCRIPT HEADLINE & THESIS METADATA (Matches Primary Title & Subtitle on Public Frontend) */}
+            <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800/80 shadow-xs space-y-5 transition-colors">
               {/* Title */}
               <div>
                 <input
                   type="text"
                   value={article.title}
                   onChange={(e) => handleChange('title', e.target.value)}
-                  placeholder="Manuscript Title (e.g. Comparative Analysis of Latency...)"
-                  className="w-full font-serif text-2xl sm:text-3xl font-bold text-ink-darkest focus:outline-none placeholder:text-ink-lighter"
+                  placeholder="Manuscript Title (e.g. Empirical Benchmarks of Quantum Processors...)"
+                  className="w-full text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent border-b border-transparent focus:border-blue-500 pb-1"
                 />
               </div>
 
@@ -702,7 +979,7 @@ export default function ArticleEditorPage() {
                   value={article.subtitle || ''}
                   onChange={(e) => handleChange('subtitle', e.target.value)}
                   placeholder="Thesis statement or research subtitle..."
-                  className="w-full text-base font-light text-ink focus:outline-none placeholder:text-ink-lighter"
+                  className="w-full text-base sm:text-lg font-normal text-slate-700 dark:text-slate-300 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent border-b border-transparent focus:border-blue-500 pb-1"
                 />
               </div>
 
@@ -711,119 +988,121 @@ export default function ArticleEditorPage() {
                 <textarea
                   value={article.excerpt || ''}
                   onChange={(e) => handleChange('excerpt', e.target.value)}
-                  placeholder="Abstract / Executive Summary (visible on archive cards and search previews)..."
+                  placeholder="Abstract / Executive Summary (visible on archive cards, social cards, and search previews)..."
                   rows={2}
-                  className="w-full text-sm font-light text-ink-muted focus:outline-none placeholder:text-ink-lighter resize-none"
+                  className="w-full text-sm font-normal text-slate-600 dark:text-slate-400 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent resize-none border-b border-transparent focus:border-blue-500 pb-1"
                 />
               </div>
+            </div>
 
-              {/* Category & Cover Image Controls */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-5 border-t border-paper-border">
-                {/* Primary Category Selector */}
+            {/* 3. HERO COVER ASSET BANNER (Matches Hero Figure on Public Frontend) */}
+            <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800/80 shadow-xs space-y-4 transition-colors">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/80">
                 <div>
-                  <label className="block text-xs font-semibold text-ink-darkest mb-1.5">
-                    Primary Research Category <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={article.categoryId}
-                    onChange={(e) => handleChange('categoryId', e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-paper-border bg-paper focus:outline-none focus:ring-1 focus:ring-rfblue text-ink font-medium"
-                  >
-                    <option value="">Select Field of Study...</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    Hero Cover Asset
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Prominent editorial banner displayed between headline metadata and body prose
+                  </p>
                 </div>
+                <div className="flex items-center space-x-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setCoverInputMode('upload')}
+                    className={`font-semibold cursor-pointer ${coverInputMode === 'upload' ? 'text-blue-600 dark:text-blue-400 underline' : 'text-slate-500 dark:text-slate-400'}`}
+                  >
+                    Upload File
+                  </button>
+                  <span className="text-slate-300 dark:text-slate-700">|</span>
+                  <button
+                    type="button"
+                    onClick={() => setCoverInputMode('url')}
+                    className={`font-semibold cursor-pointer ${coverInputMode === 'url' ? 'text-blue-600 dark:text-blue-400 underline' : 'text-slate-500 dark:text-slate-400'}`}
+                  >
+                    Enter Direct URL
+                  </button>
+                </div>
+              </div>
 
-                {/* Cover Image Upload Area */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-semibold text-ink-darkest">
-                      Cover Asset
-                    </label>
-                    <div className="flex items-center space-x-2 text-[11px]">
+              {article.coverImageUrl ? (
+                <div className="space-y-3">
+                  <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-950 group max-h-80 shadow-xs">
+                    <img
+                      src={normalizeMediaUrl(article.coverImageUrl)}
+                      alt={article.coverImageAlt || article.title || 'Cover Asset'}
+                      className="w-full h-full object-cover max-h-80"
+                    />
+                    <div className="absolute top-3 right-3 flex items-center space-x-2">
                       <button
                         type="button"
-                        onClick={() => setCoverInputMode('upload')}
-                        className={`font-semibold ${coverInputMode === 'upload' ? 'text-rfblue underline' : 'text-ink-muted'}`}
+                        onClick={() => handleChange('coverImageUrl', '')}
+                        className="p-1.5 bg-black/70 hover:bg-black text-white rounded-full transition-colors shadow-md cursor-pointer"
+                        title="Remove cover asset"
                       >
-                        Upload File
-                      </button>
-                      <span className="text-paper-border">|</span>
-                      <button
-                        type="button"
-                        onClick={() => setCoverInputMode('url')}
-                        className={`font-semibold ${coverInputMode === 'url' ? 'text-rfblue underline' : 'text-ink-muted'}`}
-                      >
-                        Enter URL
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
 
-                  {article.coverImageUrl ? (
-                    <div className="relative rounded-xl overflow-hidden border border-paper-border bg-paper group">
-                      <img
-                        src={normalizeMediaUrl(article.coverImageUrl)}
-                        alt={article.coverImageAlt || 'Cover Asset'}
-                        className="w-full h-24 object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleChange('coverImageUrl', '')}
-                        className="absolute top-2 right-2 p-1 bg-black/70 hover:bg-black text-white rounded-full transition-colors shadow-xs"
-                        title="Remove cover asset"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ) : coverInputMode === 'upload' ? (
-                    <label className="flex flex-col items-center justify-center p-4 border border-dashed border-paper-border rounded-xl cursor-pointer hover:border-rfblue hover:bg-paper/50 transition-all text-center">
-                      {uploadingCover ? (
-                        <div className="flex items-center space-x-2 text-rfblue">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span className="text-xs font-semibold">Processing via Sharp WebP...</span>
-                        </div>
-                      ) : (
-                        <>
-                          <UploadCloud className="w-5 h-5 text-rfblue mb-1" />
-                          <span className="text-xs font-semibold text-ink">Upload Manual Image</span>
-                          <span className="text-[10px] text-ink-light">PNG, JPG, WebP up to 8MB</span>
-                        </>
-                      )}
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/avif"
-                        onChange={handleCoverUpload}
-                        disabled={uploadingCover}
-                        className="hidden"
-                      />
-                    </label>
-                  ) : (
+                  {/* Cover Image Alt Text & Caption */}
+                  <div>
                     <input
-                      type="url"
-                      value={article.coverImageUrl || ''}
-                      onChange={(e) => handleChange('coverImageUrl', e.target.value)}
-                      placeholder="https://... (CDN or direct image URL)"
-                      className="w-full text-xs p-2.5 rounded-xl border border-paper-border bg-paper focus:outline-none focus:ring-1 focus:ring-rfblue text-ink"
+                      type="text"
+                      value={article.coverImageAlt || ''}
+                      onChange={(e) => handleChange('coverImageAlt', e.target.value)}
+                      placeholder="Cover Image Alt Description & Figure Caption (displays below hero image on public reader view)..."
+                      className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
                     />
-                  )}
+                  </div>
                 </div>
-              </div>
+              ) : coverInputMode === 'upload' ? (
+                <label className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl cursor-pointer hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-center">
+                  {uploadingCover ? (
+                    <div className="flex items-center space-x-2 text-blue-600 dark:text-blue-400">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span className="text-xs font-semibold">Processing via Sharp WebP...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-8 h-8 text-blue-600 dark:text-blue-400 mb-2" />
+                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        Upload Manuscript Cover Image
+                      </span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        PNG, JPG, WebP up to 8MB (Auto-optimized to modern WebP)
+                      </span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/avif"
+                    onChange={handleCoverUpload}
+                    disabled={uploadingCover}
+                    className="hidden"
+                  />
+                </label>
+              ) : (
+                <input
+                  type="url"
+                  value={article.coverImageUrl || ''}
+                  onChange={(e) => handleChange('coverImageUrl', e.target.value)}
+                  placeholder="https://... (Direct image URL or CDN link)"
+                  className="w-full text-xs p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
+                />
+              )}
             </div>
 
-            {/* Block Stack */}
+            {/* 4. MANUSCRIPT CONTENT BLOCKS (Matches Article Prose Body on Public Frontend) */}
             <div className="space-y-4">
               {article.blocks.map((block, index) => (
                 <div
                   key={block.id || index}
-                  className="group bg-white rounded-2xl p-5 border border-paper-border shadow-xs hover:border-rfblue-300 transition-colors"
+                  className="group bg-white dark:bg-slate-900/80 rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800/80 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors text-slate-800 dark:text-slate-100"
                 >
-                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-paper-border text-xs text-ink-light">
+                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-slate-800/80 text-xs text-slate-500 dark:text-slate-400">
                     <div className="flex items-center space-x-2">
-                      <span className="font-bold uppercase tracking-widest text-rfblue text-[10px]">
+                      <span className="font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 text-[10px]">
                         Block {index + 1}: {block.blockType}
                       </span>
                     </div>
@@ -833,7 +1112,7 @@ export default function ArticleEditorPage() {
                         type="button"
                         onClick={() => moveBlock(index, -1)}
                         disabled={index === 0}
-                        className="p-1 hover:text-ink disabled:opacity-30 transition-colors"
+                        className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 transition-colors cursor-pointer"
                         title="Move Up"
                       >
                         <MoveUp className="w-3.5 h-3.5" />
@@ -842,7 +1121,7 @@ export default function ArticleEditorPage() {
                         type="button"
                         onClick={() => moveBlock(index, 1)}
                         disabled={index === article.blocks.length - 1}
-                        className="p-1 hover:text-ink disabled:opacity-30 transition-colors"
+                        className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 transition-colors cursor-pointer"
                         title="Move Down"
                       >
                         <MoveDown className="w-3.5 h-3.5" />
@@ -850,7 +1129,7 @@ export default function ArticleEditorPage() {
                       <button
                         type="button"
                         onClick={() => removeBlock(index)}
-                        className="p-1 hover:text-red-600 ml-2 transition-colors"
+                        className="p-1 text-slate-500 dark:text-slate-400 hover:text-red-500 ml-2 transition-colors cursor-pointer"
                         title="Delete Block"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -862,14 +1141,14 @@ export default function ArticleEditorPage() {
                   {block.blockType === 'heading' && (
                     <div className="space-y-3">
                       <div className="flex items-center space-x-2">
-                        <span className="text-[10px] font-bold text-ink-muted uppercase">Level:</span>
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Level:</span>
                         <button
                           type="button"
                           onClick={() => handleBlockContentChange(index, { level: 2 })}
-                          className={`px-2 py-0.5 rounded text-[11px] font-bold transition-colors ${
+                          className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition-colors cursor-pointer ${
                             (block.content?.level || 2) === 2
-                              ? 'bg-rfblue text-white'
-                              : 'bg-paper text-ink-muted hover:text-ink'
+                              ? 'bg-blue-600 text-white shadow-2xs'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                           }`}
                         >
                           H2 Section
@@ -877,10 +1156,10 @@ export default function ArticleEditorPage() {
                         <button
                           type="button"
                           onClick={() => handleBlockContentChange(index, { level: 3 })}
-                          className={`px-2 py-0.5 rounded text-[11px] font-bold transition-colors ${
+                          className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition-colors cursor-pointer ${
                             block.content?.level === 3
-                              ? 'bg-rfblue text-white'
-                              : 'bg-paper text-ink-muted hover:text-ink'
+                              ? 'bg-blue-600 text-white shadow-2xs'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                           }`}
                         >
                           H3 Subsection
@@ -891,42 +1170,34 @@ export default function ArticleEditorPage() {
                         value={block.content?.text || ''}
                         onChange={(e) => handleBlockContentChange(index, { text: e.target.value })}
                         placeholder="Section Heading Title..."
-                        className="w-full font-serif text-xl font-bold text-ink-darkest focus:outline-none border-b border-transparent focus:border-rfblue pb-1"
+                        className="w-full text-xl font-bold text-slate-900 dark:text-white focus:outline-none border-b border-slate-200 dark:border-slate-800 focus:border-blue-500 pb-1 bg-transparent placeholder-slate-400 dark:placeholder-slate-500"
                       />
                     </div>
                   )}
 
-                  {/* 2. PARAGRAPH BLOCK */}
+                  {/* 2. PARAGRAPH BLOCK (Production-ready Rich Text Editor) */}
                   {block.blockType === 'paragraph' && (
                     <div className="space-y-2">
-                      <textarea
-                        value={block.content?.text ?? (block.content?.html ? block.content.html.replace(/<[^>]+>/g, '') : '')}
-                        onChange={(e) => handleBlockContentChange(index, {
-                          text: e.target.value,
-                          html: `<p>${e.target.value.replace(/\n\n/g, '</p><p>')}</p>`
-                        })}
+                      <RichTextEditor
+                        content={block.content}
+                        onChange={(updated) => handleBlockContentChange(index, updated)}
                         placeholder="Write manuscript findings, empirical prose, or methodology..."
-                        rows={4}
-                        className="w-full text-sm leading-relaxed text-ink focus:outline-none resize-y p-2 rounded-lg bg-paper/50 border border-transparent focus:border-rfblue"
                       />
-                      <div className="text-[10px] text-ink-light text-right">
-                        {(block.content?.text || '').split(/\s+/).filter(Boolean).length} words
-                      </div>
                     </div>
                   )}
 
                   {/* 3. PULL QUOTE BLOCK */}
                   {block.blockType === 'quote' && (
-                    <div className="space-y-3 pl-4 border-l-4 border-rfblue">
+                    <div className="space-y-3 pl-4 border-l-4 border-blue-600 dark:border-blue-500">
                       <textarea
                         value={block.content?.quote ?? block.content?.text ?? ''}
                         onChange={(e) => handleBlockContentChange(index, {
                           quote: e.target.value,
                           text: e.target.value
                         })}
-                        placeholder="Key quote or statement..."
+                        placeholder="Key quote or thesis statement..."
                         rows={2}
-                        className="w-full font-serif text-base italic text-ink-darkest focus:outline-none resize-none"
+                        className="w-full text-base italic text-slate-900 dark:text-white focus:outline-none resize-none bg-transparent placeholder-slate-400 dark:placeholder-slate-500"
                       />
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <input
@@ -937,14 +1208,14 @@ export default function ArticleEditorPage() {
                             citation: e.target.value
                           })}
                           placeholder="Attribution (e.g. Dr. Eleanor Vance)"
-                          className="w-full text-xs p-1.5 rounded-lg border border-paper-border bg-paper focus:outline-none"
+                          className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
                         />
                         <input
                           type="text"
                           value={block.content?.source || ''}
                           onChange={(e) => handleBlockContentChange(index, { source: e.target.value })}
                           placeholder="Source / Citation (e.g. Nature 2026)"
-                          className="w-full text-xs p-1.5 rounded-lg border border-paper-border bg-paper focus:outline-none"
+                          className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
                         />
                       </div>
                     </div>
@@ -955,23 +1226,23 @@ export default function ArticleEditorPage() {
                     <div
                       className={`space-y-3 p-4 rounded-xl border ${
                         block.content?.variant === 'warning'
-                          ? 'bg-red-50/50 border-red-200'
+                          ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30'
                           : block.content?.variant === 'tip'
-                          ? 'bg-emerald-50/50 border-emerald-200'
-                          : 'bg-rfblue-50/50 border-rfblue-200'
+                          ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30'
+                          : 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30'
                       }`}
                     >
                       <div className="flex items-center space-x-2">
-                        <span className="text-[10px] font-bold text-ink-muted uppercase">Callout Type:</span>
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Callout Type:</span>
                         {['info', 'warning', 'tip'].map((v) => (
                           <button
                             key={v}
                             type="button"
                             onClick={() => handleBlockContentChange(index, { variant: v, type: v })}
-                            className={`px-2.5 py-0.5 rounded text-[11px] font-bold capitalize transition-colors ${
+                            className={`px-2.5 py-0.5 rounded text-[11px] font-bold capitalize transition-colors cursor-pointer ${
                               (block.content?.variant || 'info') === v
-                                ? 'bg-rfblue text-white'
-                                : 'bg-white text-ink-muted hover:text-ink'
+                                ? 'bg-blue-600 text-white shadow-2xs'
+                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-transparent'
                             }`}
                           >
                             {v}
@@ -984,7 +1255,7 @@ export default function ArticleEditorPage() {
                         value={block.content?.title || ''}
                         onChange={(e) => handleBlockContentChange(index, { title: e.target.value })}
                         placeholder="Callout Header / Title..."
-                        className="w-full text-xs font-bold text-ink-darkest bg-transparent focus:outline-none border-b border-paper-border pb-1"
+                        className="w-full text-xs font-bold text-slate-900 dark:text-white bg-transparent focus:outline-none border-b border-slate-300 dark:border-slate-800 focus:border-blue-500 pb-1 placeholder-slate-400 dark:placeholder-slate-500"
                       />
 
                       <textarea
@@ -995,7 +1266,7 @@ export default function ArticleEditorPage() {
                         })}
                         placeholder="Callout body text or contextual observation..."
                         rows={2}
-                        className="w-full text-xs text-ink-muted bg-transparent focus:outline-none resize-none"
+                        className="w-full text-xs text-slate-700 dark:text-slate-300 bg-transparent focus:outline-none resize-none placeholder-slate-400 dark:placeholder-slate-500"
                       />
                     </div>
                   )}
@@ -1020,7 +1291,7 @@ export default function ArticleEditorPage() {
                     return (
                       <div className="space-y-3 overflow-x-auto">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-ink-darkest">
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                             Interactive Matrix Table Editor
                           </span>
                           <div className="flex items-center space-x-2">
@@ -1031,7 +1302,7 @@ export default function ArticleEditorPage() {
                                 const newRows = rows.map(r => ({ ...r, values: [...r.values, ''] }));
                                 handleBlockContentChange(index, { headers: newHeaders, rows: newRows });
                               }}
-                              className="text-[11px] font-semibold text-rfblue hover:underline inline-flex items-center space-x-1"
+                              className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center space-x-1 cursor-pointer"
                             >
                               <Plus className="w-3 h-3" />
                               <span>Add Column</span>
@@ -1042,7 +1313,7 @@ export default function ArticleEditorPage() {
                                 const newRows = [...rows, { label: `Factor ${rows.length + 1}`, values: new Array(Math.max(1, headers.length - 1)).fill('') }];
                                 updateRows(newRows);
                               }}
-                              className="text-[11px] font-semibold text-rfblue hover:underline inline-flex items-center space-x-1"
+                              className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center space-x-1 cursor-pointer"
                             >
                               <Plus className="w-3 h-3" />
                               <span>Add Row</span>
@@ -1051,9 +1322,9 @@ export default function ArticleEditorPage() {
                         </div>
 
                         {/* Visual Table Editor */}
-                        <div className="border border-paper-border rounded-xl overflow-hidden bg-paper/40">
+                        <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-950/40">
                           <table className="w-full text-left text-xs">
-                            <thead className="bg-paper border-b border-paper-border">
+                            <thead className="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
                               <tr>
                                 {headers.map((h, hIdx) => (
                                   <th key={hIdx} className="p-2 min-w-[120px]">
@@ -1067,7 +1338,7 @@ export default function ArticleEditorPage() {
                                           updateHeaders(next);
                                         }}
                                         placeholder={`Header ${hIdx + 1}`}
-                                        className="w-full text-xs font-bold text-ink-darkest bg-white px-2 py-1 rounded border border-paper-border focus:outline-none focus:border-rfblue"
+                                        className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2 py-1 rounded border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
                                       />
                                       {headers.length > 2 && hIdx > 0 && (
                                         <button
@@ -1080,7 +1351,7 @@ export default function ArticleEditorPage() {
                                             }));
                                             handleBlockContentChange(index, { headers: nextHeaders, rows: nextRows });
                                           }}
-                                          className="text-ink-muted hover:text-red-500 p-0.5"
+                                          className="text-slate-400 hover:text-red-500 p-0.5 cursor-pointer"
                                           title="Delete column"
                                         >
                                           <X className="w-3 h-3" />
@@ -1092,9 +1363,9 @@ export default function ArticleEditorPage() {
                                 <th className="w-8"></th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-paper-border/60">
+                            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
                               {rows.map((r, rIdx) => (
-                                <tr key={rIdx} className="bg-white hover:bg-paper/20">
+                                <tr key={rIdx} className="hover:bg-slate-100/60 dark:hover:bg-slate-800/30 transition-colors">
                                   <td className="p-2">
                                     <input
                                       type="text"
@@ -1105,7 +1376,7 @@ export default function ArticleEditorPage() {
                                         updateRows(nextRows);
                                       }}
                                       placeholder="Row Label..."
-                                      className="w-full text-xs font-semibold text-ink-darkest bg-paper px-2 py-1 rounded border border-paper-border focus:outline-none"
+                                      className="w-full text-xs font-semibold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-950 px-2 py-1 rounded border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
                                     />
                                   </td>
                                   {headers.slice(1).map((_, vIdx) => (
@@ -1121,7 +1392,7 @@ export default function ArticleEditorPage() {
                                           updateRows(nextRows);
                                         }}
                                         placeholder="Value..."
-                                        className="w-full text-xs text-ink bg-paper/50 px-2 py-1 rounded border border-paper-border focus:outline-none"
+                                        className="w-full text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-950 px-2 py-1 rounded border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
                                       />
                                     </td>
                                   ))}
@@ -1133,7 +1404,7 @@ export default function ArticleEditorPage() {
                                           const nextRows = rows.filter((_, i) => i !== rIdx);
                                           updateRows(nextRows);
                                         }}
-                                        className="text-ink-muted hover:text-red-500 p-1"
+                                        className="text-slate-400 hover:text-red-500 p-1 cursor-pointer"
                                         title="Delete row"
                                       >
                                         <X className="w-3 h-3" />
@@ -1153,16 +1424,16 @@ export default function ArticleEditorPage() {
                   {block.blockType === 'image' && (
                     <div className="space-y-3">
                       {block.content?.url ? (
-                        <div className="relative rounded-xl overflow-hidden border border-paper-border bg-paper">
+                        <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-950">
                           <img
                             src={normalizeMediaUrl(block.content.url)}
                             alt={block.content.alt || 'Asset'}
-                            className="w-full max-h-56 object-cover"
+                            className="w-full max-h-64 object-cover"
                           />
                           <button
                             type="button"
                             onClick={() => handleBlockContentChange(index, { url: '' })}
-                            className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-black text-white rounded-full transition-colors shadow-xs"
+                            className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-black text-white rounded-full transition-colors shadow-md cursor-pointer"
                             title="Remove image"
                           >
                             <X className="w-3.5 h-3.5" />
@@ -1171,17 +1442,17 @@ export default function ArticleEditorPage() {
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {/* File Upload Dropzone */}
-                          <label className="flex flex-col items-center justify-center p-5 border border-dashed border-paper-border rounded-xl cursor-pointer hover:border-rfblue hover:bg-paper/50 transition-all text-center">
+                          <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-center">
                             {uploadingBlockIndex === index ? (
-                              <div className="flex items-center space-x-2 text-rfblue">
+                              <div className="flex items-center space-x-2 text-blue-600 dark:text-blue-400">
                                 <Loader2 className="w-4 h-4 animate-spin" />
                                 <span className="text-xs font-semibold">Processing via Sharp WebP...</span>
                               </div>
                             ) : (
                               <>
-                                <UploadCloud className="w-6 h-6 text-rfblue mb-1.5" />
-                                <span className="text-xs font-semibold text-ink">Upload Manual Image</span>
-                                <span className="text-[10px] text-ink-light">JPG, PNG, WebP (Platform Independent)</span>
+                                <UploadCloud className="w-6 h-6 text-blue-600 dark:text-blue-400 mb-1.5" />
+                                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Upload Manual Image</span>
+                                <span className="text-[10px] text-slate-500 dark:text-slate-400">JPG, PNG, WebP (Platform Independent)</span>
                               </>
                             )}
                             <input
@@ -1198,14 +1469,14 @@ export default function ArticleEditorPage() {
                           </label>
 
                           {/* URL Input Fallback */}
-                          <div className="flex flex-col justify-center p-4 rounded-xl border border-paper-border bg-paper/40 space-y-2">
-                            <span className="text-xs font-semibold text-ink-darkest">Or Enter Image URL</span>
+                          <div className="flex flex-col justify-center p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 space-y-2">
+                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Or Enter Direct Image URL</span>
                             <input
                               type="url"
                               value={block.content?.url || ''}
                               onChange={(e) => handleBlockContentChange(index, { url: e.target.value })}
                               placeholder="https://... (Direct image URL)"
-                              className="w-full text-xs p-2 rounded-lg border border-paper-border bg-white focus:outline-none"
+                              className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
                             />
                           </div>
                         </div>
@@ -1218,14 +1489,14 @@ export default function ArticleEditorPage() {
                           value={block.content?.caption || ''}
                           onChange={(e) => handleBlockContentChange(index, { caption: e.target.value })}
                           placeholder="Image Caption (e.g. Figure 1: Benchmark distribution)"
-                          className="w-full text-xs p-2 rounded-lg border border-paper-border bg-paper focus:outline-none"
+                          className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
                         />
                         <input
                           type="text"
                           value={block.content?.alt || ''}
                           onChange={(e) => handleBlockContentChange(index, { alt: e.target.value })}
                           placeholder="Alt description for screen readers"
-                          className="w-full text-xs p-2 rounded-lg border border-paper-border bg-paper focus:outline-none"
+                          className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
                         />
                       </div>
                     </div>
@@ -1234,8 +1505,8 @@ export default function ArticleEditorPage() {
                   {/* 7. DIVIDER BLOCK */}
                   {block.blockType === 'divider' && (
                     <div className="py-4 text-center">
-                      <hr className="border-t border-paper-border max-w-sm mx-auto" />
-                      <span className="text-[10px] text-ink-light uppercase tracking-widest mt-1 block">
+                      <hr className="border-t border-slate-200 dark:border-slate-800 max-w-sm mx-auto" />
+                      <span className="text-[10px] text-slate-500 uppercase tracking-widest mt-1 block">
                         Editorial Section Divider
                       </span>
                     </div>
@@ -1245,74 +1516,179 @@ export default function ArticleEditorPage() {
             </div>
 
             {/* Block Inserter Bar */}
-            <div className="p-6 bg-white rounded-3xl border border-dashed border-paper-border text-center">
-              <span className="text-xs font-semibold text-ink-muted block mb-3">
+            <div className="p-6 bg-slate-100/70 dark:bg-slate-900/60 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-center transition-colors">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-3">
                 Insert Research Content Block
               </span>
               <div className="flex items-center justify-center flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => addBlock('paragraph')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-paper-border hover:border-rfblue hover:text-rfblue bg-paper text-xs font-semibold text-ink-muted transition-colors"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
                 >
-                  <AlignLeft className="w-3.5 h-3.5" />
+                  <AlignLeft className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   <span>Paragraph</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => addBlock('heading')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-paper-border hover:border-rfblue hover:text-rfblue bg-paper text-xs font-semibold text-ink-muted transition-colors"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
                 >
-                  <Heading className="w-3.5 h-3.5" />
+                  <Heading className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   <span>Heading</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => addBlock('comparison')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-paper-border hover:border-rfblue hover:text-rfblue bg-paper text-xs font-semibold text-ink-muted transition-colors"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
                 >
-                  <TableIcon className="w-3.5 h-3.5" />
+                  <TableIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   <span>Comparison Matrix</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => addBlock('quote')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-paper-border hover:border-rfblue hover:text-rfblue bg-paper text-xs font-semibold text-ink-muted transition-colors"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
                 >
-                  <Quote className="w-3.5 h-3.5" />
+                  <Quote className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   <span>Pull Quote</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => addBlock('callout')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-paper-border hover:border-rfblue hover:text-rfblue bg-paper text-xs font-semibold text-ink-muted transition-colors"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
                 >
-                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                   <span>Callout Box</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => addBlock('image')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-paper-border hover:border-rfblue hover:text-rfblue bg-paper text-xs font-semibold text-ink-muted transition-colors"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
                 >
-                  <ImageIcon className="w-3.5 h-3.5" />
+                  <ImageIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>Media Image</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => addBlock('divider')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-paper-border hover:border-rfblue hover:text-rfblue bg-paper text-xs font-semibold text-ink-muted transition-colors"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
                 >
-                  <Minus className="w-3.5 h-3.5" />
+                  <Minus className="w-3.5 h-3.5 text-slate-500" />
                   <span>Divider</span>
                 </button>
               </div>
             </div>
+
+            {/* 5. TOPIC TAGS SECTION (Matches Article Footer Taxonomies on Public Frontend) */}
+            <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800/80 shadow-xs space-y-4 transition-colors">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/80">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    Topic Tags (Research Taxonomies)
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Index manuscript under domain topics (rendered as clickable hashtags at article footer)
+                  </p>
+                </div>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                  {(article.tags || []).length}/8 Tags • Dual Format (#tag_name or Title)
+                </span>
+              </div>
+
+              {/* Tag Chips */}
+              {(article.tags || []).length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {article.tags.map((tag, idx) => {
+                    const raw = typeof tag === 'string' ? tag : (tag.slug || tag.name || '');
+                    const formatted = raw.startsWith('#')
+                      ? raw
+                      : `#${raw.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '')}`;
+                    return (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 dark:border-blue-500/30 shadow-2xs"
+                      >
+                        <span>{formatted}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(idx)}
+                          className="p-0.5 hover:bg-blue-500/20 rounded-full text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors cursor-pointer"
+                          title="Remove tag"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Tag Input Field & Autocomplete */}
+              <div className="relative">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-xs font-mono font-bold">
+                      #
+                    </span>
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => {
+                        setTagInput(e.target.value);
+                        setShowTagSuggestions(true);
+                      }}
+                      onFocus={() => setShowTagSuggestions(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ',') {
+                          e.preventDefault();
+                          if (tagInput.trim()) {
+                            handleAddTag(tagInput.trim());
+                          }
+                        }
+                      }}
+                      placeholder="Enter tag (e.g. #semiconductor_architecture or Semiconductor Architecture) and press Enter"
+                      className="w-full text-xs pl-7 pr-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium placeholder-slate-400 dark:placeholder-slate-500"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (tagInput.trim()) handleAddTag(tagInput.trim());
+                    }}
+                    disabled={!tagInput.trim() || (article.tags || []).length >= 8}
+                    className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors disabled:opacity-40 shrink-0 cursor-pointer shadow-xs"
+                  >
+                    Add Tag
+                  </button>
+                </div>
+
+                {/* Autocomplete Suggestions Dropdown */}
+                {showTagSuggestions && suggestedTags.length > 0 && (
+                  <div className="absolute top-full left-0 mt-1.5 w-full bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-750 py-1.5 z-30 max-h-48 overflow-y-auto">
+                    <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Platform Taxonomies
+                    </div>
+                    {suggestedTags.map(st => (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() => handleAddTag(st)}
+                        className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                      >
+                        <span className="font-medium">#{st.slug.replace(/-/g, '_')}</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
+                          {st.name} ({st.articlesCount} {st.articlesCount === 1 ? 'article' : 'articles'})
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

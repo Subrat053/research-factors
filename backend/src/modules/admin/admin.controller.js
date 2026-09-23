@@ -1,4 +1,5 @@
 import { AdminService } from './admin.service.js';
+import { ArticleService } from '../articles/article.service.js';
 
 export class AdminController {
   static async getStats(req, res, next) {
@@ -147,6 +148,20 @@ export class AdminController {
       res.status(200).json({
         success: true,
         message: 'Article archived',
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async publishArticle(req, res, next) {
+    try {
+      const { id } = req.params;
+      const result = await ArticleService.publishArticle(id, req.user.id);
+      res.status(200).json({
+        success: true,
+        message: 'Article published live successfully',
         data: result
       });
     } catch (error) {

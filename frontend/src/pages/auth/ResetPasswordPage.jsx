@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { authApi } from '../../services/auth.api.js';
+import { LOGO_URL } from '../../services/media.api.js';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
 const resetSchema = z.object({
@@ -49,12 +50,12 @@ export default function ResetPasswordPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <Link to="/" className="inline-block group py-1">
           <img
-            src="/logo.png"
+            src={LOGO_URL}
             alt="Research Factors"
             className="h-11 w-auto mx-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
           />
         </Link>
-        <h2 className="mt-6 text-3xl font-serif font-bold tracking-tight text-ink-darkest">
+        <h2 className="mt-6 text-3xl font-bold tracking-tight text-ink-darkest">
           Choose a new password
         </h2>
         <p className="mt-2 text-sm text-ink-muted">

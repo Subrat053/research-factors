@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { authApi } from '../../services/auth.api.js';
+import { LOGO_URL } from '../../services/media.api.js';
 import { AlertCircle, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
 
 const forgotSchema = z.object({
@@ -37,12 +38,12 @@ export default function ForgotPasswordPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <Link to="/" className="inline-block group py-1">
           <img
-            src="/logo.png"
+            src={LOGO_URL}
             alt="Research Factors"
             className="h-11 w-auto mx-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
           />
         </Link>
-        <h2 className="mt-6 text-3xl font-serif font-bold tracking-tight text-ink-darkest">
+        <h2 className="mt-6 text-3xl font-bold tracking-tight text-ink-darkest">
           Reset password
         </h2>
         <p className="mt-2 text-sm text-ink-muted">
@@ -57,7 +58,7 @@ export default function ForgotPasswordPage() {
               <div className="w-12 h-12 rounded-full bg-rfblue-50 text-rfblue flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-serif font-bold text-ink-darkest mb-2">Check your inbox</h3>
+              <h3 className="text-lg font-bold text-ink-darkest mb-2">Check your inbox</h3>
               <p className="text-sm text-ink-muted mb-6 leading-relaxed">
                 If an account exists with that email, instructions to reset your password have been sent.
               </p>

@@ -19,7 +19,8 @@ import {
   Loader2,
   ExternalLink,
   PenTool,
-  AlertCircle
+  AlertCircle,
+  Globe
 } from 'lucide-react';
 
 export default function ArticleManagementPage() {
@@ -32,6 +33,7 @@ export default function ArticleManagementPage() {
   const canModerate = hasPermission('article.approve') || hasPermission('article.update_any');
   const canSchedule = hasPermission('article.schedule');
   const canArchive = hasPermission('article.publish');
+  const canPublish = hasPermission('article.publish');
   const canDeleteAny = hasPermission('article.delete_any');
   const canCreate = hasPermission('article.create');
 
@@ -71,10 +73,25 @@ export default function ArticleManagementPage() {
     }
   });
 
+  const publishMutation = useMutation({
+    mutationFn: (id) => adminApi.publishArticle(id),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries(['admin-articles-all']);
+      queryClient.invalidateQueries(['admin-stats']);
+      queryClient.invalidateQueries(['featured-article']);
+      setAlertMsg({ type: 'success', text: res.message || 'Article published live successfully!' });
+    },
+    onError: (err) => {
+      setAlertMsg({ type: 'error', text: err.response?.data?.error?.message || err.message || 'Failed to publish article' });
+    }
+  });
+
   const archiveMutation = useMutation({
     mutationFn: (id) => adminApi.archiveArticle(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['admin-articles-all']);
+      queryClient.invalidateQueries(['admin-stats']);
+      queryClient.invalidateQueries(['featured-article']);
       setAlertMsg({ type: 'success', text: 'Article archived.' });
     },
     onError: (err) => {
@@ -118,7 +135,7 @@ export default function ArticleManagementPage() {
       actions={
         canCreate && (
           <Link
-            to="/editor"
+            to="/admin/editor"
             className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-xs"
           >
             <PenTool className="w-3.5 h-3.5" />
@@ -167,7 +184,7 @@ export default function ArticleManagementPage() {
                 </div>
               </div>
               <Link
-                to={`/editor/${ra.id}`}
+                to={`/admin/editor/${ra.id}`}
                 className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 hover:bg-amber-400 shrink-0 transition-colors"
               >
                 <Edit3 className="w-3.5 h-3.5" />
@@ -179,7 +196,7 @@ export default function ArticleManagementPage() {
       )}
 
       {/* Filter Toolbar */}
-      <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="admin-toolbar mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1 relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -190,7 +207,7 @@ export default function ArticleManagementPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-white placeholder-slate-400 focus:outline-hidden focus:border-blue-500"
+            className="admin-input w-full pl-10 pr-4 py-2 rounded-xl text-xs"
           />
         </div>
 
@@ -200,7 +217,7 @@ export default function ArticleManagementPage() {
             setStatusFilter(e.target.value);
             setPage(1);
           }}
-          className="px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/60 text-xs text-slate-200 focus:outline-hidden focus:border-blue-500"
+          className="admin-input px-3 py-2 rounded-xl text-xs"
         >
           <option value="">All Statuses</option>
           <option value="PUBLISHED">Published</option>
@@ -213,24 +230,24 @@ export default function ArticleManagementPage() {
       </div>
 
       {/* Articles Table */}
-      <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl overflow-hidden shadow-xs">
+      <div className="admin-table-container">
         {isLoading ? (
           <div className="p-20 flex flex-col items-center justify-center space-y-3">
             <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-            <p className="text-xs text-slate-400">Loading articles...</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Loading articles...</p>
           </div>
         ) : articles.length === 0 ? (
           <div className="p-20 text-center">
-            <FileText className="w-10 h-10 text-slate-500 mx-auto mb-3" />
-            <h3 className="text-sm font-semibold text-white">No Articles Found</h3>
-            <p className="text-xs text-slate-400 mt-1">
+            <FileText className="w-10 h-10 text-slate-400 dark:text-slate-500 mx-auto mb-3" />
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">No Articles Found</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               {canModerate
                 ? 'Try adjusting your search filters or status criteria.'
                 : 'You have not written any articles yet. Click "Write Article" to begin your first draft.'}
             </p>
             {canCreate && !canModerate && (
               <Link
-                to="/editor"
+                to="/admin/editor"
                 className="mt-4 inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-xs"
               >
                 <PenTool className="w-3.5 h-3.5" />
@@ -242,7 +259,7 @@ export default function ArticleManagementPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-900/80">
+                <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100/70 dark:bg-slate-900/80">
                   <th className="py-3.5 px-6">Article Title</th>
                   {canModerate && <th className="py-3.5 px-6">Author</th>}
                   <th className="py-3.5 px-6">Category</th>
@@ -251,16 +268,16 @@ export default function ArticleManagementPage() {
                   <th className="py-3.5 px-6 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-xs text-slate-300">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-xs text-slate-700 dark:text-slate-300">
                 {articles.map((a) => (
-                  <tr key={a.id} className="hover:bg-slate-800/30 transition-colors">
+                  <tr key={a.id} className="admin-table-row">
                     <td className="py-4 px-6 max-w-sm">
                       <div className="flex items-center space-x-2">
-                        <h4 className="font-semibold text-white truncate" title={a.title}>
+                        <h4 className="font-semibold text-slate-900 dark:text-white truncate" title={a.title}>
                           {a.title}
                         </h4>
                         {a.isFeatured && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wide bg-blue-500/20 text-blue-300 border border-blue-500/30 shrink-0">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wide bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/20 dark:border-blue-500/30 shrink-0">
                             Featured
                           </span>
                         )}
@@ -272,12 +289,12 @@ export default function ArticleManagementPage() {
 
                     {canModerate && (
                       <td className="py-4 px-6">
-                        <span className="font-semibold text-slate-200 block">{a.author?.name}</span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-200 block">{a.author?.name}</span>
                         <span className="text-[10px] text-slate-500">{a.author?.email}</span>
                       </td>
                     )}
 
-                    <td className="py-4 px-6 text-slate-300">
+                    <td className="py-4 px-6 text-slate-700 dark:text-slate-300">
                       {a.category?.name || 'Uncategorized'}
                     </td>
 
@@ -285,21 +302,21 @@ export default function ArticleManagementPage() {
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
                           a.status === 'PUBLISHED'
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25'
                             : a.status === 'PENDING_REVIEW'
-                            ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25'
+                            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25'
                             : a.status === 'APPROVED'
-                            ? 'bg-blue-500/15 text-blue-400 border border-blue-500/25'
+                            ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/25'
                             : a.status === 'REJECTED'
-                            ? 'bg-red-500/15 text-red-400 border border-red-500/25'
-                            : 'bg-slate-800 text-slate-400 border border-slate-700'
+                            ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/25'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
                         }`}
                       >
                         {a.status === 'REJECTED' ? 'NEEDS REVISION' : a.status.replace('_', ' ')}
                       </span>
                     </td>
 
-                    <td className="py-4 px-6 text-slate-400 text-[11px]">
+                    <td className="py-4 px-6 text-slate-500 dark:text-slate-400 text-[11px]">
                       {a.viewCount.toLocaleString()}
                     </td>
 
@@ -309,7 +326,7 @@ export default function ArticleManagementPage() {
                           <Link
                             to={`/research/${a.slug}`}
                             target="_blank"
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
                             title="View Public Article"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
@@ -317,8 +334,8 @@ export default function ArticleManagementPage() {
                         )}
 
                         <Link
-                          to={`/editor/${a.id}`}
-                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                          to={`/admin/editor/${a.id}`}
+                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
                           title="Edit Article in Studio"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
@@ -327,25 +344,41 @@ export default function ArticleManagementPage() {
                         {canSchedule && a.status !== 'PUBLISHED' && (
                           <button
                             onClick={() => handleOpenScheduleModal(a)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
                             title="Schedule Publication"
                           >
-                            <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                            <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                           </button>
                         )}
 
-                        {canArchive && a.status === 'PUBLISHED' && (
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`Unpublish and archive '${a.title}'?`)) {
-                                archiveMutation.mutate(a.id);
-                              }
-                            }}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors"
-                            title="Archive / Unpublish"
-                          >
-                            <Archive className="w-3.5 h-3.5" />
-                          </button>
+                        {canArchive && (
+                          a.status === 'PUBLISHED' ? (
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Unpublish and archive '${a.title}'? It will no longer be visible to the public.`)) {
+                                  archiveMutation.mutate(a.id);
+                                }
+                              }}
+                              disabled={archiveMutation.isPending}
+                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-100 dark:bg-slate-800 dark:hover:bg-amber-500/20 text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors cursor-pointer disabled:opacity-50"
+                              title="Unpublish / Archive Article"
+                            >
+                              <Archive className="w-3.5 h-3.5" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Publish '${a.title}' live immediately? It will become visible on the public magazine.`)) {
+                                  publishMutation.mutate(a.id);
+                                }
+                              }}
+                              disabled={publishMutation.isPending}
+                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-emerald-100 dark:bg-slate-800 dark:hover:bg-emerald-500/20 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer disabled:opacity-50"
+                              title="Publish Article Live"
+                            >
+                              <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                            </button>
+                          )
                         )}
 
                         {canDeleteAny && (
@@ -355,7 +388,7 @@ export default function ArticleManagementPage() {
                                 forceDeleteMutation.mutate(a.id);
                               }
                             }}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-red-100 dark:bg-slate-800 dark:hover:bg-red-500/20 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer"
                             title="Force Delete"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -372,23 +405,23 @@ export default function ArticleManagementPage() {
 
         {/* Pagination */}
         {pagination.totalPages > 1 && (
-          <div className="p-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+          <div className="p-4 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-900/40">
             <span>
-              Showing Page <strong className="text-white">{pagination.page}</strong> of{' '}
-              <strong className="text-white">{pagination.totalPages}</strong> ({pagination.total} total)
+              Showing Page <strong className="text-slate-900 dark:text-white">{pagination.page}</strong> of{' '}
+              <strong className="text-slate-900 dark:text-white">{pagination.totalPages}</strong> ({pagination.total} total)
             </span>
             <div className="space-x-2">
               <button
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40 transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 disabled:opacity-40 transition-colors cursor-pointer"
               >
                 Previous
               </button>
               <button
                 disabled={page >= pagination.totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40 transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 disabled:opacity-40 transition-colors cursor-pointer"
               >
                 Next
               </button>
@@ -400,32 +433,32 @@ export default function ArticleManagementPage() {
       {/* Publication Schedule Modal */}
       {scheduleModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-serif font-bold text-white text-base">Schedule Publication</h3>
+          <div className="admin-modal rounded-3xl p-6 max-w-md w-full space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="font-bold text-slate-900 dark:text-white text-base">Schedule Publication</h3>
               <button
                 onClick={() => setScheduleModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-white"
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Select date and time to automatically promote{' '}
-              <strong className="text-slate-200">"{selectedArticle?.title}"</strong> to published status.
+              <strong className="text-slate-800 dark:text-slate-200">"{selectedArticle?.title}"</strong> to published status.
             </p>
 
             <form onSubmit={handleScheduleSubmit} className="space-y-4">
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
                   Publication Timestamp
                 </label>
                 <input
                   type="datetime-local"
                   value={scheduledDate}
                   onChange={(e) => setScheduledDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-hidden focus:border-blue-500"
+                  className="admin-input w-full px-3 py-2 rounded-xl text-xs"
                   required
                 />
               </div>
@@ -434,14 +467,14 @@ export default function ArticleManagementPage() {
                 <button
                   type="button"
                   onClick={() => setScheduleModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={scheduleMutation.isPending}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   {scheduleMutation.isPending ? 'Scheduling...' : 'Confirm Schedule'}
                 </button>

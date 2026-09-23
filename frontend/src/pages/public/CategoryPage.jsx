@@ -46,10 +46,10 @@ export default function CategoryPage() {
               <Compass className="w-3.5 h-3.5" />
               <span>Research Field</span>
             </div>
-            <h1 className="text-3xl sm:text-5xl font-serif font-bold text-ink-darkest tracking-tight">
+            <h1 className="text-ink-darkest">
               {category?.name || categorySlug}
             </h1>
-            <p className="mt-4 text-base sm:text-lg text-ink-muted font-light leading-relaxed">
+            <p className="mt-4 text-lead">
               {category?.description || 'Curated peer-reviewed publications and technical analyses.'}
             </p>
           </div>

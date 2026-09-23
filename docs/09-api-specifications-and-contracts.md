@@ -82,27 +82,33 @@ For paginated collections:
 - `POST /forgot-password`: Issues a secure time-limited password reset token.
 - `POST /reset-password`: Resets password using valid token.
 
-### Public Content (`/api/v1/articles`, `/api/v1/categories`, `/api/v1/search`)
-- `GET /articles`: Paginated list of published articles with category/tag/sort filters.
+### Public Content (`/api/v1/articles`, `/api/v1/categories`, `/api/v1/tags`, `/api/v1/search`)
+- `GET /articles`: Paginated list of published articles with `category`, `tag`, `type` (format enum: `RESEARCH`, `REVIEW`, `COMPARISON`, `GUIDE`, `ANALYSIS`, `OPINION`), and `sort` filters.
 - `GET /articles/:slug`: Full published article with blocks, author info, and related items.
 - `GET /categories`: Active category hierarchy.
+- `GET /tags`: Query and autocomplete tags with active article counts (`?search=query`).
+- `GET /tags/:slug`: Get tag metadata and article counts by slug.
 - `GET /tags/trending`: Most popular tags.
-- `GET /search`: PostgreSQL full-text search across titles, excerpts, blocks, and tags.
+- `GET /search`: Search published articles across titles, excerpts, categories, and tags with optional `type`, `category`, and `limit` filters.
+- `GET /search/trending`: Top trending research articles ordered by view counts and search click engagement (in-memory cached with 10-minute TTL to reduce database reads to near-zero).
+- `GET /search/recommendations`: Tailored research recommendations based on the user's recent search type (`ArticleType`) or category (in-memory cached with 10-minute TTL).
+- `POST /search/click`: Asynchronous, fire-and-forget search click engagement tracker that reinforces trending rankings without blocking client navigation.
 
 ### Author Workspace (`/api/v1/author/articles`)
 - `GET /author/articles`: List all articles created by the authenticated author.
-- `POST /author/articles`: Initialize a new draft article.
-- `PATCH /author/articles/:id/draft`: Debounced autosave endpoint for draft header & blocks.
+- `POST /author/articles`: Initialize a new draft article (supports dynamic category, `type` editorial format, & dual-format tags).
+- `PATCH /author/articles/:id/draft`: Debounced autosave endpoint for draft header, `type` editorial format, & blocks.
 - `GET /author/articles/:id/preview`: Secure author preview of draft content.
 - `POST /author/articles/:id/submit`: Transition article from `DRAFT` or `REJECTED` to `PENDING_REVIEW`.
 
-### Editorial & Administration (`/api/v1/admin/articles`)
+### Editorial & Administration (`/api/v1/admin/articles`, `/api/v1/categories`)
 - `GET /admin/articles`: Filter all articles across system statuses (`PENDING_REVIEW`, etc.).
 - `POST /admin/articles/:id/approve`: Move article to `APPROVED`.
 - `POST /admin/articles/:id/reject`: Reject article with required `rejectionReason`.
-- `POST /admin/articles/:id/publish`: Publish approved article (updates status & `publishedAt`).
+- `POST /admin/articles/:id/publish`: Publish article live directly or from review queue (`article.publish` permission; updates status to `PUBLISHED`, locks slug history, & sets `publishedAt`).
 - `POST /admin/articles/:id/schedule`: Set future publication time.
-- `POST /admin/articles/:id/unpublish`: Revert article to `ARCHIVED` or `DRAFT`.
+- `POST /admin/articles/:id/unpublish`: Revert live article to `ARCHIVED` (`article.publish` / `article.unpublish` permission).
+- `POST /categories/merge`: Merge duplicate category into target category transactionally (`category.merge` / `category.manage`).
 
 ### Community (`/api/v1/comments`, `/api/v1/bookmarks`)
 - `GET /articles/:id/comments`: Fetch root comments for an article (paginated).
@@ -110,9 +116,19 @@ For paginated collections:
 - `POST /articles/:id/comments`: Create top-level comment or reply (depth <= 1).
 - `POST /comments/:id/like`: Toggle like/upvote on comment.
 - `POST /comments/:id/report`: Submit moderation report for comment.
+- `DELETE /comments/:commentId`: Delete comment (author ownership verification or `comment.moderate` / Super Admin permission).
 - `POST /articles/:id/bookmark`: Toggle bookmark for authenticated reader.
 - `GET /account/bookmarks`: List reader's saved research library.
 
 ### Media Abstraction (`/api/v1/media`)
 - `POST /media/upload`: Multipart file upload. Processes through Sharp, stores via active `StorageProvider`, creates `Media` record.
 - `DELETE /media/:id`: Deletes media from storage and database (if not linked to published articles).
+
+### Contact & Sponsorship Inquiries (`/api/v1/contact`, `/api/v1/admin/contact-messages`)
+- `POST /contact/sponsorship`: Public submission of brand sponsorship and research partnership inquiries (rate-limited, sanitized, persists to `contact_messages`).
+- `POST /contact`: Public submission of general reader inquiries and editorial correspondence (rate-limited, sanitized, persists to `contact_messages`).
+- `POST /contact/general`: Alias for general reader inquiries.
+- `GET /admin/contact-messages`: Permission-gated (`contact.manage`) paginated list with `status` (`unread`, `pending`, `resolved`) and `type` (`sponsorship`, `general`) filters, plus keyword search.
+- `PATCH /admin/contact-messages/:id`: Permission-gated (`contact.manage`) update to toggle `isRead` or `isResolved` status (creates audit log).
+- `DELETE /admin/contact-messages/:id`: Permission-gated (`contact.manage`) deletion of inquiry (creates audit log).
+

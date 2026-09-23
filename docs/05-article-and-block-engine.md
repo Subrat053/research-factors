@@ -11,6 +11,23 @@ This block-based architecture ensures:
 
 ---
 
+## 2. Article Formats & Editorial Genres (`ArticleType`)
+
+Every manuscript is assigned a primary editorial format that defines its investigative nature and drives cross-platform discovery:
+
+| Format Code | UI Display Label | Journalistic Scope |
+| :--- | :--- | :--- |
+| **`RESEARCH`** | Research | Original empirical studies, bench testing, and experimental results. |
+| **`REVIEW`** | Review | Systematic literature reviews and technological state-of-the-art surveys. |
+| **`COMPARISON`**| Comparison | Side-by-side benchmark evaluations and architectural comparisons. |
+| **`ANALYSIS`** | Analysis | In-depth economic, policy, and industry landscape investigations. |
+| **`GUIDE`** | Guide | Practical engineering methodologies, protocols, and implementation workflows. |
+| **`OPINION`** | Opinion | Expert perspectives, speculative essays, and editorial commentaries. |
+
+Authors dynamically select their manuscript's format in the Author Studio (`ArticleEditorPage`). The chosen format is stored in `Article.type`, validated against `VALID_ARTICLE_TYPES` in `ArticleService`, and rendered as a clickable discovery badge across public reading views.
+
+---
+
 ## 2. Article State Machine Lifecycle
 
 ```
@@ -55,11 +72,20 @@ This block-based architecture ensures:
 Each block in `ArticleBlock` contains `blockType`, integer `position`, and a structured `content` JSON payload.
 
 ### 1. Paragraph Block (`paragraph`)
+Drafted using the custom Tiptap v2 Rich Text Editor (`RichTextEditor.jsx`) using 100% free open-source MIT extensions:
+- **Core Marks**: Bold (`Ctrl+B`), Italic (`Ctrl+I`), Underline (`Ctrl+U` via `@tiptap/extension-underline`), Strikethrough, Inline Code.
+- **Scientific Typography**: Subscript (`@tiptap/extension-subscript` for formulas like $H_2O$), Superscript (`@tiptap/extension-superscript` for exponents $10^9$ and citations $[1]$).
+- **Hyperlinks**: Insert/Edit/Unlink interactive popover with protocol normalization (`@tiptap/extension-link`, enforced `rel="noopener noreferrer"` and `target="_blank"`).
+- **Lists & Quotes**: Bullet lists, Ordered lists, Blockquotes.
+- **Editorial Productivity**: Clear formatting, Undo, Redo, live word and character counters.
+- **Server-Side Security**: All block HTML is strictly sanitized in `article.service.js` via `sanitize-html` against an XSS allowlist before database storage (adhering to Rule 6).
+
 ```json
 {
   "type": "paragraph",
   "content": {
-    "text": "Recent empirical studies indicate that quantum computing accelerates optimization algorithms by a factor of..."
+    "text": "Recent empirical studies indicate that quantum computing accelerates optimization algorithms by a factor of...",
+    "html": "<p>Recent empirical studies indicate that <strong>quantum computing</strong> accelerates optimization algorithms by a factor of 10<sup>9</sup>, referencing <a href=\"https://doi.org/...\" target=\"_blank\" rel=\"noopener noreferrer\">published benchmarks</a>.</p>"
   }
 }
 ```
@@ -214,11 +240,11 @@ If a slug collision occurs:
 
 ## 7. Authoring Studio & Interactive Block Matrix Implementation
 
-The manuscript editor (`/editor` and `/editor/:id`) in [`ArticleEditorPage.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/author/ArticleEditorPage.jsx) provides a dynamic, resilient block authoring studio:
+The manuscript editor (`/admin/editor` and `/admin/editor/:id`, with seamless canonical redirects from `/editor` and `/editor/:id`) in [`ArticleEditorPage.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/author/ArticleEditorPage.jsx) is integrated directly inside [`AdminLayout.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/components/admin/AdminLayout.jsx). It provides a unified, dark editorial studio experience with full portal sidebar navigation, real-time save state indicators, live production preview, and a dynamic block authoring matrix:
 
 ### 1. Dynamic RBAC Permission Checks
 All actions are conditionally enabled based on the author's resolved permissions via `useAuth().hasPermission`:
-- `article.create`: Required to access the manuscript studio and initialize new drafts.
+- `article.create`: Required to access the manuscript studio and initialize new drafts (highlights "Write Article" in the admin portal sidebar).
 - `article.update_own`: Enforced on `PATCH /api/v1/articles/:id/draft`.
 - `article.submit`: Required to trigger `POST /api/v1/articles/:id/submit`. Submitting users without this permission are given an informative alert.
 - `media.upload`: Required to upload manual image files. If unavailable, authors are informed and offered an external URL fallback.
@@ -230,7 +256,7 @@ All actions are conditionally enabled based on the author's resolved permissions
 
 ### 3. Interactive Content Block Form Controls
 - **Heading**: H2 Section vs. H3 Subsection level toggles with title input.
-- **Paragraph**: Multiline prose textarea with live word count, storing both clean text and semantic HTML.
+- **Paragraph**: Production-Ready Tiptap Rich Text Editor (`@tiptap/react` + `@tiptap/starter-kit`) with dedicated formatting toolbar (Bold, Italic, Strikethrough, Inline Code, Bullet Lists, Numbered Lists, Blockquotes, Clear Formatting, Undo/Redo), real-time word/character count, and dual output of clean text and semantic HTML. Rendered safely on public and preview pages via `.rich-prose` in [`BlockRenderer.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/components/article/BlockRenderer.jsx).
 - **Pull Quote**: Dedicated inputs for quotation prose, author attribution, and publication source citation.
 - **Callout Box**: Multi-variant selector (`info`, `warning`, `tip`), title input, and observation body text.
 - **Comparison Matrix Table**: Visual spreadsheet-style editor supporting dynamic `+ Add Column`, `- Remove Column`, `+ Add Row`, and `- Remove Row` with real-time JSON synchronization.
@@ -250,12 +276,34 @@ All actions are conditionally enabled based on the author's resolved permissions
 - Backend exposes `GET /api/v1/articles/featured` to retrieve the latest featured published research.
 - The Homepage masthead (`HomePage.jsx`) queries this endpoint, displaying the featured article in the hero slot (`<ArticleCard variant="featured" />`) with an editorial `Featured` badge and deduplicating it from the general feed.
 
+### 6. Direct Publishing & Dual Publish/Unpublish Action
+- Privileged editorial roles with `article.publish` permission can directly publish any manuscript live via `POST /api/v1/admin/articles/:id/publish` without routing through the peer review queue.
+- In [`ArticleManagementPage.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/admin/ArticleManagementPage.jsx), the action controls feature a dual publish/unpublish action:
+  - When an article is not published (`DRAFT`, `PENDING_REVIEW`, `REJECTED`, or `ARCHIVED`), clicking the `<Globe />` button directly publishes the article live, recording slug history and timestamp.
+  - When an article is `PUBLISHED`, clicking the `<Archive />` button immediately unpublishes/archives it (`ARCHIVED`), hiding it from public discovery while preserving content and history.
+- In [`ArticleEditorPage.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/author/ArticleEditorPage.jsx), users with `article.publish` permission have direct **Publish Live** and **Unpublish** header buttons in the manuscript studio, eliminating unnecessary review overhead for administrators and senior editors.
+
+### 7. Spatial Rhythm & Field Ordering Alignment with Desktop Reader Layout
+The form controls in [`ArticleEditorPage.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/author/ArticleEditorPage.jsx) strictly mirror the top-to-bottom visual hierarchy of the reader view ([`ArticleDetailPage.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/public/ArticleDetailPage.jsx)):
+1. **Top Header Taxonomy Bar**: Category selector + Custom category creator + Article format / genre dropdown (`RESEARCH`, `REVIEW`, `COMPARISON`, `ANALYSIS`, `GUIDE`, `OPINION`) + Live estimated reading time badge (`~X min read` / word count).
+2. **Manuscript Headline**: High-contrast serif H1 title input.
+3. **Subtitle / Thesis Statement**: Subtitle input matching public reader font scale.
+4. **Abstract / Executive Summary**: Two-row excerpt textarea for archive cards, RSS, and SEO description tags.
+5. **Hero Cover Asset**: Prominent wide hero section with Sharp WebP file dropzone, direct URL mode, high-fidelity preview banner, and **Cover Image Alt Text & Figure Caption** (`coverImageAlt`).
+6. **Manuscript Content Blocks**: Interactive block sequence with rich paragraph editing and real-time word counters.
+7. **Topic Tags (Research Taxonomies)**: Positioned at the bottom after content blocks with dual-format `#tag_name` chips, hashtag input, and autocomplete.
+
+### 8. Dual Light & Dark Theme Mode Support
+- Integrated via [`ThemeContext.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/context/ThemeContext.jsx) with `localStorage` persistence and `document.documentElement` `.dark` class synchronization.
+- Top navigation bar and sidebar footer in [`AdminLayout.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/components/admin/AdminLayout.jsx) feature an instant Sun / Moon theme toggle button.
+- Full high-contrast styling across all admin portals, layout chrome, block containers, and inputs in both Light Mode (crisp editorial slate/white) and Dark Mode (sleek dark slate).
+
 ---
 
 ## 8. Future Roadmap for Article Engine
 
-1. **WYSIWYG Inline Formatting Toolbar**:
-   - Embed lightweight inline marks (bold, italic, code snippet, footnote superscript, and hyperlinks) directly inside paragraph textareas via Tiptap extension integration.
+1. **Inline Link Annotations & Footnotes in Rich Editor**:
+   - Add a modal link annotator and academic footnote superscript reference extension into `RichTextEditor.jsx`.
 2. **Draft Revisions & Rollback History**:
    - Introduce an `ArticleRevision` model in PostgreSQL to snapshot manuscript states on every explicit save or review submission, allowing authors to compare diffs and restore previous checkpoints.
 3. **Collaborative Draft Presence & Soft Locking**:

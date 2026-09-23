@@ -75,4 +75,17 @@ export class CategoryController {
       next(err);
     }
   }
+
+  static async mergeCategories(req, res, next) {
+    try {
+      const result = await CategoryService.mergeCategories(req.body, req.user?.id);
+      res.json({
+        success: true,
+        data: result,
+        message: 'Categories merged successfully'
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }

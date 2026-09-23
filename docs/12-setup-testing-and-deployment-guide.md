@@ -173,3 +173,39 @@ npm run test             # Component tests
 3. **Automated Test Run**: Executes unit and integration test suites against ephemeral PostgreSQL service container.
 4. **Vite Build**: Tests frontend bundle compilation and verifies asset tree.
 5. **Deployment**: Deploys frontend to CDN (e.g. Cloudflare Pages) and backend container to managed hosting (e.g. AWS ECS / Render / Railway).
+
+---
+
+## 4. Frontend Production Deployment & Optimization Architecture
+
+The frontend is built with high-performance production optimizations:
+
+### 1. Route-Level Code Splitting & Vendor Chunking
+- **Entry Chunk**: Minified to **~73 kB (gzip: ~26 kB)** using route-level lazy loading (`React.lazy()` + `<Suspense>`).
+- **Heavy Engines Isolated**: The Tiptap rich-text manuscript editor (`@tiptap/*`, ~332 kB) is bundled into a separate `vendor-tiptap` chunk and downloaded **only** when navigating to `/admin/editor`. Public readers on `/` or `/research/:slug` never download editor dependencies.
+- **Vendor Splitting**:
+  - `vendor-react`: Core runtime (`react`, `react-dom`, `react-router-dom`, `react-helmet-async`)
+  - `vendor-tanstack`: Data caching layer (`@tanstack/react-query`)
+  - `vendor-tiptap`: Block editor engine (`@tiptap/react`, `@tiptap/starter-kit`, extensions)
+  - `vendor-icons`: Icon assets (`lucide-react`)
+  - `vendor-forms`: Validation & schemas (`react-hook-form`, `zod`)
+
+### 2. Fault-Tolerant Error Boundaries
+- Uncaught runtime rendering errors are trapped by [`frontend/src/components/common/ErrorBoundary.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/components/common/ErrorBoundary.jsx), rendering an editorial-styled recovery screen with reload and home recovery navigation rather than a blank white screen.
+
+### 3. SPA Routing & Server Redirects
+Because client-side routing is handled by React Router, web servers must rewrite deep URLs to `/index.html`:
+- **Cloudflare Pages / Netlify**: Configured via [`frontend/public/_redirects`](file:///d:/Wizmonk/ResearchFactor/frontend/public/_redirects) (`/* /index.html 200`).
+- **Nginx / Docker**: Configured via [`frontend/nginx.conf`](file:///d:/Wizmonk/ResearchFactor/frontend/nginx.conf) (`try_files $uri $uri/ /index.html;`).
+
+### 4. Search Engine Crawling & Discovery
+- [`frontend/public/robots.txt`](file:///d:/Wizmonk/ResearchFactor/frontend/public/robots.txt) grants full access to public editorial routes while shielding `/admin/`, `/editor/`, and auth endpoints.
+- [`frontend/public/sitemap.xml`](file:///d:/Wizmonk/ResearchFactor/frontend/public/sitemap.xml) pre-declares canonical publication URLs with change frequencies.
+
+### 5. Subfolder Deployment (`/rf/` Subpath)
+When deploying the frontend to a subfolder (e.g. `https://demo.wizmonk.com/rf`):
+1. **Base URL**: Set via `VITE_BASE_PATH=/rf/` in environment variables, or defaults to `/rf/` in `vite.config.js`.
+2. **Router Basename**: React Router automatically inherits `import.meta.env.BASE_URL` (`<BrowserRouter basename={import.meta.env.BASE_URL}>`).
+3. **Apache / cPanel (.htaccess)**: [`frontend/public/.htaccess`](file:///d:/Wizmonk/ResearchFactor/frontend/public/.htaccess) handles URL rewrites with `RewriteBase /rf/` and `RewriteRule . /rf/index.html [L]`.
+4. **Static Redirects**: [`frontend/public/_redirects`](file:///d:/Wizmonk/ResearchFactor/frontend/public/_redirects) routes `/rf/* /rf/index.html 200`.
+

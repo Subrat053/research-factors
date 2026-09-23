@@ -183,4 +183,133 @@ export class CategoryService {
       return cat;
     });
   }
+
+  /**
+   * Dynamically resolves or creates a category by ID or Name
+   * Enables authors to assign or introduce new categories during manuscript authoring
+   */
+  static async findOrCreateCategory(categoryInput, actorId = null) {
+    if (!categoryInput) return null;
+
+    const input = String(categoryInput).trim();
+    if (!input) return null;
+
+    // Check if input is a valid UUID
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input);
+    if (isUuid) {
+      const existingById = await prisma.category.findUnique({ where: { id: input } });
+      if (existingById) return existingById;
+    }
+
+    // Look up by name or slug (case-insensitive)
+    const slug = input.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const existing = await prisma.category.findFirst({
+      where: {
+        OR: [
+          { name: { equals: input, mode: 'insensitive' } },
+          { slug }
+        ]
+      }
+    });
+
+    if (existing) return existing;
+
+    // Format proper Title Case for display name if it was slug-like
+    const formattedName = input.includes('-') || input.includes('_')
+      ? input.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+      : input.replace(/\b\w/g, c => c.toUpperCase());
+
+    return prisma.$transaction(async (tx) => {
+      const newCategory = await tx.category.create({
+        data: {
+          name: formattedName,
+          slug,
+          isActive: true
+        }
+      });
+
+      if (actorId) {
+        await tx.auditLog.create({
+          data: {
+            actorId,
+            action: 'category.author_create',
+            entityType: 'Category',
+            entityId: newCategory.id,
+            metadata: { name: newCategory.name, slug: newCategory.slug }
+          }
+        });
+      }
+
+      return newCategory;
+    });
+  }
+
+  /**
+   * Merges sourceCategory into targetCategory, reassigning all articles and child categories
+   */
+  static async mergeCategories({ sourceCategoryId, targetCategoryId }, actorId) {
+    if (!sourceCategoryId || !targetCategoryId) {
+      throw new AppError('Both sourceCategoryId and targetCategoryId are required', 400, 'INVALID_MERGE_REQUEST');
+    }
+
+    if (sourceCategoryId === targetCategoryId) {
+      throw new AppError('Cannot merge a category into itself', 400, 'CANNOT_MERGE_SAME_CATEGORY');
+    }
+
+    const [sourceCategory, targetCategory] = await Promise.all([
+      prisma.category.findUnique({ where: { id: sourceCategoryId }, include: { articles: true, children: true } }),
+      prisma.category.findUnique({ where: { id: targetCategoryId } })
+    ]);
+
+    if (!sourceCategory || !targetCategory) {
+      throw new AppError('One or both specified categories do not exist', 404, 'CATEGORY_NOT_FOUND');
+    }
+
+    const reassignedArticlesCount = sourceCategory.articles.length;
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Reassign all articles to target category
+      if (reassignedArticlesCount > 0) {
+        await tx.article.updateMany({
+          where: { categoryId: sourceCategoryId },
+          data: { categoryId: targetCategoryId }
+        });
+      }
+
+      // 2. Reassign any children of sourceCategory to targetCategory
+      if (sourceCategory.children.length > 0) {
+        await tx.category.updateMany({
+          where: { parentId: sourceCategoryId },
+          data: { parentId: targetCategoryId }
+        });
+      }
+
+      // 3. Delete sourceCategory
+      await tx.category.delete({ where: { id: sourceCategoryId } });
+
+      // 4. Record Audit Log
+      if (actorId) {
+        await tx.auditLog.create({
+          data: {
+            actorId,
+            action: 'category.merge',
+            entityType: 'Category',
+            entityId: targetCategoryId,
+            metadata: {
+              mergedSource: { id: sourceCategory.id, name: sourceCategory.name, slug: sourceCategory.slug },
+              target: { id: targetCategory.id, name: targetCategory.name, slug: targetCategory.slug },
+              reassignedArticlesCount
+            }
+          }
+        });
+      }
+    });
+
+    return {
+      success: true,
+      mergedInto: { id: targetCategory.id, name: targetCategory.name },
+      deletedCategory: { id: sourceCategory.id, name: sourceCategory.name },
+      articlesReassigned: reassignedArticlesCount
+    };
+  }
 }

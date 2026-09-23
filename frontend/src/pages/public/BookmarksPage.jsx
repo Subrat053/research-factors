@@ -29,14 +29,14 @@ export default function BookmarksPage() {
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
         <div className="border-b border-paper-border pb-8 mb-10">
-          <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-widest text-rfblue mb-2">
+          <div className="flex items-center space-x-2 text-eyebrow text-rfblue mb-2">
             <Bookmark className="w-4 h-4" />
             <span>Reading Library</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-serif font-bold text-ink-darkest">
+          <h1 className="text-ink-darkest">
             Saved Articles & Research
           </h1>
-          <p className="text-sm text-ink-muted mt-2 max-w-xl font-light">
+          <p className="text-sm sm:text-base text-ink-muted mt-2 max-w-xl">
             Your personal collection of peer-reviewed articles, comparisons, and investigations.
           </p>
         </div>
@@ -55,7 +55,7 @@ export default function BookmarksPage() {
             <div className="w-16 h-16 rounded-2xl bg-rfblue-50 text-rfblue mx-auto flex items-center justify-center mb-4">
               <Bookmark className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-serif font-bold text-ink-darkest mb-2">
+            <h3 className="text-card-title text-ink-darkest mb-2">
               No Saved Articles Yet
             </h3>
             <p className="text-sm text-ink-muted max-w-sm mx-auto mb-6">

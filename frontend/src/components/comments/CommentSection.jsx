@@ -112,16 +112,19 @@ export const CommentSection = ({ articleId }) => {
       );
     } catch (err) {
       alert(err.response?.data?.error?.message || 'Failed to delete response');
+      throw err;
     }
   };
+
+  const totalResponsesCount = comments.reduce((acc, c) => acc + 1 + (c.replies?.length || 0), 0);
 
   return (
     <section className="mt-16 pt-12 border-t border-slate-200 dark:border-zinc-800">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-brand-600 dark:text-brand-400" />
-          <h3 className="font-serif text-2xl font-bold text-slate-900 dark:text-white">
-            Responses ({comments.length})
+          <MessageSquare className="w-5 h-5 text-rfblue  " />
+          <h3 className="text-2xl font-bold text-slate-900">
+            Comments ({totalResponsesCount})
           </h3>
         </div>
       </div>
@@ -129,7 +132,7 @@ export const CommentSection = ({ articleId }) => {
       {/* Post comment form */}
       {user ? (
         <form onSubmit={handlePostComment} className="mb-10">
-          <div className="rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 shadow-sm focus-within:border-brand-500 transition-colors">
+          <div className="rounded-xl border border-slate-200  bg-white  p-4 shadow-sm focus-within:border-rfblue transition-colors">
             <textarea
               value={newCommentText}
               onChange={(e) => setNewCommentText(e.target.value)}
@@ -145,13 +148,13 @@ export const CommentSection = ({ articleId }) => {
               <button
                 type="submit"
                 disabled={submitting || !newCommentText.trim()}
-                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm transition-all disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-rfblue hover:bg-rfblue-700 rounded-lg shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {submitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
-                    <span>Publish Response</span>
+                    <span>Comment</span>
                     <Send className="w-3.5 h-3.5" />
                   </>
                 )}
@@ -160,15 +163,15 @@ export const CommentSection = ({ articleId }) => {
           </div>
         </form>
       ) : (
-        <div className="mb-10 p-6 rounded-xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-200 dark:border-zinc-800 text-center">
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+        <div className="mb-10 p-6 rounded-xl bg-slate-50  border border-slate-200 text-center">
+          <p className="text-sm text-slate-600  mb-3">
             Join the conversation. Sign in to contribute peer feedback and questions.
           </p>
           <Link
             to="/login"
-            className="inline-flex items-center px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-100 rounded-lg transition-colors"
+            className="inline-flex items-center px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800  rounded-lg transition-colors"
           >
-            Sign In to Respond
+            Sign In to Comment
           </Link>
         </div>
       )}

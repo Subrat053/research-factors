@@ -23,7 +23,7 @@ export const requireArticleOwnership = async (req, res, next) => {
     }
 
     const isOwner = article.authorId === req.user.id;
-    const canOverride = req.user.isSuperAdmin || req.user.permissions?.has('article.update_any');
+    const canOverride = req.user.isSuperAdmin || req.user.permissions?.has('article.update_any') || req.user.permissions?.has('article.approve');
 
     if (!isOwner && !canOverride) {
       return next(new AppError('Access denied: You do not own this article', 403, 'FORBIDDEN_OWNERSHIP'));

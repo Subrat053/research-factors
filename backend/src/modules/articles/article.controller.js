@@ -65,7 +65,7 @@ export class ArticleController {
 
   static async getTrending(req, res, next) {
     try {
-      const articles = await ArticleService.getTrendingArticles(5);
+      const articles = await ArticleService.getTrendingArticles(6);
       res.json({
         success: true,
         data: articles.map(a => ArticleDTO.toPublicSummary(a))

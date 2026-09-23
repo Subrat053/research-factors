@@ -28,10 +28,28 @@ export default {
           50: '#EFF6FF',
           100: '#DBEAFE',
           200: '#BFDBFE',
+          300: '#93C5FD',
+          400: '#60A5FA',
+          500: '#3B82F6',
           600: '#2563EB',
           700: '#1D4ED8',
           800: '#1E40AF',
           900: '#0F2B5C',
+          950: '#081734',
+          DEFAULT: '#1E40AF'
+        },
+        brand: {
+          50: '#EFF6FF',
+          100: '#DBEAFE',
+          200: '#BFDBFE',
+          300: '#93C5FD',
+          400: '#60A5FA',
+          500: '#3B82F6',
+          600: '#2563EB',
+          700: '#1D4ED8',
+          800: '#1E40AF',
+          900: '#0F2B5C',
+          950: '#081734',
           DEFAULT: '#1E40AF'
         },
         // 4. Minimal Accent & Alert Red (<5% surface)
@@ -45,8 +63,8 @@ export default {
         }
       },
       fontFamily: {
-        serif: ['Newsreader', 'Merriweather', 'Georgia', 'serif'],
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif']
+        sans: ['-apple-system', 'BlinkMacSystemFont', 'system-ui', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'],
+        serif: ['-apple-system', 'BlinkMacSystemFont', 'system-ui', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif']
       },
       maxWidth: {
         prose: '72ch'

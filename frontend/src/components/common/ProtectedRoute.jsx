@@ -32,7 +32,7 @@ export function ProtectedRoute({ children, requiredPermission, requiredAnyPermis
           <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mb-4">
             ⚠️
           </div>
-          <h2 className="text-2xl font-serif font-bold text-ink-darkest mb-2">Access Restricted</h2>
+          <h2 className="text-2xl font-bold text-ink-darkest mb-2">Access Restricted</h2>
           <p className="text-sm text-ink-muted max-w-md mb-6">
             Your account does not possess the permissions required to view this editorial resource.
           </p>
@@ -50,7 +50,7 @@ export function ProtectedRoute({ children, requiredPermission, requiredAnyPermis
           <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mb-4">
             ⚠️
           </div>
-          <h2 className="text-2xl font-serif font-bold text-ink-darkest mb-2">Access Restricted</h2>
+          <h2 className="text-2xl font-bold text-ink-darkest mb-2">Access Restricted</h2>
           <p className="text-sm text-ink-muted max-w-md mb-6">
             Your account does not possess administrative permissions required to view this resource.
           </p>
@@ -65,7 +65,7 @@ export function ProtectedRoute({ children, requiredPermission, requiredAnyPermis
         <div className="w-12 h-12 rounded-full bg-rfred-50 text-rfred flex items-center justify-center mb-4">
           ⚠️
         </div>
-        <h2 className="text-2xl font-serif font-bold text-ink-darkest mb-2">Unauthorized Role</h2>
+        <h2 className="text-2xl font-bold text-ink-darkest mb-2">Unauthorized Role</h2>
         <p className="text-sm text-ink-muted max-w-md mb-6">
           This area is restricted to {requiredRole} accounts.
         </p>

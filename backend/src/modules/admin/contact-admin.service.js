@@ -5,7 +5,7 @@ export class ContactAdminService {
   /**
    * Lists contact inquiries with filtering
    */
-  static async listMessages({ status = '', search = '', page = 1, limit = 20 }) {
+  static async listMessages({ status = '', search = '', page = 1, limit = 20, type = '' }) {
     const skip = (Math.max(1, parseInt(page, 10)) - 1) * parseInt(limit, 10);
     const take = parseInt(limit, 10);
 
@@ -18,13 +18,24 @@ export class ContactAdminService {
       where.isResolved = false;
     }
 
+    if (type === 'sponsorship') {
+      where.subject = { startsWith: '[Sponsorship]' };
+    } else if (type === 'general') {
+      where.NOT = { subject: { startsWith: '[Sponsorship]' } };
+    }
+
     if (search && search.trim().length > 0) {
       const q = search.trim();
-      where.OR = [
+      const searchConditions = [
         { name: { contains: q, mode: 'insensitive' } },
         { email: { contains: q, mode: 'insensitive' } },
         { subject: { contains: q, mode: 'insensitive' } },
         { message: { contains: q, mode: 'insensitive' } }
+      ];
+
+      where.AND = [
+        ...(where.AND || []),
+        { OR: searchConditions }
       ];
     }
 

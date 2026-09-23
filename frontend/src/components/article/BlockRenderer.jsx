@@ -6,7 +6,7 @@ export function BlockRenderer({ blocks = [] }) {
   if (!blocks || blocks.length === 0) return null;
 
   return (
-    <div className="space-y-8 text-ink leading-relaxed font-light">
+    <div className="w-full space-y-8 text-ink leading-relaxed">
       {blocks.map((block, idx) => {
         const { blockType, content, id } = block;
         const key = id || idx;
@@ -23,7 +23,7 @@ export function BlockRenderer({ blocks = [] }) {
                 <h2
                   id={anchorId}
                   key={key}
-                  className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-ink-darkest pt-6 scroll-mt-24 border-b border-paper-border/60 pb-3"
+                  className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-darkest pt-6 scroll-mt-24 border-b border-paper-border/60 pb-3"
                 >
                   {text}
                 </h2>
@@ -33,7 +33,7 @@ export function BlockRenderer({ blocks = [] }) {
               <h3
                 id={anchorId}
                 key={key}
-                className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-ink-darkest pt-4 scroll-mt-24"
+                className="text-xl sm:text-2xl font-bold tracking-tight text-ink-darkest pt-4 scroll-mt-24"
               >
                 {text}
               </h3>
@@ -43,7 +43,21 @@ export function BlockRenderer({ blocks = [] }) {
           // 2. Paragraph Block
           case 'paragraph': {
             const isFirst = idx === 0 || (idx === 1 && blocks[0]?.blockType === 'heading');
-            const displayText = content?.text || (content?.html ? content.html.replace(/<[^>]+>/g, '') : (typeof content === 'string' ? content : ''));
+            const hasRichHtml = Boolean(content?.html && content.html.includes('<'));
+
+            if (hasRichHtml) {
+              return (
+                <div
+                  key={key}
+                  className={`rich-prose text-base sm:text-lg text-ink-muted leading-relaxed font-normal ${
+                    isFirst ? 'drop-cap' : ''
+                  }`}
+                  dangerouslySetInnerHTML={{ __html: content.html }}
+                />
+              );
+            }
+
+            const displayText = content?.text || (typeof content === 'string' ? content : '');
             return (
               <p
                 key={key}
@@ -124,7 +138,7 @@ export function BlockRenderer({ blocks = [] }) {
               <div key={key} className="my-10 overflow-hidden rounded-2xl border border-paper-border bg-white shadow-xs">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-paper border-b border-paper-border text-xs uppercase tracking-wider text-ink-darkest font-bold font-serif">
+                    <thead className="bg-paper border-b border-paper-border text-xs uppercase tracking-wider text-ink-darkest font-bold">
                       <tr>
                         {headers.map((h, hIdx) => (
                           <th key={hIdx} className="py-3.5 px-5 first:pl-6 last:pr-6">
@@ -161,7 +175,7 @@ export function BlockRenderer({ blocks = [] }) {
 
             return (
               <figure key={key} className="my-10 pl-6 border-l-4 border-rfblue py-2">
-                <blockquote className="font-serif text-xl sm:text-2xl italic font-medium text-ink-darkest leading-snug">
+                <blockquote className="text-xl sm:text-2xl italic font-medium text-ink-darkest leading-snug">
                   "{quoteText}"
                 </blockquote>
                 {(author || source) && (

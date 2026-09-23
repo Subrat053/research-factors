@@ -84,6 +84,12 @@ adminRoutes.post(
   AdminController.archiveArticle
 );
 
+adminRoutes.post(
+  '/articles/:id/publish',
+  requirePermission('article.publish'),
+  AdminController.publishArticle
+);
+
 adminRoutes.delete(
   '/articles/:id',
   requirePermission('article.delete_any'),
@@ -299,27 +305,28 @@ adminRoutes.patch(
   SettingsAdminController.updateRegistrationStatus
 );
 
-// ================= SYSTEM CONFIGURATION & HEALTH (SUPER ADMIN EXCLUSIVE) =================
+// ================= SYSTEM CONFIGURATION & HEALTH =================
 adminRoutes.get(
   '/settings',
-  requireSuperAdmin,
+  requireAnyPermission('system.settings', 'setting.manage'),
   SettingsAdminController.getAllSettings
 );
 
 adminRoutes.put(
   '/settings',
-  requireSuperAdmin,
+  requireAnyPermission('system.settings', 'setting.manage'),
   SettingsAdminController.updateSettings
 );
 
 adminRoutes.post(
   '/settings/test-email',
-  requireSuperAdmin,
+  requireAnyPermission('system.settings', 'setting.manage'),
   SettingsAdminController.testEmail
 );
 
 adminRoutes.get(
   '/settings/system-health',
-  requireSuperAdmin,
+  requireAnyPermission('system.settings', 'setting.manage', 'audit.read'),
   SettingsAdminController.getSystemHealth
 );
+

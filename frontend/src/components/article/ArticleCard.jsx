@@ -27,30 +27,37 @@ export function ArticleCard({ article, variant = 'standard' }) {
       })
     : null;
 
-  // 1. FEATURED HERO VARIANT (Ghost / Brightspot style)
+  // 1. FEATURED HERO VARIANT
   if (variant === 'featured') {
+    const displayExcerpt = subtitle || excerpt || 'In-depth empirical research, critical analysis, and findings from Research Factors.';
+
     return (
-      <article className="group relative bg-white rounded-3xl border border-paper-border overflow-hidden shadow-xs hover:shadow-xl hover:border-rfblue/30 transition-all duration-300">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
+      <article className="h-full w-full group relative bg-white rounded-2xl border border-paper-border overflow-hidden shadow-xs hover:shadow-md hover:border-rfblue/40 transition-all duration-200 flex flex-col">
+        <div className="flex flex-col md:grid md:grid-cols-2 gap-0 h-full flex-1">
           {/* Image Left */}
-          <div className="lg:col-span-7 overflow-hidden aspect-[16/10] lg:aspect-auto relative min-h-[320px] lg:min-h-[420px] bg-paper">
+          <div className="overflow-hidden h-[190px] sm:h-[210px] md:h-full relative bg-slate-100 shrink-0">
             {coverImageUrl ? (
               <img
                 src={normalizeMediaUrl(coverImageUrl)}
                 alt={title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500 ease-out"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-tr from-rfblue-900 to-rfblue-700 flex items-center justify-center p-8 text-white">
-                <span className="font-serif text-3xl font-bold opacity-30">Research Factors</span>
+              <div className="w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-rfblue/90 flex flex-col items-center justify-center p-6 text-white text-center">
+                <span className="text-xs uppercase tracking-widest font-bold text-rfblue-100/70 mb-1">
+                  Research Factors
+                </span>
+                <span className="text-xl sm:text-2xl font-bold opacity-40">
+                  Empirical Science
+                </span>
               </div>
             )}
-            <div className="absolute top-5 left-5 flex items-center space-x-2">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-white/90 backdrop-blur-md text-rfblue shadow-xs">
+            <div className="absolute top-4 left-4 flex items-center space-x-2">
+              <span className="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider bg-white/95 backdrop-blur-md text-rfblue shadow-xs">
                 {category?.name || 'Research'}
               </span>
               {article.isFeatured && (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-white shadow-xs">
+                <span className="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider bg-rfblue text-white shadow-xs">
                   Featured
                 </span>
               )}
@@ -58,36 +65,53 @@ export function ArticleCard({ article, variant = 'standard' }) {
           </div>
 
           {/* Editorial Content Right */}
-          <div className="lg:col-span-5 p-8 lg:p-12 flex flex-col justify-between">
+          <div className="p-5 sm:p-6 lg:p-7 flex flex-col justify-between h-full bg-white">
             <div>
-              <div className="flex items-center space-x-3 text-xs text-ink-light font-medium mb-4">
+              <div className="flex items-center space-x-2 text-xs text-ink-light font-medium mb-2.5">
                 <span>{formattedDate}</span>
                 <span>•</span>
                 <span className="flex items-center">
-                  <Clock className="w-3.5 h-3.5 mr-1" />
-                  {readingTimeMin} min read
+                  <Clock className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                  {readingTimeMin || 5} min read
                 </span>
               </div>
 
               <Link to={`/research/${slug}`} className="block group">
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-ink-darkest leading-tight tracking-tight group-hover:text-rfblue transition-colors">
+                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-ink-darkest leading-snug tracking-tight group-hover:text-rfblue transition-colors line-clamp-2">
                   {title}
                 </h2>
-                <p className="mt-4 text-sm sm:text-base text-ink-muted leading-relaxed font-light line-clamp-3">
-                  {subtitle || excerpt}
+                <p className="mt-2.5 text-xs sm:text-sm text-ink-muted leading-relaxed line-clamp-2 sm:line-clamp-3">
+                  {displayExcerpt}
                 </p>
               </Link>
             </div>
 
             {/* Author Footer */}
-            <div className="mt-8 pt-6 border-t border-paper-border flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-rfblue-50 border border-rfblue-100 flex items-center justify-center font-bold text-sm text-rfblue">
-                  {author?.firstName?.[0] || 'A'}
+            <div className="mt-4 pt-4 border-t border-paper-border flex items-center justify-between">
+              <div className="flex items-center space-x-3 min-w-0 pr-2">
+                <div className="w-9 h-9 rounded-lg overflow-hidden bg-rfblue-50 border border-rfblue-100 flex items-center justify-center font-bold text-xs text-rfblue shrink-0 shadow-2xs">
+                  {author?.avatarUrl ? (
+                    <img
+                      src={normalizeMediaUrl(author.avatarUrl)}
+                      alt={author.fullName || 'Author'}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const next = e.currentTarget.nextElementSibling;
+                        if (next) next.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <span
+                    className="w-full h-full flex items-center justify-center"
+                    style={{ display: author?.avatarUrl ? 'none' : 'flex' }}
+                  >
+                    {author?.firstName?.[0] || author?.fullName?.[0] || 'A'}
+                  </span>
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-ink-darkest">{author?.fullName}</h4>
-                  <p className="text-[11px] text-ink-light truncate max-w-[160px]">
+                <div className="min-w-0">
+                  <h4 className="text-xs sm:text-sm font-bold text-ink-darkest truncate">{author?.fullName}</h4>
+                  <p className="text-[11px] text-ink-light truncate max-w-[150px]">
                     {author?.authorProfile?.headline || 'Editorial Fellow'}
                   </p>
                 </div>
@@ -95,9 +119,10 @@ export function ArticleCard({ article, variant = 'standard' }) {
 
               <Link
                 to={`/research/${slug}`}
-                className="w-10 h-10 rounded-full bg-paper flex items-center justify-center text-ink-darkest group-hover:bg-rfblue group-hover:text-white transition-all shadow-xs"
+                className="w-9 h-9 rounded-lg bg-paper flex items-center justify-center text-ink-darkest group-hover:bg-rfblue group-hover:text-white transition-all shadow-2xs shrink-0"
+                title="Read Research"
               >
-                <ArrowUpRight className="w-5 h-5" />
+                <ArrowUpRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
@@ -106,23 +131,23 @@ export function ArticleCard({ article, variant = 'standard' }) {
     );
   }
 
-  // 2. COMPACT SIDEBAR VARIANT
+  // 2. COMPACT NUMBERED / SIDEBAR VARIANT
   if (variant === 'compact') {
     return (
-      <article className="group flex items-start space-x-4 py-4 border-b border-paper-border/60 last:border-0">
-        <div className="flex-1">
-          <div className="flex items-center space-x-2 text-[10px] uppercase font-bold tracking-wider text-rfblue mb-1">
-            <span>{category?.name}</span>
-            <span className="text-ink-light">• {readingTimeMin}m</span>
+      <article className="group flex items-start space-x-3.5 py-3.5 border-b border-paper-border/60 last:border-0">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-rfblue mb-1">
+            <span>{category?.name || 'Topic'}</span>
+            <span className="text-ink-light">• {readingTimeMin || 5}m</span>
           </div>
           <Link to={`/research/${slug}`}>
-            <h4 className="text-sm font-serif font-bold text-ink-darkest group-hover:text-rfblue transition-colors leading-snug line-clamp-2">
+            <h4 className="text-sm sm:text-base font-semibold text-ink-darkest group-hover:text-rfblue transition-colors leading-snug line-clamp-2">
               {title}
             </h4>
           </Link>
         </div>
         {coverImageUrl && (
-          <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-paper">
+          <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-paper border border-paper-border">
             <img
               src={normalizeMediaUrl(coverImageUrl)}
               alt={title}
@@ -134,9 +159,38 @@ export function ArticleCard({ article, variant = 'standard' }) {
     );
   }
 
-  // 3. STANDARD EDITORIAL GRID CARD (Default)
+  // 3. RELATED HORIZONTAL VARIANT (Left Image, Right Heading Only)
+  if (variant === 'related-horizontal') {
+    return (
+      <Link
+        to={`/research/${slug}`}
+        className="group flex items-center space-x-3.5 p-2 rounded-xl hover:bg-paper transition-colors duration-200"
+      >
+        <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-lg overflow-hidden shrink-0 bg-paper border border-paper-border">
+          {coverImageUrl ? (
+            <img
+              src={normalizeMediaUrl(coverImageUrl)}
+              alt={title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs text-ink-light text-center p-1">
+              Research Factors
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm sm:text-base font-semibold text-ink-darkest group-hover:text-rfblue transition-colors leading-snug line-clamp-2 sm:line-clamp-3">
+            {title}
+          </h4>
+        </div>
+      </Link>
+    );
+  }
+
+  // 3. STANDARD 4-COLUMN / GRID CARD (Default)
   return (
-    <article className="group flex flex-col justify-between bg-white rounded-2xl border border-paper-border overflow-hidden hover:shadow-lg hover:border-rfblue/30 transition-all duration-300">
+    <article className="group flex flex-col justify-between bg-white rounded-xl border border-paper-border overflow-hidden shadow-2xs hover:shadow-md hover:border-rfblue/40 transition-all duration-200">
       <div>
         {/* Cover Image Container */}
         <Link to={`/research/${slug}`} className="block relative aspect-[16/10] overflow-hidden bg-paper">
@@ -147,52 +201,69 @@ export function ArticleCard({ article, variant = 'standard' }) {
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
             />
           ) : (
-            <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs text-ink-light">
+            <div className="w-full h-full bg-slate-100 flex items-center justify-center text-sm text-ink-light">
               Research Factors
             </div>
           )}
           <div className="absolute top-3 left-3">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-md text-rfblue shadow-xs">
+            <span className="inline-flex items-center px-3 py-1 rounded-md text-xs sm:text-sm font-bold uppercase tracking-wider bg-white/95 backdrop-blur-md text-rfblue shadow-xs">
               {category?.name || 'Research'}
             </span>
           </div>
         </Link>
 
         {/* Content Body */}
-        <div className="p-6">
-          <div className="flex items-center space-x-2 text-xs text-ink-light font-medium mb-2.5">
+        <div className="p-5 sm:p-6">
+          <div className="flex items-center space-x-2 text-xs sm:text-sm text-ink-light font-medium mb-2.5">
             <span>{formattedDate}</span>
             <span>•</span>
             <span className="flex items-center">
-              <Clock className="w-3 h-3 mr-1" />
-              {readingTimeMin} min read
+              <Clock className="w-3.5 h-3.5 mr-1 text-slate-500" />
+              {readingTimeMin || 5} min read
             </span>
           </div>
 
           <Link to={`/research/${slug}`}>
-            <h3 className="text-lg font-serif font-bold text-ink-darkest group-hover:text-rfblue transition-colors leading-snug tracking-tight">
+            <h3 className="text-card-title group-hover:text-rfblue transition-colors line-clamp-2">
               {title}
             </h3>
           </Link>
 
-          <p className="mt-2.5 text-xs text-ink-muted leading-relaxed font-light line-clamp-2">
+          <p className="mt-2.5 text-xs sm:text-sm text-ink-muted leading-relaxed line-clamp-2">
             {excerpt || subtitle}
           </p>
         </div>
       </div>
 
       {/* Author Footer */}
-      <div className="px-6 py-4 bg-paper/50 border-t border-paper-border/60 flex items-center justify-between">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-7 h-7 rounded-full bg-rfblue-50 text-rfblue flex items-center justify-center font-bold text-xs">
-            {author?.firstName?.[0] || 'A'}
+      <div className="px-5 sm:px-6 py-3.5 bg-paper/40 border-t border-paper-border/60 flex items-center justify-between">
+        <div className="flex items-center space-x-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-md overflow-hidden bg-rfblue-50 text-rfblue flex items-center justify-center font-bold text-xs shrink-0 border border-rfblue-100 shadow-2xs">
+            {author?.avatarUrl ? (
+              <img
+                src={normalizeMediaUrl(author.avatarUrl)}
+                alt={author.fullName || 'Author'}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const next = e.currentTarget.nextElementSibling;
+                  if (next) next.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <span
+              className="w-full h-full flex items-center justify-center"
+              style={{ display: author?.avatarUrl ? 'none' : 'flex' }}
+            >
+              {author?.firstName?.[0] || author?.fullName?.[0] || 'A'}
+            </span>
           </div>
-          <span className="text-xs font-semibold text-ink-darkest">{author?.fullName}</span>
+          <span className="text-xs sm:text-sm font-semibold text-ink-darkest truncate">{author?.fullName}</span>
         </div>
 
         {commentCount > 0 && (
-          <span className="flex items-center text-xs text-ink-light">
-            <MessageSquare className="w-3.5 h-3.5 mr-1" />
+          <span className="flex items-center text-xs sm:text-sm text-ink-light shrink-0 ml-2">
+            <MessageSquare className="w-3.5 h-3.5 mr-1 text-slate-400" />
             {commentCount}
           </span>
         )}

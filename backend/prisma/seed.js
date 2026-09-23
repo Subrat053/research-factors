@@ -48,6 +48,7 @@ async function main() {
 
     // Taxonomy domain
     { action: 'category.manage', module: 'category', description: 'Manage categories' },
+    { action: 'category.merge', module: 'category', description: 'Merge redundant or duplicate categories' },
     { action: 'tag.manage', module: 'tag', description: 'Manage tags' },
 
     // Media domain
@@ -90,7 +91,7 @@ async function main() {
   const editorPerms = [
     ...authorPerms,
     'article.read_draft', 'article.update_any', 'article.approve', 'article.reject', 'article.publish',
-    'article.unpublish', 'article.schedule', 'comment.moderate', 'category.manage', 'tag.manage', 'media.delete_any'
+    'article.unpublish', 'article.schedule', 'comment.moderate', 'category.manage', 'category.merge', 'tag.manage', 'media.delete_any'
   ];
   const adminPerms = [
     ...editorPerms,
@@ -499,7 +500,7 @@ async function main() {
       value: {
         siteName: 'Research Factors',
         tagline: 'Research that helps you understand the world.',
-        contactEmail: 'editorial@researchfactors.com',
+        contactEmail: 'contact@researchfactors.com',
         socialLinks: {
           twitter: 'https://twitter.com/researchfactors',
           linkedin: 'https://linkedin.com/company/researchfactors',
