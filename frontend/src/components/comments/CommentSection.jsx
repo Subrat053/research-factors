@@ -123,7 +123,7 @@ export const CommentSection = ({ articleId }) => {
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-2">
           <MessageSquare className="w-5 h-5 text-rfblue  " />
-          <h3 className="text-2xl font-bold text-slate-900">
+          <h3 className="text-2xl font-semibold text-slate-900">
             Comments ({totalResponsesCount})
           </h3>
         </div>

@@ -20,23 +20,23 @@ export function BlockRenderer({ blocks = [] }) {
 
             if (level === 2) {
               return (
-                <h2
+                <h3
                   id={anchorId}
                   key={key}
-                  className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-darkest pt-6 scroll-mt-24 border-b border-paper-border/60 pb-3"
+                  className="text-2xl sm:text-3xl font-semibold tracking-tight text-ink-darkest pt-6 scroll-mt-24 border-b border-paper-border/60 pb-3"
                 >
                   {text}
-                </h2>
+                </h3>
               );
             }
             return (
-              <h3
+              <h4
                 id={anchorId}
                 key={key}
-                className="text-xl sm:text-2xl font-bold tracking-tight text-ink-darkest pt-4 scroll-mt-24"
+                className="text-xl sm:text-2xl font-semibold tracking-tight text-ink-darkest pt-4 scroll-mt-24"
               >
                 {text}
-              </h3>
+              </h4>
             );
           }
 

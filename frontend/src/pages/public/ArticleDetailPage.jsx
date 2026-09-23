@@ -171,9 +171,9 @@ export default function ArticleDetailPage() {
                 </div>
 
                 {/* 3. Primary Article Headline */}
-                <h1 className="text-ink-darkest">
+                <h2 className="text-ink-darkest font-semibold">
                   {article.title}
-                </h1>
+                </h2>
 
                 {/* 4. Subtitle / Excerpt */}
                 {article.subtitle && (
@@ -266,7 +266,7 @@ export default function ArticleDetailPage() {
                   <div className="pt-8 border-t border-paper-border">
                     <div className="flex items-center space-x-2 flex-wrap gap-y-2">
                       <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink-light mr-2">
-                        Topics:
+                        Tags:
                       </span>
                       {article.tags.map(tag => {
                         const raw = typeof tag === 'string' ? tag : (tag.slug || tag.name || '');

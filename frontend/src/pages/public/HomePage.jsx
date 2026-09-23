@@ -434,7 +434,7 @@ export default function HomePage() {
                       <Users className="w-4 h-4 text-slate-700 shrink-0" />
                       <span>Expert Written</span>
                     </div>
-                    <p className="text-xs sm:text-sm text-ink-light leading-snug">By industry specialists</p>
+                    <p className="text-xs sm:text-sm text-ink-muted leading-snug">By industry specialists</p>
                   </div>
 
                   <div>
@@ -442,7 +442,7 @@ export default function HomePage() {
                       <Activity className="w-4 h-4 text-slate-700 shrink-0" />
                       <span>Data Backed</span>
                     </div>
-                    <p className="text-xs sm:text-sm text-ink-light leading-snug">With empirical research</p>
+                    <p className="text-xs sm:text-sm text-ink-muted leading-snug">With empirical research</p>
                   </div>
 
                   <div>
@@ -450,7 +450,7 @@ export default function HomePage() {
                       <ShieldCheck className="w-4 h-4 text-slate-700 shrink-0" />
                       <span>Unbiased</span>
                     </div>
-                    <p className="text-xs sm:text-sm text-ink-light leading-snug">No brand bias, just facts</p>
+                    <p className="text-xs sm:text-sm text-ink-muted leading-snug">No brand bias, just facts</p>
                   </div>
                 </div>
               </div>
@@ -471,7 +471,7 @@ export default function HomePage() {
                       </div>
                       <span className="text-xs sm:text-sm font-bold text-ink-darkest">In-depth Analysis</span>
                     </div>
-                    <p className="text-xs text-ink-light leading-tight">Compare. Understand. Decide.</p>
+                    <p className="text-xs text-ink-muted leading-tight">Compare. Understand. Decide.</p>
                   </div>
 
                   {/* Floating Glass Badge 2: Bottom Left */}
@@ -482,7 +482,7 @@ export default function HomePage() {
                       </div>
                       <span className="text-xs sm:text-sm font-bold text-ink-darkest">Expert Insights</span>
                     </div>
-                    <p className="text-xs text-ink-light leading-tight">From industry specialists</p>
+                    <p className="text-xs  leading-tight">From industry specialists</p>
                   </div>
                 </div>
               </div>
@@ -500,7 +500,7 @@ export default function HomePage() {
                     </Link>
                   </div>
 
-                  <div className="divide-y divide-paper-border/60">
+                  <div className="divide-y text-ink-muted divide-paper-border/60">
                     {isTrendingLoading ? (
                       <div className="space-y-3.5 py-2 animate-pulse">
                         <div className="h-12 bg-paper-border/50 rounded" />
@@ -524,7 +524,7 @@ export default function HomePage() {
                             <h4 className="text-xs sm:text-sm font-semibold text-ink-darkest group-hover:text-rfblue transition-colors line-clamp-2 leading-snug">
                               {item.title}
                             </h4>
-                            <span className="text-xs text-ink-light mt-1 block">
+                            <span className="text-xs text-ink-muted mt-1 block">
                               {item.category?.name || 'Research'} • {item.readingTimeMin || 5} min read
                             </span>
                           </div>
@@ -548,7 +548,7 @@ export default function HomePage() {
                             <h4 className="text-xs sm:text-sm font-semibold text-ink-darkest line-clamp-2 leading-snug">
                               {item.title}
                             </h4>
-                            <span className="text-xs text-ink-light mt-1 block">{item.cat}</span>
+                            <span className="text-xs text-ink-muted mt-1 block">{item.cat}</span>
                           </div>
                         </div>
                       ))
@@ -614,7 +614,7 @@ export default function HomePage() {
                     </div>
 
                     <div className="mt-6 pt-4 border-t border-paper-border/60 flex items-center justify-between">
-                      <span className="text-xs sm:text-sm font-semibold text-ink-light">
+                      <span className="text-xs sm:text-sm font-semibold text-ink-muted">
                         {matchCategory?._count?.articles || 'Explore'} articles
                       </span>
                       <div className="w-7 h-7 rounded-full bg-paper flex items-center justify-center text-ink group-hover:bg-rfblue group-hover:text-white transition-colors">
@@ -813,7 +813,7 @@ export default function HomePage() {
                     </div>
                     <div>
                       <h4 className="text-sm sm:text-base font-bold text-ink-darkest">Native Sponsored Articles</h4>
-                      <p className="text-xs sm:text-sm text-ink-light leading-snug">Editorial-style, high-quality research</p>
+                      <p className="text-xs sm:text-sm text-ink-muted leading-snug">Editorial-style, high-quality research</p>
                     </div>
                   </motion.div>
 
@@ -827,7 +827,7 @@ export default function HomePage() {
                     </div>
                     <div>
                       <h4 className="text-sm sm:text-base font-bold text-ink-darkest">Targeted Audience</h4>
-                      <p className="text-xs sm:text-sm text-ink-light leading-snug">Tech-savvy, informed & decision-makers</p>
+                      <p className="text-xs sm:text-sm text-ink-muted leading-snug">Tech-savvy, informed & decision-makers</p>
                     </div>
                   </motion.div>
 
@@ -841,7 +841,7 @@ export default function HomePage() {
                     </div>
                     <div>
                       <h4 className="text-sm sm:text-base font-bold text-ink-darkest">Measurable Impact</h4>
-                      <p className="text-xs sm:text-sm text-ink-light leading-snug">Real traffic, deep engagement & brand lift</p>
+                      <p className="text-xs sm:text-sm text-ink-muted leading-snug">Real traffic, deep engagement & brand lift</p>
                     </div>
                   </motion.div>
 
@@ -855,7 +855,7 @@ export default function HomePage() {
                     </div>
                     <div>
                       <h4 className="text-sm sm:text-base font-bold text-ink-darkest">Flexible Collaboration</h4>
-                      <p className="text-xs sm:text-sm text-ink-light leading-snug">Custom packages tailored to campaign goals</p>
+                      <p className="text-xs sm:text-sm text-ink-muted leading-snug">Custom packages tailored to campaign goals</p>
                     </div>
                   </motion.div>
 
@@ -1077,7 +1077,7 @@ export default function HomePage() {
                       <h4 className="text-sm sm:text-base font-bold text-ink-darkest truncate">
                         {testimonials[testimonialIndex].author}
                       </h4>
-                      <p className="text-xs text-ink-light truncate">
+                      <p className="text-xs text-ink-muted truncate">
                         {testimonials[testimonialIndex].role}
                       </p>
                     </div>
@@ -1184,7 +1184,7 @@ export default function HomePage() {
               {/* For Readers Card */}
               <div className="p-8 sm:p-10 rounded-xl border border-paper-border bg-paper flex flex-col justify-between shadow-2xs">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-ink-light block mb-2.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-ink-muted block mb-2.5">
                     FOR READERS & RESEARCHERS
                   </span>
                   <h3 className="mb-3">
