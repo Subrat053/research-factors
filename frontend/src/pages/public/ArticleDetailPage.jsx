@@ -1,9 +1,10 @@
 import React from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { articlesApi } from '../../services/articles.api.js';
 import { normalizeMediaUrl } from '../../services/media.api.js';
+import { SeoHead } from '../../components/common/SeoHead.jsx';
 import { Header } from '../../components/layout/Header.jsx';
 import { Footer } from '../../components/layout/Footer.jsx';
 import { BlockRenderer } from '../../components/article/BlockRenderer.jsx';
@@ -15,11 +16,31 @@ import { DetailSkeleton } from '../../components/feedback/SkeletonLoader.jsx';
 import { CommentSection } from '../../components/comments/CommentSection.jsx';
 import { bookmarksApi } from '../../services/bookmarks.api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { Clock, Calendar, ChevronRight, User, ShieldCheck, Sparkles } from 'lucide-react';
+import { useAlert } from '../../context/ModalContext.jsx';
+import { Clock, Calendar, ChevronRight, User, ShieldCheck, Sparkles, ArrowRight } from 'lucide-react';
+
+// Helper for formatting tags in clean, human-readable normal form
+function formatNormalTag(tag) {
+  if (!tag) return { name: '', slug: '' };
+  const raw = typeof tag === 'string' ? tag : (tag.name || tag.slug || '');
+  const clean = String(raw).replace(/^#+/, '').trim();
+  const slug = (typeof tag === 'object' && tag.slug)
+    ? tag.slug
+    : clean.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+  let name = (typeof tag === 'object' && tag.name) ? tag.name : clean;
+  name = name.replace(/^#+/, '').trim();
+  if (name.includes('_') || (name.includes('-') && !name.includes(' '))) {
+    name = name.replace(/[-_]/g, ' ');
+  }
+  return { name, slug };
+}
 
 export default function ArticleDetailPage() {
-  const { slug } = useParams();
+  const { categorySlug: urlCategorySlug, slug } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const showAlert = useAlert();
   const [isBookmarked, setIsBookmarked] = React.useState(false);
 
   const { data, isLoading, error } = useQuery({
@@ -28,6 +49,23 @@ export default function ArticleDetailPage() {
   });
 
   const article = data?.data || null;
+
+  // Handle 301 permanent slug redirects & category URL canonicalization
+  React.useEffect(() => {
+    if (data?.redirect && data?.newSlug) {
+      const targetCat = data.categorySlug || 'research';
+      navigate(`/${targetCat}/${data.newSlug}`, { replace: true });
+      return;
+    }
+
+    if (article?.slug) {
+      const correctCategory = article.category?.slug || 'research';
+      // If accessed via legacy /research/:slug or /articles/:slug or mismatched category, canonicalize
+      if (urlCategorySlug === 'research' || urlCategorySlug === 'articles' || (urlCategorySlug && urlCategorySlug !== correctCategory)) {
+        navigate(`/${correctCategory}/${article.slug}`, { replace: true });
+      }
+    }
+  }, [data, article, urlCategorySlug, navigate]);
 
   // Dynamic fallback query if the article category has fewer than 4 related publications
   const { data: fallbackData } = useQuery({
@@ -116,14 +154,19 @@ export default function ArticleDetailPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-paper text-ink">
-      <Helmet>
-        <title>{article.seoTitle || article.title} — Research Factors</title>
-        <meta name="description" content={article.seoDescription || article.excerpt} />
-        <meta property="og:title" content={article.title} />
-        <meta property="og:description" content={article.excerpt} />
-        {article.coverImageUrl && <meta property="og:image" content={normalizeMediaUrl(article.coverImageUrl)} />}
-        {article.canonicalUrl && <link rel="canonical" href={article.canonicalUrl} />}
-      </Helmet>
+      {/* Production-Grade SEO, Social Cards & Schema.org JSON-LD Graph */}
+      <SeoHead
+        seo={article.seo}
+        title={`${article.seoTitle || article.title} — Research Factors`}
+        description={article.seoDescription || article.excerpt}
+        canonicalUrl={article.canonicalUrl}
+        openGraph={{
+          title: article.seoTitle || article.title,
+          description: article.seoDescription || article.excerpt,
+          image: article.coverImageUrl ? normalizeMediaUrl(article.coverImageUrl) : undefined,
+          type: 'article'
+        }}
+      />
 
       {/* Reading Scroll Progress Bar */}
       <ReadingProgressBar />
@@ -132,26 +175,28 @@ export default function ArticleDetailPage() {
 
       <main className="flex-1">
         {/* 2-Column Article Layout: Left Content & Right Sticky Sidebar */}
-        <article className="pt-8 sm:pt-10 pb-20">
+        <article className="pt-6 sm:pt-10 pb-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
               {/* LEFT COLUMN: All Article Content (8 cols) */}
               <div className="lg:col-span-8 space-y-8 min-w-0">
                 {/* 1. Breadcrumb Navigation */}
-                <nav className="flex items-center space-x-2 text-xs sm:text-sm text-ink-light flex-wrap">
+                <nav aria-label="Breadcrumbs" className="flex items-center space-x-2 text-xs sm:text-sm text-ink-light flex-wrap">
                   <Link to="/" className="hover:text-rfblue transition-colors">Home</Link>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                  <Link to="/research" className="hover:text-rfblue transition-colors">Research</Link>
-                  {article.category && (
-                    <>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                      <Link
-                        to={`/research?category=${article.category.slug}`}
-                        className="hover:text-rfblue font-medium text-ink-muted transition-colors"
-                      >
-                        {article.category.name}
-                      </Link>
-                    </>
+                  <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                  <Link to="/research" className="hover:text-rfblue transition-colors">Category</Link>
+                  <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                  {article.category ? (
+                    <Link
+                      to={`/categories/${article.category.slug}`}
+                      className="hover:text-rfblue font-semibold text-ink-darkest transition-colors"
+                    >
+                      {article.category.name}
+                    </Link>
+                  ) : (
+                    <span className="font-semibold text-ink-darkest">
+                      Research
+                    </span>
                   )}
                 </nav>
 
@@ -231,6 +276,7 @@ export default function ArticleDetailPage() {
                   {/* Share & Bookmark Actions */}
                   <div className="shrink-0 pt-2 border-t border-paper-border/60 md:border-t-0 md:pt-0 flex items-center justify-start md:justify-end">
                     <ShareBar
+                      article={article}
                       title={article.title}
                       onBookmark={handleBookmarkToggle}
                       isBookmarked={isBookmarked}
@@ -261,26 +307,24 @@ export default function ArticleDetailPage() {
                   <BlockRenderer blocks={article.blocks} />
                 </div>
 
-                {/* 8. Article Footer & Topic Tags */}
+                {/* 8. MOBILE ONLY: Topic Tags (On desktop, prominently rendered at top of right sidebar) */}
                 {article.tags && article.tags.length > 0 && (
-                  <div className="pt-8 border-t border-paper-border">
-                    <div className="flex items-center space-x-2 flex-wrap gap-y-2">
-                      <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink-light mr-2">
-                        Tags:
-                      </span>
-                      {article.tags.map(tag => {
-                        const raw = typeof tag === 'string' ? tag : (tag.slug || tag.name || '');
-                        const clean = raw.replace(/^#+/, '');
-                        const slug = (typeof tag === 'object' && tag.slug) ? tag.slug : clean.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                        const formatted = `#${slug.replace(/-/g, '_')}`;
+                  <div className="lg:hidden pt-8 border-t border-paper-border">
+                    <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink-light block mb-3">
+                      Tags:
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {article.tags.map((tag, idx) => {
+                        const { name, slug } = formatNormalTag(tag);
+                        if (!name) return null;
                         return (
                           <Link
-                            key={tag.id || slug}
+                            key={tag.id || slug || idx}
                             to={`/research?tag=${slug}`}
-                            className="px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-paper border border-paper-border text-ink-muted hover:text-white hover:bg-rfblue hover:border-rfblue cursor-pointer transition-colors shadow-2xs inline-flex items-center"
-                            title={`Browse research tagged ${formatted}`}
+                            className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-[#eef5f6] dark:bg-[#152e35] text-[#0f5466] dark:text-[#5eead4] hover:bg-[#dbebee] dark:hover:bg-[#1b3d46] transition-colors cursor-pointer border border-[#d6e7eb] dark:border-[#1e444e] shadow-2xs"
+                            title={`Browse research tagged ${name}`}
                           >
-                            {formatted}
+                            {name}
                           </Link>
                         );
                       })}
@@ -288,7 +332,36 @@ export default function ArticleDetailPage() {
                   </div>
                 )}
 
-                {/* 9. Author Biography Card */}
+                {/* 9. MOBILE ONLY: Sponsored Disclosure Card */}
+                {article.isSponsored && article.sponsorName && (
+                  <div className="lg:hidden p-6 rounded-2xl bg-white dark:bg-paper-card border border-paper-border shadow-xs space-y-3">
+                    <span className="text-[11px] font-bold tracking-widest text-rfblue dark:text-[#f87171] uppercase block">
+                      SPONSORED
+                    </span>
+                    <h3 className="font-serif text-xl font-bold text-ink-darkest">
+                      {article.sponsorName}
+                    </h3>
+                    {article.sponsorDescription && (
+                      <p className="text-xs sm:text-sm text-ink-muted leading-relaxed">
+                        {article.sponsorDescription}
+                      </p>
+                    )}
+                    {article.sponsorUrl && (
+                      <div className="pt-2">
+                        <a
+                          href={article.sponsorUrl}
+                          target="_blank"
+                          rel="noopener noreferrer sponsored"
+                          className="inline-flex items-center justify-center px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold text-white bg-rfblue hover:bg-[#a94f29] transition-colors shadow-2xs"
+                        >
+                          Visit Sponsor
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 10. Author Biography Card */}
                 <div className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-paper-card border border-paper-border shadow-xs flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-5">
                   <div className="w-16 h-16 rounded-2xl overflow-hidden bg-rfblue-50 dark:bg-rfblue-950/40 text-rfblue flex items-center justify-center font-bold text-xl border border-rfblue-100 dark:border-rfblue-800 shrink-0 shadow-2xs">
                     {article.author?.avatarUrl || article.author?.authorProfile?.avatarUrl ? (
@@ -333,7 +406,7 @@ export default function ArticleDetailPage() {
                   </div>
                 </div>
 
-                {/* 10. MOBILE / TABLET ONLY: Related Articles (Placed before comments on < lg) */}
+                {/* 11. MOBILE / TABLET ONLY: Related Articles (Placed before comments on < lg) */}
                 {relatedArticles.length > 0 && (
                   <div className="lg:hidden pt-8 border-t border-paper-border">
                     <div className="flex items-center justify-between mb-4">
@@ -350,35 +423,139 @@ export default function ArticleDetailPage() {
                   </div>
                 )}
 
-                {/* 11. Dynamic Peer Discussion & Comments */}
+                {/* Mobile Sponsorship Opportunity Banner (Available on all article pages) */}
+                <div className="lg:hidden relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#060D1A] via-[#0F172A] to-[#1E3A8A] text-white p-5 sm:p-6 shadow-md border border-slate-800 my-6">
+                  <div className="absolute top-0 right-0 -mr-6 -mt-6 w-24 h-24 bg-rfblue/20 rounded-full blur-2xl pointer-events-none" />
+                  <div className="relative z-10 space-y-3">
+                    <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white border border-white/15">
+                      <span>Sponsorship Opportunity</span>
+                    </div>
+                    <h3 className="font-serif text-lg font-bold text-white leading-snug">
+                      Want your organization to be part of the research?
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                      Reach readers who are already researching, comparing, and making informed choices. Sponsorship gives your brand a relevant space to showcase your products or services alongside research your audience is actively exploring.
+                    </p>
+                    <div className="pt-1">
+                      <Link
+                        to="/sponsorship"
+                        className="inline-flex items-center justify-center space-x-2 w-full sm:w-auto px-5 py-2.5 rounded-full text-xs font-semibold text-white bg-rfblue hover:bg-rfblue-600 transition-all duration-200 shadow-sm cursor-pointer group"
+                      >
+                        <span>Become a Sponsor</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                
+
+                {/* 12. Dynamic Peer Discussion & Comments */}
                 <CommentSection articleId={article.id} />
               </div>
 
-              {/* RIGHT COLUMN: Sticky Sidebar (4 cols - Desktop Only) */}
-              <aside className="hidden lg:block lg:col-span-4 min-w-0 h-full">
-                <div className="sticky top-24 space-y-6 max-h-[calc(100vh-6.5rem)] overflow-y-auto no-scrollbar pr-0.5">
-                  {/* Table of Contents (if article has headings) */}
-                  {headings.length > 0 && (
-                    <div className="bg-white dark:bg-paper-card rounded-2xl border border-paper-border p-5 shadow-xs">
-                      <TableOfContents headings={headings} />
+              {/* RIGHT COLUMN: Desktop Sidebar (4 cols - Desktop Only) */}
+              <aside className="hidden lg:block lg:col-span-4 min-w-0 space-y-6">
+                {/* 1. Tags Card (Header "Tags", normal-form badges) */}
+                {article.tags && article.tags.length > 0 && (
+                  <div className="bg-white dark:bg-paper-card rounded-2xl border border-paper-border p-6 shadow-xs">
+                    <h3 className="font-serif text-2xl font-bold tracking-tight text-ink-darkest mb-4">
+                      Tags
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {article.tags.map((tag, idx) => {
+                        const { name, slug } = formatNormalTag(tag);
+                        if (!name) return null;
+                        return (
+                          <Link
+                            key={tag.id || slug || idx}
+                            to={`/research?tag=${slug}`}
+                            className="px-3.5 py-1.5 rounded-full text-xs sm:text-[13px] font-medium bg-[#eef5f6] dark:bg-[#152e35] text-[#0f5466] dark:text-[#5eead4] hover:bg-[#dbebee] dark:hover:bg-[#1b3d46] transition-colors cursor-pointer border border-[#d6e7eb] dark:border-[#1e444e] shadow-2xs"
+                            title={`Browse publications under ${name}`}
+                          >
+                            {name}
+                          </Link>
+                        );
+                      })}
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Related Articles Box (Left Image, Right Heading) */}
-                  {relatedArticles.length > 0 && (
-                    <div className="bg-white dark:bg-paper-card rounded-2xl border border-paper-border p-5 shadow-xs space-y-3">
-                      <div className="flex items-center justify-between pb-3 border-b border-paper-border">
-                        <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink-darkest flex items-center">
-                          Related Articles
-                        </h3>
+                {/* 2. Table of Contents Card (Viewed below the base of topic/tags heading) */}
+                {headings.length > 0 && (
+                  <div className="bg-white dark:bg-paper-card rounded-2xl border border-paper-border p-5 shadow-xs">
+                    <TableOfContents headings={headings} />
+                  </div>
+                )}
+
+                {/* 3. Sponsored Card (if article is sponsored) */}
+                {article.isSponsored && article.sponsorName && (
+                  <div className="bg-white dark:bg-paper-card rounded-2xl border border-paper-border p-6 shadow-xs space-y-3">
+                    <span className="text-[11px] font-bold tracking-widest text-rfblue dark:text-[#f87171] uppercase block">
+                      SPONSORED
+                    </span>
+                    <h3 className="font-serif text-xl sm:text-2xl font-bold text-ink-darkest leading-snug">
+                      {article.sponsorName}
+                    </h3>
+                    {article.sponsorDescription && (
+                      <p className="text-xs sm:text-sm text-ink-muted leading-relaxed">
+                        {article.sponsorDescription}
+                      </p>
+                    )}
+                    {article.sponsorUrl && (
+                      <div className="pt-2">
+                        <a
+                          href={article.sponsorUrl}
+                          target="_blank"
+                          rel="noopener noreferrer sponsored"
+                          className="inline-flex items-center justify-center px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold text-white bg-rfblue hover:bg-[#a94f29] transition-colors shadow-2xs cursor-pointer"
+                        >
+                          Visit Sponsor
+                        </a>
                       </div>
-                      <div className="space-y-2">
-                        {relatedArticles.map(item => (
-                          <ArticleCard key={item.id} article={item} variant="related-horizontal" />
-                        ))}
-                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 4. Related Articles Card */}
+                {relatedArticles.length > 0 && (
+                  <div className="bg-white dark:bg-paper-card rounded-2xl border border-paper-border p-5 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between pb-3 border-b border-paper-border">
+                      <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink-darkest flex items-center">
+                        Related Articles
+                      </h3>
                     </div>
-                  )}
+                    <div className="space-y-2">
+                      {relatedArticles.map(item => (
+                        <ArticleCard key={item.id} article={item} variant="related-horizontal" />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. Sticky Sponsorship Opportunity Banner (Available on all article pages, sticky until footer) */}
+                <div className="sticky top-24 relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#060D1A] via-[#0F172A] to-[#1E3A8A] text-white p-6 shadow-md border border-slate-800">
+                  <div className="absolute top-0 right-0 -mr-6 -mt-6 w-24 h-24 bg-rfblue/20 rounded-full blur-2xl pointer-events-none" />
+                  <div className="relative z-10 space-y-3">
+                    <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white border border-white/15">
+                      <span>Sponsorship Opportunity</span>
+                    </div>
+                    <h3 className="font-serif text-lg font-bold text-white leading-snug">
+                      Want your organization to be part of the research?
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                      Reach readers who are already researching, comparing, and making informed choices. Sponsorship gives your brand a relevant space to showcase your products or services alongside research your audience is actively exploring.
+                    </p>
+                    <div className="pt-2">
+                      <Link
+                        to="/sponsorship"
+                        className="inline-flex items-center justify-center space-x-2 w-full px-4 py-2.5 rounded-full text-xs font-semibold text-white bg-rfblue hover:bg-rfblue-600 transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer group"
+                      >
+                        <span>Become a Sponsor</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                      </Link>
+                    </div>
+                  </div>
                 </div>
               </aside>
             </div>

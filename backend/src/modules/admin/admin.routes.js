@@ -8,6 +8,7 @@ import { TagAdminController } from './tag-admin.controller.js';
 import { ReportAdminController } from './report-admin.controller.js';
 import { ContactAdminController } from './contact-admin.controller.js';
 import { MediaAdminController } from './media-admin.controller.js';
+import { SeoController } from '../seo/seo.controller.js';
 import { authenticate } from '../../middleware/authenticate.js';
 import { requirePermission, requireAnyPermission, requireSuperAdmin } from '../../middleware/authorize.js';
 import { validateRequest } from '../../middleware/validate.js';
@@ -43,6 +44,18 @@ adminRoutes.get(
 );
 
 // ================= ARTICLES MANAGEMENT =================
+adminRoutes.post(
+  '/articles/bulk-status',
+  requirePermission('article.publish'),
+  AdminController.bulkUpdateArticleStatus
+);
+
+adminRoutes.post(
+  '/articles/bulk-delete',
+  requirePermission('article.delete_any'),
+  AdminController.bulkDeleteArticles
+);
+
 adminRoutes.post(
   '/articles/:id/submit',
   requirePermission('article.submit'),
@@ -101,6 +114,12 @@ adminRoutes.get(
   '/users',
   requirePermission('user.read_list'),
   UserAdminController.getUsers
+);
+
+adminRoutes.patch(
+  '/users/bulk-status',
+  requirePermission('user.suspend'),
+  UserAdminController.bulkUpdateUserStatus
 );
 
 adminRoutes.post(
@@ -260,6 +279,18 @@ adminRoutes.get(
 );
 
 adminRoutes.patch(
+  '/contact-messages/bulk',
+  requirePermission('contact.manage'),
+  ContactAdminController.bulkUpdateMessages
+);
+
+adminRoutes.post(
+  '/contact-messages/bulk-delete',
+  requirePermission('contact.manage'),
+  ContactAdminController.bulkDeleteMessages
+);
+
+adminRoutes.patch(
   '/contact-messages/:id',
   requirePermission('contact.manage'),
   ContactAdminController.updateMessage
@@ -329,4 +360,30 @@ adminRoutes.get(
   requireAnyPermission('system.settings', 'setting.manage', 'audit.read'),
   SettingsAdminController.getSystemHealth
 );
+
+// ================= SEARCH ENGINE OPTIMIZATION (SEO) GOVERNANCE =================
+adminRoutes.get(
+  '/seo/audit',
+  requireAnyPermission('setting.manage', 'article.approve', 'article.create'),
+  SeoController.getSeoAudit
+);
+
+adminRoutes.post(
+  '/seo/regenerate',
+  requireAnyPermission('setting.manage', 'article.create', 'article.update_own'),
+  SeoController.regenerateSeo
+);
+
+adminRoutes.post(
+  '/seo/migrate-missing',
+  requireAnyPermission('setting.manage'),
+  SeoController.migrateMissingSeo
+);
+
+adminRoutes.put(
+  '/seo/:entityType/:entityId',
+  requireAnyPermission('setting.manage', 'article.create', 'article.update_own'),
+  SeoController.updateSeoMetadata
+);
+
 

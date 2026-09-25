@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet-async';
+import { useQuery } from '@tanstack/react-query';
 import { Header } from '../../components/layout/Header.jsx';
 import { Footer } from '../../components/layout/Footer.jsx';
 import { usePageContent } from '../../services/pages.api.js';
+import { seoApi } from '../../services/seo.api.js';
+import { SeoHead } from '../../components/common/SeoHead.jsx';
 import {
   Cookie,
   Calendar,
@@ -65,30 +67,20 @@ export default function CookiePolicyPage() {
     }
   };
 
+  const { data: seoData } = useQuery({
+    queryKey: ['seo', 'PAGE', 'cookie-policy'],
+    queryFn: () => seoApi.resolveSeo({ type: 'PAGE', id: 'cookie-policy' }),
+    staleTime: 1000 * 60 * 5,
+  });
+
   return (
     <div className="min-h-screen flex flex-col bg-paper text-ink selection:bg-rfblue-100 selection:text-rfblue-900">
-      <Helmet>
-        <title>Cookie Policy | Research Factors</title>
-        <meta
-          name="description"
-          content="Learn about the cookies and tracking technologies used by Research Factors, their purposes, and how to manage your cookie preferences."
-        />
-        <link rel="canonical" href="https://researchfactors.com/cookie-policy" />
-        <meta property="og:title" content="Cookie Policy | Research Factors" />
-        <meta
-          property="og:description"
-          content="Understand how Research Factors uses cookies for authentication, preferences, and performance measurement."
-        />
-        <meta property="og:type" content="article" />
-        <meta property="og:url" content="https://researchfactors.com/cookie-policy" />
-        <meta name="twitter:card" content="summary" />
-        <meta name="twitter:title" content="Cookie Policy | Research Factors" />
-        <meta
-          name="twitter:description"
-          content="Review cookie disclosures, classifications, and consent choices on Research Factors."
-        />
-        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
-      </Helmet>
+      <SeoHead
+        seo={seoData?.seo}
+        fallbackTitle="Cookie Policy | Research Factors"
+        fallbackDescription="Learn about the cookies and tracking technologies used by Research Factors, their purposes, and how to manage your cookie preferences."
+        canonicalUrl={`${window.location.origin}/cookie-policy`}
+      />
 
       <Header />
 

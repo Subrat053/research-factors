@@ -42,6 +42,20 @@ export class UserAdminController {
     }
   }
 
+  static async bulkUpdateUserStatus(req, res, next) {
+    try {
+      const { userIds, status, reason } = req.body;
+      const result = await UserAdminService.bulkUpdateUserStatus(userIds, { status, reason }, req.user);
+      res.json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async assignUserRoles(req, res, next) {
     try {
       const { id } = req.params;

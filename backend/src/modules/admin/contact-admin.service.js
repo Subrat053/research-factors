@@ -119,4 +119,103 @@ export class ContactAdminService {
 
     return { id, deleted: true };
   }
+
+  /**
+   * Bulk updates contact inquiries (read / resolved)
+   */
+  static async bulkUpdateMessages(messageIds, data = {}, actorId) {
+    if (!Array.isArray(messageIds) || messageIds.length === 0) {
+      throw new AppError('messageIds array is required and must not be empty', 400, 'INVALID_MESSAGE_IDS');
+    }
+
+    const updateData = {};
+    if (typeof data.isRead === 'boolean') updateData.isRead = data.isRead;
+    if (typeof data.isResolved === 'boolean') updateData.isResolved = data.isResolved;
+
+    if (Object.keys(updateData).length === 0) {
+      throw new AppError('No valid update fields provided (isRead or isResolved required)', 400, 'NO_UPDATE_DATA');
+    }
+
+    const messages = await prisma.contactMessage.findMany({
+      where: { id: { in: messageIds } },
+      select: { id: true }
+    });
+
+    if (messages.length === 0) {
+      return { updatedCount: 0, message: 'No matching inquiries found' };
+    }
+
+    const foundIds = messages.map(m => m.id);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.contactMessage.updateMany({
+        where: { id: { in: foundIds } },
+        data: updateData
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'contact.bulk_update',
+          entityType: 'ContactMessage',
+          entityId: 'bulk',
+          metadata: {
+            messageIds: foundIds,
+            count: foundIds.length,
+            changes: updateData
+          }
+        }
+      });
+    });
+
+    return {
+      updatedCount: foundIds.length,
+      message: `Successfully updated ${foundIds.length} inquiry(ies)`
+    };
+  }
+
+  /**
+   * Bulk deletes contact inquiries
+   */
+  static async bulkDeleteMessages(messageIds, actorId) {
+    if (!Array.isArray(messageIds) || messageIds.length === 0) {
+      throw new AppError('messageIds array is required and must not be empty', 400, 'INVALID_MESSAGE_IDS');
+    }
+
+    const messages = await prisma.contactMessage.findMany({
+      where: { id: { in: messageIds } },
+      select: { id: true, subject: true, email: true }
+    });
+
+    if (messages.length === 0) {
+      return { deletedCount: 0, message: 'No matching inquiries found' };
+    }
+
+    const foundIds = messages.map(m => m.id);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.contactMessage.deleteMany({
+        where: { id: { in: foundIds } }
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'contact.bulk_delete',
+          entityType: 'ContactMessage',
+          entityId: 'bulk',
+          metadata: {
+            messageIds: foundIds,
+            count: foundIds.length,
+            subjects: messages.map(m => m.subject)
+          }
+        }
+      });
+    });
+
+    return {
+      deletedCount: foundIds.length,
+      message: `Successfully deleted ${foundIds.length} inquiry(ies) permanently`
+    };
+  }
 }

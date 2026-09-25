@@ -182,4 +182,32 @@ export class AdminController {
       next(error);
     }
   }
+
+  static async bulkUpdateArticleStatus(req, res, next) {
+    try {
+      const { articleIds, action } = req.body;
+      const result = await AdminService.bulkUpdateArticleStatus(articleIds, action, req.user.id);
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async bulkDeleteArticles(req, res, next) {
+    try {
+      const { articleIds } = req.body;
+      const result = await AdminService.bulkForceDeleteArticles(articleIds, req.user.id);
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

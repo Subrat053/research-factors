@@ -160,6 +160,11 @@ model Category {
   description String?
   imageUrl    String?    @map("image_url")
   isActive    Boolean    @default(true) @map("is_active")
+  showInFooter Boolean   @default(true) @map("show_in_footer")
+  seoTitle    String?    @map("seo_title")
+  seoDescription String? @map("seo_description")
+  seoKeywords String?    @map("seo_keywords")
+  canonicalUrl String?   @map("canonical_url")
   parentId    String?    @map("parent_id") @db.Uuid
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
@@ -170,6 +175,7 @@ model Category {
 
   @@index([slug])
   @@index([isActive])
+  @@index([showInFooter])
   @@map("categories")
 }
 
@@ -198,6 +204,11 @@ model Article {
   readingTimeMin  Int                  @default(1) @map("reading_time_min")
   viewCount       Int                  @default(0) @map("view_count")
   isFeatured      Boolean              @default(false) @map("is_featured")
+  isSponsored     Boolean              @default(false) @map("is_sponsored")
+  sponsorName     String?              @map("sponsor_name")
+  sponsorDescription String?           @map("sponsor_description")
+  sponsorUrl      String?              @map("sponsor_url")
+  sponsorLogoUrl  String?              @map("sponsor_logo_url")
   seoTitle        String?              @map("seo_title")
   seoDescription  String?              @map("seo_description")
   canonicalUrl    String?              @map("canonical_url")
@@ -421,3 +432,54 @@ model SystemSetting {
   @@index([category])
   @@map("system_settings")
 }
+
+// ================= SEARCH ENGINE OPTIMIZATION =================
+
+model SeoMetadata {
+  id                         String   @id @default(uuid()) @db.Uuid
+  entityType                 String   @map("entity_type") // 'ARTICLE' | 'CATEGORY' | 'PAGE' | 'SITE'
+  entityId                   String   @map("entity_id")   // UUID or string slug (e.g. 'home', 'about', 'contact', etc.)
+
+  // Custom Overrides (null = use generated/fallback)
+  customTitle                String?  @map("custom_title")
+  customDescription          String?  @map("custom_description")
+  customCanonicalUrl         String?  @map("custom_canonical_url")
+  customOgTitle              String?  @map("custom_og_title")
+  customOgDescription        String?  @map("custom_og_description")
+  customOgImage              String?  @map("custom_og_image")
+  customTwitterCard          String?  @default("summary_large_image") @map("custom_twitter_card")
+  customTwitterTitle         String?  @map("custom_twitter_title")
+  customTwitterDescription   String?  @map("custom_twitter_description")
+  customTwitterImage         String?  @map("custom_twitter_image")
+
+  // Generated Values (regenerated on content change without overwriting custom overrides)
+  generatedTitle             String?  @map("generated_title")
+  generatedDescription       String?  @map("generated_description")
+  generatedCanonicalUrl      String?  @map("generated_canonical_url")
+  generatedOgTitle           String?  @map("generated_og_title")
+  generatedOgDescription     String?  @map("generated_og_description")
+  generatedOgImage           String?  @map("generated_og_image")
+  generatedTwitterTitle      String?  @map("generated_twitter_title")
+  generatedTwitterDescription String? @map("generated_twitter_description")
+
+  // Robots & Crawl Directives
+  isNoIndex                  Boolean  @default(false) @map("is_no_index")
+  isNoFollow                 Boolean  @default(false) @map("is_no_follow")
+
+  // Search & Editorial Content Guidance
+  focusKeyword               String?  @map("focus_keyword")
+  secondaryKeywords          Json?    @map("secondary_keywords")
+
+  // Structured Data / JSON-LD Configuration
+  schemaType                 String   @default("Article") @map("schema_type")
+  customSchema               Json?    @map("custom_schema")
+
+  createdAt                  DateTime @default(now()) @map("created_at")
+  updatedAt                  DateTime @updatedAt @map("updated_at")
+
+  @@unique([entityType, entityId])
+  @@index([entityType, entityId])
+  @@index([isNoIndex])
+  @@map("seo_metadata")
+}
+

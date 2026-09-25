@@ -207,22 +207,28 @@ model AuthorProfile {
 // ================= ARTICLES & BLOCKS =================
 
 model Category {
-  id          String     @id @default(uuid()) @db.Uuid
-  name        String     @unique
-  slug        String     @unique
-  description String?
-  imageUrl    String?    @map("image_url")
-  isActive    Boolean    @default(true) @map("is_active")
-  parentId    String?    @map("parent_id") @db.Uuid
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
+  id             String     @id @default(uuid()) @db.Uuid
+  name           String     @unique
+  slug           String     @unique
+  description    String?
+  imageUrl       String?    @map("image_url")
+  isActive       Boolean    @default(true) @map("is_active")
+  showInFooter   Boolean    @default(true) @map("show_in_footer")
+  seoTitle       String?    @map("seo_title")
+  seoDescription String?    @map("seo_description")
+  seoKeywords    String?    @map("seo_keywords")
+  canonicalUrl   String?    @map("canonical_url")
+  parentId       String?    @map("parent_id") @db.Uuid
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
 
-  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children    Category[] @relation("CategoryHierarchy")
-  articles    Article[]
+  parent         Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children       Category[] @relation("CategoryHierarchy")
+  articles       Article[]
 
   @@index([slug])
   @@index([isActive])
+  @@index([showInFooter])
   @@map("categories")
 }
 

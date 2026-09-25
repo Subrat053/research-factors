@@ -683,4 +683,121 @@ export class AdminService {
 
     return { id: articleId, deleted: true };
   }
+
+  /**
+   * Bulk updates article status (publish or archive)
+   */
+  static async bulkUpdateArticleStatus(articleIds, action, reviewerId) {
+    if (!Array.isArray(articleIds) || articleIds.length === 0) {
+      throw new AppError('articleIds array is required and must not be empty', 400, 'INVALID_ARTICLE_IDS');
+    }
+
+    if (!['publish', 'archive'].includes(action)) {
+      throw new AppError('Invalid bulk action. Allowed: publish, archive', 400, 'INVALID_ACTION');
+    }
+
+    const newStatus = action === 'publish' ? 'PUBLISHED' : 'ARCHIVED';
+
+    const articles = await prisma.article.findMany({
+      where: { id: { in: articleIds } },
+      select: { id: true, slug: true, status: true }
+    });
+
+    if (articles.length === 0) {
+      return { updatedCount: 0, message: 'No matching articles found' };
+    }
+
+    const foundIds = articles.map(a => a.id);
+
+    await prisma.$transaction(async (tx) => {
+      const updateData = { status: newStatus };
+      if (action === 'publish') {
+        updateData.publishedAt = new Date();
+      }
+
+      await tx.article.updateMany({
+        where: { id: { in: foundIds } },
+        data: updateData
+      });
+
+      // Upsert slug history if publishing
+      if (action === 'publish') {
+        for (const art of articles) {
+          await tx.articleSlugHistory.upsert({
+            where: { slug: art.slug },
+            create: { slug: art.slug, articleId: art.id },
+            update: {}
+          });
+        }
+      }
+
+      // Record bulk audit log
+      await tx.auditLog.create({
+        data: {
+          actorId: reviewerId,
+          action: `article.bulk_${action}`,
+          entityType: 'Article',
+          entityId: 'bulk',
+          metadata: {
+            articleIds: foundIds,
+            count: foundIds.length,
+            newStatus
+          }
+        }
+      });
+    }, { maxWait: 10000, timeout: 30000 });
+
+    return {
+      updatedCount: foundIds.length,
+      message: `Successfully updated ${foundIds.length} article(s) to ${newStatus}`
+    };
+  }
+
+  /**
+   * Bulk force deletes articles and their child blocks, tags, bookmarks, comments
+   */
+  static async bulkForceDeleteArticles(articleIds, actorId) {
+    if (!Array.isArray(articleIds) || articleIds.length === 0) {
+      throw new AppError('articleIds array is required and must not be empty', 400, 'INVALID_ARTICLE_IDS');
+    }
+
+    const articles = await prisma.article.findMany({
+      where: { id: { in: articleIds } },
+      select: { id: true, title: true }
+    });
+
+    if (articles.length === 0) {
+      return { deletedCount: 0, message: 'No matching articles found' };
+    }
+
+    const foundIds = articles.map(a => a.id);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.articleBlock.deleteMany({ where: { articleId: { in: foundIds } } });
+      await tx.articleTag.deleteMany({ where: { articleId: { in: foundIds } } });
+      await tx.bookmark.deleteMany({ where: { articleId: { in: foundIds } } });
+      await tx.comment.deleteMany({ where: { articleId: { in: foundIds } } });
+      await tx.articleSlugHistory.deleteMany({ where: { articleId: { in: foundIds } } });
+      await tx.article.deleteMany({ where: { id: { in: foundIds } } });
+
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'article.bulk_force_delete',
+          entityType: 'Article',
+          entityId: 'bulk',
+          metadata: {
+            articleIds: foundIds,
+            count: foundIds.length,
+            titles: articles.map(a => a.title)
+          }
+        }
+      });
+    });
+
+    return {
+      deletedCount: foundIds.length,
+      message: `Successfully deleted ${foundIds.length} article(s) permanently`
+    };
+  }
 }

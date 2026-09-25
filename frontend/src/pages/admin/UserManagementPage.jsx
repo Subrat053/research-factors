@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { adminApi } from '../../services/admin.api.js';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useConfirm } from '../../context/ModalContext.jsx';
 import {
   Users,
   Search,
@@ -23,6 +24,7 @@ import {
 
 export default function UserManagementPage() {
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const { user: currentUser, hasPermission } = useAuth();
   const isSuperAdmin = currentUser?.roles?.includes('SUPER_ADMIN') || false;
   const canCreateUser = isSuperAdmin || (hasPermission && hasPermission('user.create'));
@@ -32,6 +34,7 @@ export default function UserManagementPage() {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
 
   // Modals & Selected User
   const [selectedUser, setSelectedUser] = useState(null);
@@ -145,6 +148,57 @@ export default function UserManagementPage() {
     }
   });
 
+  const bulkStatusMutation = useMutation({
+    mutationFn: ({ userIds, status, reason }) =>
+      adminApi.bulkUpdateUserStatus({ userIds, status, reason }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries(['admin-users']);
+      setSelectedUserIds([]);
+      showFeedback({
+        type: 'success',
+        text: res.message || `Successfully updated ${res.data?.updatedCount || 0} user account(s).`
+      });
+    },
+    onError: (err) => {
+      showFeedback({
+        type: 'error',
+        text: err.response?.data?.error?.message || err.message || 'Failed to update users in bulk'
+      });
+    }
+  });
+
+  const handleBulkActivate = async () => {
+    if (selectedUserIds.length === 0) return;
+    const ok = await confirm({
+      title: `Activate ${selectedUserIds.length} User Account(s)`,
+      message: `Are you sure you want to activate ${selectedUserIds.length} selected user account(s)? They will regain immediate access to sign in, comment, and publish.`,
+      confirmText: 'Activate Users',
+      cancelText: 'Cancel',
+      variant: 'info'
+    });
+    if (ok) {
+      bulkStatusMutation.mutate({ userIds: selectedUserIds, status: 'ACTIVE' });
+    }
+  };
+
+  const handleBulkSuspend = async () => {
+    if (selectedUserIds.length === 0) return;
+    const ok = await confirm({
+      title: `Suspend ${selectedUserIds.length} User Account(s)`,
+      message: `Are you sure you want to suspend ${selectedUserIds.length} selected user account(s)? Suspended users cannot log in or participate in the community.`,
+      confirmText: 'Suspend Accounts',
+      cancelText: 'Cancel',
+      variant: 'danger'
+    });
+    if (ok) {
+      bulkStatusMutation.mutate({
+        userIds: selectedUserIds,
+        status: 'SUSPENDED',
+        reason: 'Bulk administrative suspension'
+      });
+    }
+  };
+
   const roleMutation = useMutation({
     mutationFn: ({ id, roleNames }) => adminApi.assignUserRoles(id, { roleNames }),
     onSuccess: (res) => {
@@ -185,13 +239,13 @@ export default function UserManagementPage() {
       title="User Directory & Governance"
       subtitle="Manage reader accounts, staff credentials, suspension states, and role allocations"
       actions={
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
           {canToggleRegistration && (
-            <div className="flex items-center space-x-2.5 bg-slate-800/80 border border-slate-700/70 rounded-xl px-3 py-1.5 shadow-xs">
+            <div className="flex items-center justify-between sm:justify-start space-x-2.5 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/70 rounded-xl px-3 py-1.5 shadow-2xs">
               <div className="flex items-center space-x-1.5 text-xs font-medium">
-                <span className={`w-2 h-2 rounded-full ${allowRegistration ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                <span className="text-slate-300 hidden sm:inline">Public Signup:</span>
-                <span className={allowRegistration ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>
+                <span className={`w-2 h-2 rounded-full ${allowRegistration ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                <span className="text-slate-600 dark:text-slate-300">Public Signup:</span>
+                <span className={allowRegistration ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-amber-600 dark:text-amber-400 font-semibold'}>
                   {allowRegistration ? 'Active' : 'Paused'}
                 </span>
               </div>
@@ -201,7 +255,7 @@ export default function UserManagementPage() {
                 onClick={() => toggleRegMutation.mutate(!allowRegistration)}
                 title={allowRegistration ? 'Pause public signups' : 'Enable public signups'}
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden disabled:opacity-50 ${
-                  allowRegistration ? 'bg-emerald-600' : 'bg-slate-700'
+                  allowRegistration ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-700'
                 }`}
               >
                 <span
@@ -219,7 +273,7 @@ export default function UserManagementPage() {
                 setCreateModalOpen(true);
                 setCreateFormError(null);
               }}
-              className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-xs"
+              className="inline-flex items-center justify-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-xs cursor-pointer"
             >
               <UserPlus className="w-3.5 h-3.5" />
               <span>Create User</span>
@@ -237,12 +291,12 @@ export default function UserManagementPage() {
         <div
           className={`mb-6 p-4 rounded-xl flex items-center justify-between text-xs font-medium border ${
             feedbackMsg.type === 'success'
-              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-              : 'bg-red-500/10 text-red-300 border-red-500/30'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
+              : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800/60'
           }`}
         >
           <span>{feedbackMsg.text}</span>
-          <button onClick={() => setFeedbackMsg(null)} className="p-1 hover:opacity-75">
+          <button onClick={() => setFeedbackMsg(null)} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -297,6 +351,45 @@ export default function UserManagementPage() {
         </div>
       </div>
 
+      {/* Bulk Action Bar */}
+      {selectedUserIds.length > 0 && (
+        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-xs animate-in fade-in duration-150">
+          <div className="flex items-center space-x-2 text-xs font-semibold text-blue-900 dark:text-blue-200">
+            <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">
+              {selectedUserIds.length}
+            </span>
+            <span>Account{selectedUserIds.length > 1 ? 's' : ''} Selected</span>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleBulkActivate}
+              disabled={bulkStatusMutation.isPending}
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-50 shadow-2xs cursor-pointer"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Activate</span>
+            </button>
+
+            <button
+              onClick={handleBulkSuspend}
+              disabled={bulkStatusMutation.isPending}
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-600 hover:bg-red-500 text-white transition-colors disabled:opacity-50 shadow-2xs cursor-pointer"
+            >
+              <Ban className="w-3.5 h-3.5" />
+              <span>Suspend</span>
+            </button>
+
+            <button
+              onClick={() => setSelectedUserIds([])}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              Deselect All
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Users Table */}
       <div className="admin-table-container">
         {isLoading ? (
@@ -315,6 +408,21 @@ export default function UserManagementPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/80">
+                  <th className="py-3.5 px-4 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={users.length > 0 && selectedUserIds.length === users.length}
+                      onChange={() => {
+                        if (selectedUserIds.length === users.length) {
+                          setSelectedUserIds([]);
+                        } else {
+                          setSelectedUserIds(users.map((u) => u.id));
+                        }
+                      }}
+                      className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      title="Select all on this page"
+                    />
+                  </th>
                   <th className="py-3.5 px-6">User / Account</th>
                   <th className="py-3.5 px-6">Roles</th>
                   <th className="py-3.5 px-6">Status</th>
@@ -326,8 +434,26 @@ export default function UserManagementPage() {
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-xs text-slate-700 dark:text-slate-300">
                 {users.map((u) => {
                   const isUserSuperAdmin = u.roles.includes('SUPER_ADMIN');
+                  const isSelected = selectedUserIds.includes(u.id);
                   return (
-                    <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                    <tr
+                      key={u.id}
+                      className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${
+                        isSelected ? 'bg-blue-50/70 dark:bg-blue-900/20' : ''
+                      }`}
+                    >
+                      <td className="py-4 px-4 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            setSelectedUserIds((prev) =>
+                              prev.includes(u.id) ? prev.filter((id) => id !== u.id) : [...prev, u.id]
+                            );
+                          }}
+                          className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center space-x-3">
                           <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-slate-200">

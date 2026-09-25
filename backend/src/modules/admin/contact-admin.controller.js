@@ -42,4 +42,32 @@ export class ContactAdminController {
       next(error);
     }
   }
+
+  static async bulkUpdateMessages(req, res, next) {
+    try {
+      const { messageIds, data } = req.body;
+      const result = await ContactAdminService.bulkUpdateMessages(messageIds, data, req.user.id);
+      res.json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async bulkDeleteMessages(req, res, next) {
+    try {
+      const { messageIds } = req.body;
+      const result = await ContactAdminService.bulkDeleteMessages(messageIds, req.user.id);
+      res.json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

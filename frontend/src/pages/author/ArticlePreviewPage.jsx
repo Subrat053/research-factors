@@ -133,14 +133,17 @@ export default function ArticlePreviewPage() {
                 <nav className="flex items-center space-x-2 text-xs sm:text-sm text-ink-light flex-wrap">
                   <Link to="/" className="hover:text-rfblue transition-colors">Home</Link>
                   <ChevronRight className="w-3.5 h-3.5" />
-                  <Link to="/research" className="hover:text-rfblue transition-colors">Research</Link>
-                  {draft.category && (
-                    <>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                      <span className="font-medium text-ink-muted">
-                        {draft.category.name}
-                      </span>
-                    </>
+                  {draft.category ? (
+                    <Link
+                      to={`/categories/${draft.category.slug}`}
+                      className="hover:text-rfblue font-medium text-ink-muted transition-colors"
+                    >
+                      {draft.category.name}
+                    </Link>
+                  ) : (
+                    <Link to="/research" className="hover:text-rfblue transition-colors">
+                      Research
+                    </Link>
                   )}
                 </nav>
 
@@ -162,9 +165,9 @@ export default function ArticlePreviewPage() {
                 </div>
 
                 {/* 3. Title */}
-                <h1 className="tracking-tight text-ink-darkest">
+                <h2 className="tracking-tight text-ink-darkest font-semibold">
                   {draft.title || 'Untitled Manuscript'}
-                </h1>
+                </h2>
 
                 {/* 4. Subtitle / Thesis Statement */}
                 {draft.subtitle && (
@@ -214,23 +217,27 @@ export default function ArticlePreviewPage() {
                   <BlockRenderer blocks={draft.blocks || []} />
                 </div>
 
-                {/* 8. Topic Tags */}
+                {/* 8. Topic Tags in Normal Form */}
                 {draft.tags && draft.tags.length > 0 && (
                   <div className="pt-8 border-t border-paper-border">
-                    <div className="flex items-center space-x-2 flex-wrap gap-y-2">
-                      <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink-light mr-2">
-                        Topics:
-                      </span>
+                    <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink-light block mb-3">
+                      Tags:
+                    </span>
+                    <div className="flex flex-wrap gap-2">
                       {draft.tags.map((tag, idx) => {
-                        const raw = typeof tag === 'string' ? tag : (tag.slug || tag.name || '');
-                        const clean = raw.replace(/^#+/, '');
-                        const formatted = `#${clean.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '')}`;
+                        const raw = typeof tag === 'string' ? tag : (tag.name || tag.slug || '');
+                        const clean = String(raw).replace(/^#+/, '').trim();
+                        let name = (typeof tag === 'object' && tag.name) ? tag.name : clean;
+                        name = name.replace(/^#+/, '').trim();
+                        if (name.includes('_') || (name.includes('-') && !name.includes(' '))) {
+                          name = name.replace(/[-_]/g, ' ');
+                        }
                         return (
                           <span
                             key={tag.id || idx}
-                            className="px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-paper border border-paper-border text-ink-muted"
+                            className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-[#eef5f6] text-[#0f5466] border border-[#d6e7eb] shadow-2xs"
                           >
-                            {formatted}
+                            {name}
                           </span>
                         );
                       })}
@@ -268,6 +275,35 @@ export default function ArticlePreviewPage() {
 
               {/* Sidebar Summary */}
               <div className="hidden lg:block lg:col-span-4 sticky top-24 space-y-6">
+                {/* Sponsored Card Preview */}
+                {draft.isSponsored && draft.sponsorName && (
+                  <div className="p-6 rounded-2xl bg-white border border-paper-border shadow-xs space-y-3">
+                    <span className="text-[11px] font-bold tracking-widest text-[#c25e34] uppercase block">
+                      SPONSORED
+                    </span>
+                    <h3 className="font-serif text-xl sm:text-2xl font-bold text-ink-darkest leading-snug">
+                      {draft.sponsorName}
+                    </h3>
+                    {draft.sponsorDescription && (
+                      <p className="text-xs sm:text-sm text-ink-muted leading-relaxed">
+                        {draft.sponsorDescription}
+                      </p>
+                    )}
+                    {draft.sponsorUrl && (
+                      <div className="pt-2">
+                        <a
+                          href={draft.sponsorUrl}
+                          target="_blank"
+                          rel="noopener noreferrer sponsored"
+                          className="inline-flex items-center justify-center px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold text-white bg-[#c25e34] hover:bg-[#a94f29] transition-colors shadow-2xs"
+                        >
+                          Visit Sponsor
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="p-6 rounded-2xl bg-white border border-paper-border shadow-xs">
                   <h4 className="text-xs font-bold uppercase tracking-widest text-rfblue mb-3">
                     Manuscript Metadata

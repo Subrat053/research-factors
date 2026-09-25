@@ -7,10 +7,15 @@ const SANITIZE_OPTIONS = {
 };
 
 const SPONSORSHIP_TYPE_LABELS = {
-  'sponsored-research': 'Native Sponsored Research Article',
-  'product-comparison': 'Product & Feature Comparison',
-  'industry-report': 'Industry Benchmark Report Sponsorship',
-  'newsletter-placement': 'Newsletter & Brand Feature'
+  'launch-article': 'Launch Article Package (₹14,999)',
+  'authority-series': 'Authority Series Package (₹34,999)',
+  'enterprise-benchmark': 'Enterprise & Benchmark Package (₹74,999)',
+  'sponsored-research': 'Native Research Article',
+  'product-review': 'Product Review',
+  'product-comparison': 'Product & Solution Comparison',
+  'expert-insight': 'Brand Insight Feature',
+  'industry-report': 'Industry Benchmark Report',
+  'custom-collaboration': 'Custom Collaboration'
 };
 
 const sanitize = (text) => {

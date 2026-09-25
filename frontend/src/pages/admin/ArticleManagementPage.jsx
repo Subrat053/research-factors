@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { adminApi } from '../../services/admin.api.js';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useConfirm } from '../../context/ModalContext.jsx';
 import {
   FileText,
   Search,
@@ -25,10 +26,12 @@ import {
 
 export default function ArticleManagementPage() {
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const { user, hasPermission } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [selectedArticleIds, setSelectedArticleIds] = useState([]);
 
   const canModerate = hasPermission('article.approve') || hasPermission('article.update_any');
   const canSchedule = hasPermission('article.schedule');
@@ -110,6 +113,78 @@ export default function ArticleManagementPage() {
     }
   });
 
+  const bulkStatusMutation = useMutation({
+    mutationFn: ({ articleIds, action }) =>
+      adminApi.bulkUpdateArticleStatus({ articleIds, action }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries(['admin-articles-all']);
+      queryClient.invalidateQueries(['admin-stats']);
+      queryClient.invalidateQueries(['featured-article']);
+      setSelectedArticleIds([]);
+      setAlertMsg({ type: 'success', text: res.message || 'Bulk article action completed successfully.' });
+    },
+    onError: (err) => {
+      setAlertMsg({ type: 'error', text: err.response?.data?.error?.message || err.message || 'Failed to update articles in bulk' });
+    }
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: ({ articleIds }) =>
+      adminApi.bulkDeleteArticles({ articleIds }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries(['admin-articles-all']);
+      queryClient.invalidateQueries(['admin-stats']);
+      queryClient.invalidateQueries(['featured-article']);
+      setSelectedArticleIds([]);
+      setAlertMsg({ type: 'success', text: res.message || 'Selected articles permanently deleted.' });
+    },
+    onError: (err) => {
+      setAlertMsg({ type: 'error', text: err.response?.data?.error?.message || err.message || 'Failed to delete articles in bulk' });
+    }
+  });
+
+  const handleBulkPublish = async () => {
+    if (selectedArticleIds.length === 0) return;
+    const ok = await confirm({
+      title: `Publish ${selectedArticleIds.length} Article(s)`,
+      message: `Publish ${selectedArticleIds.length} selected article(s) live immediately? They will become visible on the public magazine.`,
+      confirmText: 'Publish All Live',
+      cancelText: 'Cancel',
+      variant: 'info'
+    });
+    if (ok) {
+      bulkStatusMutation.mutate({ articleIds: selectedArticleIds, action: 'PUBLISH' });
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    if (selectedArticleIds.length === 0) return;
+    const ok = await confirm({
+      title: `Archive ${selectedArticleIds.length} Article(s)`,
+      message: `Unpublish and archive ${selectedArticleIds.length} selected article(s)? They will no longer be visible on the public site.`,
+      confirmText: 'Archive Articles',
+      cancelText: 'Cancel',
+      variant: 'warning'
+    });
+    if (ok) {
+      bulkStatusMutation.mutate({ articleIds: selectedArticleIds, action: 'ARCHIVE' });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedArticleIds.length === 0) return;
+    const ok = await confirm({
+      title: `Permanently Delete ${selectedArticleIds.length} Article(s)`,
+      message: `Permanently purge ${selectedArticleIds.length} selected article(s)? All associated content blocks, media attachments, and comments will be permanently erased. This action cannot be undone.`,
+      confirmText: 'Delete Permanently',
+      cancelText: 'Cancel',
+      variant: 'danger'
+    });
+    if (ok) {
+      bulkDeleteMutation.mutate({ articleIds: selectedArticleIds });
+    }
+  };
+
   const handleOpenScheduleModal = (article) => {
     setSelectedArticle(article);
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -153,12 +228,12 @@ export default function ArticleManagementPage() {
         <div
           className={`mb-6 p-4 rounded-xl flex items-center justify-between text-xs font-medium border ${
             alertMsg.type === 'success'
-              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-              : 'bg-red-500/10 text-red-300 border-red-500/30'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
+              : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800/60'
           }`}
         >
           <span>{alertMsg.text}</span>
-          <button onClick={() => setAlertMsg(null)} className="p-1 hover:opacity-75">
+          <button onClick={() => setAlertMsg(null)} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -170,16 +245,16 @@ export default function ArticleManagementPage() {
           {rejectedArticles.map((ra) => (
             <div
               key={ra.id}
-              className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div className="flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-xs font-bold text-white">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
                     Action Required on "{ra.title}"
                   </h4>
-                  <p className="text-xs text-amber-200/90 mt-1">
-                    Editorial Feedback: <span className="font-semibold text-white">"{ra.rejectionReason}"</span>
+                  <p className="text-xs text-amber-800 dark:text-amber-200/90 mt-1">
+                    Editorial Feedback: <span className="font-semibold text-slate-900 dark:text-white">"{ra.rejectionReason}"</span>
                   </p>
                 </div>
               </div>
@@ -229,6 +304,60 @@ export default function ArticleManagementPage() {
         </select>
       </div>
 
+      {/* Bulk Action Bar */}
+      {selectedArticleIds.length > 0 && (
+        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-xs animate-in fade-in duration-150">
+          <div className="flex items-center space-x-2 text-xs font-semibold text-blue-900 dark:text-blue-200">
+            <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">
+              {selectedArticleIds.length}
+            </span>
+            <span>Article{selectedArticleIds.length > 1 ? 's' : ''} Selected</span>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            {canPublish && (
+              <button
+                onClick={handleBulkPublish}
+                disabled={bulkStatusMutation.isPending || bulkDeleteMutation.isPending}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-50 shadow-2xs cursor-pointer"
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>Publish</span>
+              </button>
+            )}
+
+            {canArchive && (
+              <button
+                onClick={handleBulkArchive}
+                disabled={bulkStatusMutation.isPending || bulkDeleteMutation.isPending}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white transition-colors disabled:opacity-50 shadow-2xs cursor-pointer"
+              >
+                <Archive className="w-3.5 h-3.5" />
+                <span>Archive</span>
+              </button>
+            )}
+
+            {canDeleteAny && (
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkStatusMutation.isPending || bulkDeleteMutation.isPending}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-600 hover:bg-red-500 text-white transition-colors disabled:opacity-50 shadow-2xs cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => setSelectedArticleIds([])}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              Deselect All
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Articles Table */}
       <div className="admin-table-container">
         {isLoading ? (
@@ -260,6 +389,21 @@ export default function ArticleManagementPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100/70 dark:bg-slate-900/80">
+                  <th className="py-3.5 px-4 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={articles.length > 0 && selectedArticleIds.length === articles.length}
+                      onChange={() => {
+                        if (selectedArticleIds.length === articles.length) {
+                          setSelectedArticleIds([]);
+                        } else {
+                          setSelectedArticleIds(articles.map((a) => a.id));
+                        }
+                      }}
+                      className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      title="Select all on this page"
+                    />
+                  </th>
                   <th className="py-3.5 px-6">Article Title</th>
                   {canModerate && <th className="py-3.5 px-6">Author</th>}
                   <th className="py-3.5 px-6">Category</th>
@@ -269,13 +413,30 @@ export default function ArticleManagementPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-xs text-slate-700 dark:text-slate-300">
-                {articles.map((a) => (
-                  <tr key={a.id} className="admin-table-row">
-                    <td className="py-4 px-6 max-w-sm">
+                {articles.map((a) => {
+                  const isSelected = selectedArticleIds.includes(a.id);
+                  return (
+                    <tr
+                      key={a.id}
+                      className={`admin-table-row ${isSelected ? 'bg-blue-50/70 dark:bg-blue-900/20' : ''}`}
+                    >
+                      <td className="py-4 px-4 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            setSelectedArticleIds((prev) =>
+                              prev.includes(a.id) ? prev.filter((id) => id !== a.id) : [...prev, a.id]
+                            );
+                          }}
+                          className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-4 px-6 max-w-sm">
                       <div className="flex items-center space-x-2">
-                        <h4 className="font-semibold text-slate-900 dark:text-white truncate" title={a.title}>
+                        <h5 className="font-semibold text-slate-900 dark:text-white truncate" title={a.title}>
                           {a.title}
-                        </h4>
+                        </h5>
                         {a.isFeatured && (
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wide bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/20 dark:border-blue-500/30 shrink-0">
                             Featured
@@ -324,7 +485,7 @@ export default function ArticleManagementPage() {
                       <div className="flex items-center justify-end space-x-2">
                         {a.status === 'PUBLISHED' && (
                           <Link
-                            to={`/research/${a.slug}`}
+                            to={`/${a.category?.slug || 'research'}/${a.slug}`}
                             target="_blank"
                             className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
                             title="View Public Article"
@@ -354,8 +515,15 @@ export default function ArticleManagementPage() {
                         {canArchive && (
                           a.status === 'PUBLISHED' ? (
                             <button
-                              onClick={() => {
-                                if (window.confirm(`Unpublish and archive '${a.title}'? It will no longer be visible to the public.`)) {
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: 'Unpublish Article',
+                                  message: `Are you sure you want to unpublish and archive '${a.title}'? It will no longer be visible to the public.`,
+                                  confirmText: 'Unpublish',
+                                  cancelText: 'Cancel',
+                                  variant: 'warning'
+                                });
+                                if (ok) {
                                   archiveMutation.mutate(a.id);
                                 }
                               }}
@@ -367,8 +535,15 @@ export default function ArticleManagementPage() {
                             </button>
                           ) : (
                             <button
-                              onClick={() => {
-                                if (window.confirm(`Publish '${a.title}' live immediately? It will become visible on the public magazine.`)) {
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: 'Publish Article Live',
+                                  message: `Publish '${a.title}' live immediately? It will become visible on the public magazine.`,
+                                  confirmText: 'Publish Live',
+                                  cancelText: 'Cancel',
+                                  variant: 'info'
+                                });
+                                if (ok) {
                                   publishMutation.mutate(a.id);
                                 }
                               }}
@@ -383,8 +558,15 @@ export default function ArticleManagementPage() {
 
                         {canDeleteAny && (
                           <button
-                            onClick={() => {
-                              if (window.confirm(`Permanently delete article '${a.title}'? All associated blocks and comments will be purged.`)) {
+                            onClick={async () => {
+                              const ok = await confirm({
+                                title: 'Permanently Delete Article',
+                                message: `Permanently delete article '${a.title}'? All associated editorial blocks, media attachments, and reader comments will be purged. This action cannot be undone.`,
+                                confirmText: 'Delete Permanently',
+                                cancelText: 'Cancel',
+                                variant: 'danger'
+                              });
+                              if (ok) {
                                 forceDeleteMutation.mutate(a.id);
                               }
                             }}
@@ -397,7 +579,8 @@ export default function ArticleManagementPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>

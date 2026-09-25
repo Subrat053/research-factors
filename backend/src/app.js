@@ -89,6 +89,10 @@ import { seoRoutes } from './modules/seo/seo.routes.js';
 import { userRoutes } from './modules/users/user.routes.js';
 import { tagRoutes } from './modules/tags/tag.routes.js';
 import { contactRoutes } from './modules/contact/contact.routes.js';
+import { crawlerPrerenderMiddleware } from './middleware/crawlerPrerender.js';
+
+// Social Crawler Head Pre-rendering
+app.use(crawlerPrerenderMiddleware);
 
 app.use('/', seoRoutes);
 app.use('/api/v1/seo', seoRoutes);

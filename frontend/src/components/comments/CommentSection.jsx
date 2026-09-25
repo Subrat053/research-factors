@@ -3,10 +3,12 @@ import { MessageSquare, Send, AlertCircle, Loader2 } from 'lucide-react';
 import { commentsApi } from '../../services/comments.api';
 import { CommentItem } from './CommentItem';
 import { useAuth } from '../../context/AuthContext';
+import { useModal } from '../../context/ModalContext.jsx';
 import { Link } from 'react-router-dom';
 
 export const CommentSection = ({ articleId }) => {
   const { user } = useAuth();
+  const { confirm, alert: showAlert } = useModal();
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -42,7 +44,11 @@ export const CommentSection = ({ articleId }) => {
       setComments(prev => [res.data, ...prev]);
       setNewCommentText('');
     } catch (err) {
-      alert(err.response?.data?.error?.message || 'Failed to submit response');
+      showAlert({
+        title: 'Submission Error',
+        message: err.response?.data?.error?.message || 'Failed to submit response',
+        variant: 'warning'
+      });
     } finally {
       setSubmitting(false);
     }
@@ -69,7 +75,11 @@ export const CommentSection = ({ articleId }) => {
       );
     } catch (err) {
       if (err.response?.status === 401) {
-        alert('Please sign in to like this response');
+        showAlert({
+          title: 'Sign In Required',
+          message: 'Please sign in to like this response.',
+          variant: 'info'
+        });
       }
     }
   };
@@ -98,7 +108,14 @@ export const CommentSection = ({ articleId }) => {
   };
 
   const handleDeleteComment = async (commentId) => {
-    if (!window.confirm('Are you sure you want to delete this response?')) return;
+    const ok = await confirm({
+      title: 'Delete Response',
+      message: 'Are you sure you want to delete this response? This action cannot be undone.',
+      confirmText: 'Delete Response',
+      cancelText: 'Cancel',
+      variant: 'danger'
+    });
+    if (!ok) return;
 
     try {
       await commentsApi.deleteComment(commentId);
@@ -111,7 +128,11 @@ export const CommentSection = ({ articleId }) => {
           }))
       );
     } catch (err) {
-      alert(err.response?.data?.error?.message || 'Failed to delete response');
+      showAlert({
+        title: 'Deletion Error',
+        message: err.response?.data?.error?.message || 'Failed to delete response',
+        variant: 'warning'
+      });
       throw err;
     }
   };

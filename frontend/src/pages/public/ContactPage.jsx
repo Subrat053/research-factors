@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { contactApi } from '../../services/contact.api.js';
+import { seoApi } from '../../services/seo.api.js';
+import { SeoHead } from '../../components/common/SeoHead.jsx';
 import { Header } from '../../components/layout/Header.jsx';
 import { Footer } from '../../components/layout/Footer.jsx';
 import {
@@ -106,30 +108,22 @@ export default function ContactPage() {
     }
   };
 
+  const { data: seoResponse } = useQuery({
+    queryKey: ['seo', 'page', 'contact'],
+    queryFn: () => seoApi.resolveSeo({ type: 'PAGE', id: 'contact' }),
+    staleTime: 1000 * 60 * 10
+  });
+  const pageSeo = seoResponse?.data || null;
+
   return (
     <div className="min-h-screen flex flex-col bg-paper text-ink selection:bg-rfblue-100 selection:text-rfblue-900">
-      <Helmet>
-        <title>Contact Us — Editorial Desk & Inquiries | Research Factors</title>
-        <meta
-          name="description"
-          content="Contact the Research Factors editorial team. Submit corrections, research feedback, or reader inquiries directly to our desk."
-        />
-        <link rel="canonical" href="https://researchfactors.com/contact" />
-        <meta property="og:title" content="Contact Us — Editorial Desk & Inquiries | Research Factors" />
-        <meta
-          property="og:description"
-          content="Submit research questions, editorial corrections, or media inquiries to our editorial team."
-        />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://researchfactors.com/contact" />
-        <meta name="twitter:card" content="summary" />
-        <meta name="twitter:title" content="Contact Us — Editorial Desk & Inquiries | Research Factors" />
-        <meta
-          name="twitter:description"
-          content="Get in touch with the Research Factors editorial desk and support teams."
-        />
-        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
-      </Helmet>
+      <SeoHead
+        seo={pageSeo}
+        title="Contact Us — Editorial Desk & Inquiries | Research Factors"
+        description="Contact the Research Factors editorial team. Submit corrections, research feedback, or reader inquiries directly to our desk."
+        canonicalUrl={typeof window !== 'undefined' ? `${window.location.origin}/contact` : 'https://researchfactors.com/contact'}
+        jsonLd={pageSeo?.schema?.jsonLd || jsonLd}
+      />
 
       <Header />
 
@@ -174,7 +168,7 @@ export default function ContactPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <h4 className="text-sm font-bold text-ink-darkest">Editorial & Corrections</h4>
-                      <p className="text-xs text-ink-light mt-0.5">
+                      <p className="text-xs sm:text-sm text-ink-light mt-0.5">
                         Factual updates, methodological inquiries, or research feedback.
                       </p>
                       <a
@@ -243,7 +237,7 @@ export default function ContactPage() {
                   </p>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-white border border-paper-border space-y-2">
+                {/* <div className="p-5 rounded-2xl bg-white border border-paper-border space-y-2">
                   <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-ink-darkest">
                     <ShieldCheck className="w-4 h-4 text-rfblue" />
                     <span>Corrections Standard</span>
@@ -251,7 +245,7 @@ export default function ContactPage() {
                   <p className="text-xs text-ink-light leading-relaxed">
                     If you identify an empirical benchmark error or outdated specification, please include the article title or URL and relevant citations so our research editors can review it promptly.
                   </p>
-                </div>
+                </div> */}
               </div>
 
               {/* Right Column: Interactive Contact Form */}

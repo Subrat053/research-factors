@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { adminApi } from '../../services/admin.api.js';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
+import { useConfirm } from '../../context/ModalContext.jsx';
 import {
   Mail,
   Search,
+  Filter,
+  ChevronDown,
   CheckCircle2,
   Trash2,
   Reply,
@@ -47,12 +50,26 @@ const parseSponsorshipDetails = (rawMessage) => {
 
 export default function ContactMessagesPage() {
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const [statusFilter, setStatusFilter] = useState('unread');
   const [typeFilter, setTypeFilter] = useState('all'); // 'all', 'sponsorship', 'general'
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [selectedMessage, setSelectedMessage] = useState(null);
+  const [selectedMessageIds, setSelectedMessageIds] = useState([]);
   const [alertMsg, setAlertMsg] = useState(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const filterDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target)) {
+        setIsFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // 1. Fetch Inquiries with permission-gated admin endpoint
   const { data, isLoading } = useQuery({
@@ -99,6 +116,59 @@ export default function ContactMessagesPage() {
     }
   });
 
+  const bulkUpdateMutation = useMutation({
+    mutationFn: ({ messageIds, status, isRead }) =>
+      adminApi.bulkUpdateContactMessages({ messageIds, status, isRead }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries(['admin-contact-messages']);
+      setSelectedMessageIds([]);
+      setAlertMsg({ type: 'success', text: res.message || 'Bulk inquiries updated successfully.' });
+    },
+    onError: (err) => {
+      setAlertMsg({ type: 'error', text: err.response?.data?.error?.message || err.message || 'Failed to update inquiries in bulk' });
+    }
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: ({ messageIds }) =>
+      adminApi.bulkDeleteContactMessages({ messageIds }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries(['admin-contact-messages']);
+      if (selectedMessage && selectedMessageIds.includes(selectedMessage.id)) {
+        setSelectedMessage(null);
+      }
+      setSelectedMessageIds([]);
+      setAlertMsg({ type: 'success', text: res.message || 'Selected inquiries deleted successfully.' });
+    },
+    onError: (err) => {
+      setAlertMsg({ type: 'error', text: err.response?.data?.error?.message || err.message || 'Failed to delete inquiries in bulk' });
+    }
+  });
+
+  const handleBulkMarkRead = () => {
+    if (selectedMessageIds.length === 0) return;
+    bulkUpdateMutation.mutate({ messageIds: selectedMessageIds, isRead: true });
+  };
+
+  const handleBulkMarkResolved = () => {
+    if (selectedMessageIds.length === 0) return;
+    bulkUpdateMutation.mutate({ messageIds: selectedMessageIds, status: 'resolved' });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedMessageIds.length === 0) return;
+    const ok = await confirm({
+      title: `Delete ${selectedMessageIds.length} Inquiry(s) Permanently`,
+      message: `Permanently delete ${selectedMessageIds.length} selected inquiry message(s)? All correspondence and contact records will be purged. This action cannot be undone.`,
+      confirmText: 'Delete Inquiries',
+      cancelText: 'Cancel',
+      variant: 'danger'
+    });
+    if (ok) {
+      bulkDeleteMutation.mutate({ messageIds: selectedMessageIds });
+    }
+  };
+
   const handleSelectMessage = (m) => {
     setSelectedMessage(m);
     if (!m.isRead) {
@@ -124,51 +194,52 @@ export default function ContactMessagesPage() {
         <div
           className={`mb-6 p-4 rounded-xl flex items-center justify-between text-xs font-medium border ${
             alertMsg.type === 'success'
-              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-              : 'bg-red-500/10 text-red-300 border-red-500/30'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
+              : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800/60'
           }`}
         >
           <span>{alertMsg.text}</span>
-          <button onClick={() => setAlertMsg(null)} className="p-1 hover:opacity-75">
+          <button onClick={() => setAlertMsg(null)} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Toolbar: Category Pills, Status Tabs & Search */}
-      <div className="admin-toolbar mb-6 flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Channel / Category Switcher */}
-          <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-xs">
-            {[
-              { id: 'all', label: 'All Channels', icon: Mail },
-              { id: 'sponsorship', label: 'Sponsorships', icon: Briefcase },
-              { id: 'general', label: 'General Reader', icon: MessageSquare }
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = typeFilter === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setTypeFilter(tab.id);
-                    setPage(1);
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    isActive
-                      ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
+      {/* Toolbar: Category Switcher, Search & Status Filter Button (Single Horizontal Row) */}
+      <div className="admin-toolbar mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        {/* Channel / Category Switcher */}
+        <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-xs shrink-0">
+          {[
+            { id: 'all', label: 'All', icon: Mail },
+            { id: 'sponsorship', label: 'Sponsorships', icon: Briefcase },
+            { id: 'general', label: 'General', icon: MessageSquare }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = typeFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setTypeFilter(tab.id);
+                  setPage(1);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  isActive
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
+        {/* Right Controls: Search Box & Status Filter Button */}
+        <div className="flex items-center gap-2.5 flex-1 md:justify-end">
           {/* Search Box */}
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full sm:w-64">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -181,31 +252,67 @@ export default function ContactMessagesPage() {
               className="admin-input pl-9 pr-3 py-1.5 text-xs w-full"
             />
           </div>
-        </div>
 
-        {/* Status Filter Tabs */}
-        <div className="flex items-center space-x-2 overflow-x-auto pb-1">
-          {[
-            { id: 'unread', label: 'Unread' },
-            { id: 'pending', label: 'Pending Resolution' },
-            { id: 'resolved', label: 'Resolved' },
-            { id: '', label: 'All Statuses' }
-          ].map((tab) => (
+          {/* Status Filter Dropdown Button */}
+          <div className="relative shrink-0" ref={filterDropdownRef}>
             <button
-              key={tab.id}
-              onClick={() => {
-                setStatusFilter(tab.id);
-                setPage(1);
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                statusFilter === tab.id
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              type="button"
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                statusFilter
+                  ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 shadow-xs'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
               }`}
+              title="Filter by status"
             >
-              {tab.label}
+              <Filter className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              <span>
+                {statusFilter === 'unread'
+                  ? 'Unread'
+                  : statusFilter === 'pending'
+                  ? 'Pending'
+                  : statusFilter === 'resolved'
+                  ? 'Resolved'
+                  : 'All Statuses'}
+              </span>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${isFilterOpen ? 'rotate-180' : ''}`} />
             </button>
-          ))}
+
+            {isFilterOpen && (
+              <div className="absolute right-0 mt-1.5 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800/80 mb-1">
+                  Filter by Status
+                </div>
+                {[
+                  { id: 'unread', label: 'Unread' },
+                  { id: 'pending', label: 'Pending' },
+                  { id: 'resolved', label: 'Resolved' },
+                  { id: '', label: 'All Statuses' }
+                ].map((opt) => {
+                  const isSelected = statusFilter === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        setStatusFilter(opt.id);
+                        setPage(1);
+                        setIsFilterOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-1.5 text-xs text-left transition-colors ${
+                        isSelected
+                          ? 'font-bold text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/40'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/70'
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -228,9 +335,69 @@ export default function ContactMessagesPage() {
             </div>
           ) : (
             <>
+              {/* Inbox Header with Master Select & Bulk Actions */}
+              <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center space-x-2.5">
+                  <input
+                    type="checkbox"
+                    checked={messages.length > 0 && selectedMessageIds.length === messages.length}
+                    onChange={() => {
+                      if (selectedMessageIds.length === messages.length) {
+                        setSelectedMessageIds([]);
+                      } else {
+                        setSelectedMessageIds(messages.map((m) => m.id));
+                      }
+                    }}
+                    className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    title="Select all inquiries on this page"
+                  />
+                  <span className="text-slate-600 dark:text-slate-400 font-medium">
+                    {selectedMessageIds.length > 0
+                      ? `${selectedMessageIds.length} selected`
+                      : `Inquiries (${messages.length})`}
+                  </span>
+                </div>
+
+                {selectedMessageIds.length > 0 && (
+                  <div className="flex items-center space-x-1.5">
+                    <button
+                      onClick={handleBulkMarkRead}
+                      disabled={bulkUpdateMutation.isPending}
+                      className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                      title="Mark selected as read"
+                    >
+                      Read
+                    </button>
+                    <button
+                      onClick={handleBulkMarkResolved}
+                      disabled={bulkUpdateMutation.isPending}
+                      className="px-2 py-1 rounded-lg text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors cursor-pointer"
+                      title="Mark selected as resolved"
+                    >
+                      Resolve
+                    </button>
+                    <button
+                      onClick={handleBulkDelete}
+                      disabled={bulkDeleteMutation.isPending}
+                      className="p-1 rounded-lg text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer"
+                      title="Delete selected"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setSelectedMessageIds([])}
+                      className="px-1.5 py-1 text-[11px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className="divide-y divide-slate-200 dark:divide-slate-800/60 max-h-[620px] overflow-y-auto">
                 {messages.map((m) => {
                   const isSelected = selectedMessage?.id === m.id;
+                  const isChecked = selectedMessageIds.includes(m.id);
                   const isSpon = m.subject?.startsWith('[Sponsorship]');
                   const cleanSubject = isSpon ? m.subject.replace(/^\[Sponsorship\]\s*/, '') : m.subject;
 
@@ -241,11 +408,24 @@ export default function ContactMessagesPage() {
                       className={`p-4 cursor-pointer transition-colors ${
                         isSelected
                           ? 'bg-blue-50/80 dark:bg-blue-600/15 border-l-3 border-blue-500'
+                          : isChecked
+                          ? 'bg-blue-50/40 dark:bg-blue-900/15'
                           : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={() => {
+                              setSelectedMessageIds((prev) =>
+                                prev.includes(m.id) ? prev.filter((id) => id !== m.id) : [...prev, m.id]
+                              );
+                            }}
+                            className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                          />
                           {isSpon ? (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shrink-0">
                               <Briefcase className="w-2.5 h-2.5 mr-1" /> Sponsorship
@@ -396,8 +576,15 @@ export default function ContactMessagesPage() {
                     {selectedMessage.isResolved ? 'Resolved ✓' : 'Mark Resolved'}
                   </button>
                   <button
-                    onClick={() => {
-                      if (window.confirm('Delete this inquiry permanently?')) {
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: 'Delete Inquiry Permanently',
+                        message: 'Are you sure you want to permanently delete this inquiry? All message details and contact records will be removed. This action cannot be undone.',
+                        confirmText: 'Delete Inquiry',
+                        cancelText: 'Cancel',
+                        variant: 'danger'
+                      });
+                      if (ok) {
                         deleteMutation.mutate(selectedMessage.id);
                       }
                     }}

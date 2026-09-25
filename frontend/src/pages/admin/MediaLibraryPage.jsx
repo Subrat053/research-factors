@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { adminApi } from '../../services/admin.api.js';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
+import { useConfirm } from '../../context/ModalContext.jsx';
 import {
   Image as ImageIcon,
   Search,
@@ -19,6 +20,7 @@ import {
 
 export default function MediaLibraryPage() {
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const [providerFilter, setProviderFilter] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -69,12 +71,12 @@ export default function MediaLibraryPage() {
         <div
           className={`mb-6 p-4 rounded-xl flex items-center justify-between text-xs font-medium border ${
             alertMsg.type === 'success'
-              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-              : 'bg-red-500/10 text-red-300 border-red-500/30'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
+              : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800/60'
           }`}
         >
           <span>{alertMsg.text}</span>
-          <button onClick={() => setAlertMsg(null)} className="p-1 hover:opacity-75">
+          <button onClick={() => setAlertMsg(null)} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -186,8 +188,15 @@ export default function MediaLibraryPage() {
                   </div>
 
                   <button
-                    onClick={() => {
-                      if (window.confirm(`Force delete asset '${m.originalName}' from both database and ${m.provider} storage?`)) {
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: 'Force Delete Asset',
+                        message: `Force delete asset '${m.originalName}' from both the database and ${m.provider} cloud storage? This file will be permanently removed.`,
+                        confirmText: 'Delete Asset',
+                        cancelText: 'Cancel',
+                        variant: 'danger'
+                      });
+                      if (ok) {
                         deleteMutation.mutate(m.id);
                       }
                     }}

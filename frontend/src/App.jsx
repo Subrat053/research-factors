@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { ThemeProvider } from './context/ThemeContext.jsx';
+import { ModalProvider } from './context/ModalContext.jsx';
 import { ProtectedRoute } from './components/common/ProtectedRoute.jsx';
 import { ScrollToTop } from './components/common/ScrollToTop.jsx';
 import { ErrorBoundary } from './components/common/ErrorBoundary.jsx';
@@ -26,6 +27,7 @@ const ContactPage = lazy(() => import('./pages/public/ContactPage.jsx'));
 const PrivacyPolicyPage = lazy(() => import('./pages/public/PrivacyPolicyPage.jsx'));
 const TermsPage = lazy(() => import('./pages/public/TermsPage.jsx'));
 const CookiePolicyPage = lazy(() => import('./pages/public/CookiePolicyPage.jsx'));
+const EditorialGuidelinesPage = lazy(() => import('./pages/public/EditorialGuidelinesPage.jsx'));
 
 // 2. Authentication Pages (Lazy Loaded)
 const LoginPage = lazy(() => import('./pages/auth/LoginPage.jsx'));
@@ -52,6 +54,7 @@ const ContactMessagesPage = lazy(() => import('./pages/admin/ContactMessagesPage
 const AuditLogsPage = lazy(() => import('./pages/admin/AuditLogsPage.jsx'));
 const RolesPermissionsPage = lazy(() => import('./pages/admin/RolesPermissionsPage.jsx'));
 const SystemSettingsPage = lazy(() => import('./pages/admin/SystemSettingsPage.jsx'));
+const SeoAuditPage = lazy(() => import('./pages/admin/SeoAuditPage.jsx'));
 const AdminProfilePage = lazy(() => import('./pages/admin/AdminProfilePage.jsx'));
 
 // 5. Development-Only Agentation (100% Tree-shaken from Production Builds)
@@ -78,7 +81,8 @@ export default function App() {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <AuthProvider>
-              <BrowserRouter basename={import.meta.env.BASE_URL}>
+              <ModalProvider>
+                <BrowserRouter basename={import.meta.env.BASE_URL}>
                 <ScrollToTop />
                 {/* Visual Feedback for AI Development - DEV only */}
                 {import.meta.env.DEV && (
@@ -91,8 +95,6 @@ export default function App() {
                     {/* Public Magazine Routes */}
                     <Route path="/" element={<HomePage />} />
                     <Route path="/research" element={<ResearchListingPage />} />
-                    <Route path="/research/:slug" element={<ArticleDetailPage />} />
-                    <Route path="/articles/:slug" element={<ArticleDetailPage />} />
                     <Route path="/categories/:categorySlug" element={<CategoryPage />} />
                     <Route path="/sponsorship" element={<SponsorshipPage />} />
                     <Route path="/about" element={<AboutPage />} />
@@ -100,6 +102,14 @@ export default function App() {
                     <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
                     <Route path="/terms" element={<TermsPage />} />
                     <Route path="/cookie-policy" element={<CookiePolicyPage />} />
+                    <Route path="/editorial-guidelines" element={<EditorialGuidelinesPage />} />
+
+                    {/* Category-Scoped Dynamic Article Route (e.g. /rf/:categorySlug/:slug) */}
+                    <Route path="/:categorySlug/:slug" element={<ArticleDetailPage />} />
+
+                    {/* Backward-Compatible Article Routes */}
+                    <Route path="/research/:slug" element={<ArticleDetailPage />} />
+                    <Route path="/articles/:slug" element={<ArticleDetailPage />} />
                     <Route
                       path="/bookmarks"
                       element={
@@ -275,6 +285,14 @@ export default function App() {
                       }
                     />
                     <Route
+                      path="/admin/seo"
+                      element={
+                        <ProtectedRoute requiredPermission="setting.manage">
+                          <SeoAuditPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
                       path="/admin/profile"
                       element={
                         <ProtectedRoute>
@@ -301,7 +319,8 @@ export default function App() {
                   </Routes>
                 </Suspense>
               </BrowserRouter>
-            </AuthProvider>
+            </ModalProvider>
+          </AuthProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </HelmetProvider>

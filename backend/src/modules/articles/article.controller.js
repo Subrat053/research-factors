@@ -34,10 +34,14 @@ export class ArticleController {
       const result = await ArticleService.getArticleBySlug(slug);
 
       if (result.redirect) {
+        const catSlug = result.categorySlug || 'research';
+        res.setHeader('Location', `/${catSlug}/${result.newSlug}`);
         return res.status(301).json({
           success: true,
           redirect: true,
+          categorySlug: catSlug,
           newSlug: result.newSlug,
+          location: `/${catSlug}/${result.newSlug}`,
           message: 'Article has moved to a new URL slug'
         });
       }

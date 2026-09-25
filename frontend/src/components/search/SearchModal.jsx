@@ -177,7 +177,8 @@ export function SearchModal({ isOpen, onClose }) {
     searchApi.trackClick(article.id, query.trim());
 
     onClose();
-    navigate(`/research/${article.slug}`);
+    const catSlug = article.category?.slug || 'research';
+    navigate(`/${catSlug}/${article.slug}`);
   };
 
   // Handle clicking a recent search chip

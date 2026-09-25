@@ -17,6 +17,11 @@ export class ArticleDTO {
       readingTimeMin: article.readingTimeMin,
       viewCount: article.viewCount,
       isFeatured: Boolean(article.isFeatured),
+      isSponsored: Boolean(article.isSponsored),
+      sponsorName: article.sponsorName || null,
+      sponsorDescription: article.sponsorDescription || null,
+      sponsorUrl: article.sponsorUrl || null,
+      sponsorLogoUrl: article.sponsorLogoUrl || null,
       publishedAt: article.publishedAt,
       category: article.category ? {
         id: article.category.id,
@@ -47,9 +52,10 @@ export class ArticleDTO {
 
     return {
       ...summary,
-      seoTitle: article.seoTitle || article.title,
-      seoDescription: article.seoDescription || article.excerpt,
-      canonicalUrl: article.canonicalUrl,
+      seoTitle: article.seoTitle || article.seo?.title || article.title,
+      seoDescription: article.seoDescription || article.seo?.description || article.excerpt,
+      canonicalUrl: article.canonicalUrl || article.seo?.canonicalUrl,
+      seo: article.seo || null,
       blocks,
       related: related.map(r => this.toPublicSummary(r))
     };
@@ -64,7 +70,8 @@ export class ArticleDTO {
       createdById: article.createdById,
       publishedById: article.publishedById,
       createdAt: article.createdAt,
-      updatedAt: article.updatedAt
+      updatedAt: article.updatedAt,
+      seoMetadata: article.seoMetadata || null
     };
   }
 }

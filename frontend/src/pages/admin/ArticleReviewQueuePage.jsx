@@ -89,12 +89,12 @@ export default function ArticleReviewQueuePage() {
         <div
           className={`mb-6 p-4 rounded-xl flex items-center justify-between text-xs font-medium border ${
             alertMsg.type === 'success'
-              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-              : 'bg-red-500/10 text-red-300 border-red-500/30'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
+              : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800/60'
           }`}
         >
           <span>{alertMsg.text}</span>
-          <button onClick={() => setAlertMsg(null)} className="p-1 hover:opacity-75">
+          <button onClick={() => setAlertMsg(null)} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
             <X className="w-4 h-4" />
           </button>
         </div>

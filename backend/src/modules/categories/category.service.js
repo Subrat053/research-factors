@@ -1,5 +1,6 @@
 import { prisma } from '../../config/db.js';
 import { AppError } from '../../middleware/errorHandler.js';
+import { SeoGeneratorService } from '../seo/seo-generator.service.js';
 
 export class CategoryService {
   /**
@@ -53,7 +54,7 @@ export class CategoryService {
   }
 
   static async createCategory(data, actorId) {
-    const { name, description, imageUrl, isActive, parentId } = data;
+    const { name, description, imageUrl, isActive, showInFooter, seoTitle, seoDescription, seoKeywords, canonicalUrl, parentId } = data;
     if (!name || name.trim().length < 2) {
       throw new AppError('Category name must be at least 2 characters long', 400, 'INVALID_NAME');
     }
@@ -77,10 +78,32 @@ export class CategoryService {
           description: description?.trim() || null,
           imageUrl: imageUrl || null,
           isActive: isActive !== undefined ? isActive : true,
+          showInFooter: showInFooter !== undefined ? showInFooter : true,
+          seoTitle: seoTitle?.trim() || null,
+          seoDescription: seoDescription?.trim() || null,
+          seoKeywords: seoKeywords?.trim() || null,
+          canonicalUrl: canonicalUrl?.trim() || null,
           parentId: parentId || null
         },
         include: { parent: true }
       });
+
+      // Sync SeoMetadata for Category
+      try {
+        const generatedSeo = SeoGeneratorService.generateCategorySeo(cat);
+        await tx.seoMetadata.create({
+          data: {
+            entityType: 'CATEGORY',
+            entityId: cat.id,
+            customTitle: cat.seoTitle,
+            customDescription: cat.seoDescription,
+            customCanonicalUrl: cat.canonicalUrl,
+            ...generatedSeo
+          }
+        });
+      } catch {
+        // Keep category creation resilient
+      }
 
       if (actorId) {
         await tx.auditLog.create({
@@ -104,7 +127,7 @@ export class CategoryService {
       throw new AppError('Category not found', 404, 'CATEGORY_NOT_FOUND');
     }
 
-    const { name, description, imageUrl, isActive, parentId } = data;
+    const { name, description, imageUrl, isActive, showInFooter, seoTitle, seoDescription, seoKeywords, canonicalUrl, parentId } = data;
     const updatePayload = {};
 
     if (name) {
@@ -114,6 +137,11 @@ export class CategoryService {
     if (description !== undefined) updatePayload.description = description;
     if (imageUrl !== undefined) updatePayload.imageUrl = imageUrl;
     if (isActive !== undefined) updatePayload.isActive = isActive;
+    if (showInFooter !== undefined) updatePayload.showInFooter = showInFooter;
+    if (seoTitle !== undefined) updatePayload.seoTitle = seoTitle?.trim() || null;
+    if (seoDescription !== undefined) updatePayload.seoDescription = seoDescription?.trim() || null;
+    if (seoKeywords !== undefined) updatePayload.seoKeywords = seoKeywords?.trim() || null;
+    if (canonicalUrl !== undefined) updatePayload.canonicalUrl = canonicalUrl?.trim() || null;
     if (parentId !== undefined) {
       if (parentId === id) {
         throw new AppError('A category cannot be its own parent', 400, 'INVALID_PARENT_CATEGORY');
@@ -127,6 +155,30 @@ export class CategoryService {
         data: updatePayload,
         include: { parent: true }
       });
+
+      // Sync SeoMetadata for Category
+      try {
+        const generatedSeo = SeoGeneratorService.generateCategorySeo(updated);
+        await tx.seoMetadata.upsert({
+          where: { entityType_entityId: { entityType: 'CATEGORY', entityId: id } },
+          update: {
+            customTitle: updated.seoTitle,
+            customDescription: updated.seoDescription,
+            customCanonicalUrl: updated.canonicalUrl,
+            ...generatedSeo
+          },
+          create: {
+            entityType: 'CATEGORY',
+            entityId: id,
+            customTitle: updated.seoTitle,
+            customDescription: updated.seoDescription,
+            customCanonicalUrl: updated.canonicalUrl,
+            ...generatedSeo
+          }
+        });
+      } catch {
+        // Keep category update resilient
+      }
 
       if (actorId) {
         await tx.auditLog.create({

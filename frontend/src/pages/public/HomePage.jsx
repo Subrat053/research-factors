@@ -4,7 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { articlesApi } from '../../services/articles.api.js';
+import { seoApi } from '../../services/seo.api.js';
 import { normalizeMediaUrl } from '../../services/media.api.js';
+import { SeoHead } from '../../components/common/SeoHead.jsx';
 import { Header } from '../../components/layout/Header.jsx';
 import { Footer } from '../../components/layout/Footer.jsx';
 import { ArticleCard } from '../../components/article/ArticleCard.jsx';
@@ -34,7 +36,8 @@ import {
   Lightbulb,
   ExternalLink,
   Laptop,
-  Target
+  Target,
+  ShoppingBag
 } from 'lucide-react';
 
 const sponsorshipContainerVariants = {
@@ -96,7 +99,7 @@ const stepContainerVariants = {
   hidden: {},
   visible: {
     transition: {
-      staggerChildren: 0.35
+      staggerChildren: 0.10
     }
   }
 };
@@ -198,6 +201,14 @@ export default function HomePage() {
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
 
+  // 0. Fetch Resolved Page SEO
+  const { data: seoResponse } = useQuery({
+    queryKey: ['seo', 'page', 'home'],
+    queryFn: () => seoApi.resolveSeo({ type: 'PAGE', id: 'home' }),
+    staleTime: 1000 * 60 * 10
+  });
+  const pageSeo = seoResponse?.data || null;
+
   // 1. Fetch Featured Article
   const { data: featuredData, isLoading: isFeaturedLoading } = useQuery({
     queryKey: ['featured-article'],
@@ -243,39 +254,89 @@ export default function HomePage() {
     return pool;
   }, [featuredData, articles]);
 
+  // Icon dictionary mapping categories by slug/keyword to high-contrast Lucide icons
+  const CATEGORY_ICON_MAP = {
+    technology: Cpu,
+    tech: Cpu,
+    software: Laptop,
+    science: FlaskConical,
+    physics: FlaskConical,
+    policy: BookOpen,
+    governance: BookOpen,
+    economics: TrendingUp,
+    finance: TrendingUp,
+    business: Briefcase,
+    lifestyle: ShoppingBag,
+    health: Activity,
+    default: Layers
+  };
+
+  const getCategoryIcon = (slug, name) => {
+    const key = `${slug || ''} ${name || ''}`.toLowerCase();
+    for (const [k, icon] of Object.entries(CATEGORY_ICON_MAP)) {
+      if (k !== 'default' && key.includes(k)) return icon;
+    }
+    return CATEGORY_ICON_MAP.default;
+  };
+
   // Curated fallback topics with matching uni-color icons and descriptions
-  const topicCards = [
+  const defaultTopicCards = [
     {
       name: 'Technology',
       slug: 'technology',
       desc: 'Gadgets, Software, AI & Semiconductors',
-      icon: Cpu
+      icon: Cpu,
+      articleCount: 13
     },
     {
       name: 'Business',
       slug: 'business',
       desc: 'Markets, Startups, Strategy & Finance',
-      icon: Briefcase
+      icon: Briefcase,
+      articleCount: 'Explore'
     },
     {
       name: 'Lifestyle',
       slug: 'lifestyle',
       desc: 'Health, Travel, Food & Daily Choices',
-      icon: Compass
+      icon: ShoppingBag,
+      articleCount: 'Explore'
     },
     {
       name: 'Science',
       slug: 'science',
       desc: 'Space, Nature, Discoveries & Research',
-      icon: FlaskConical
+      icon: FlaskConical,
+      articleCount: 1
     },
     {
       name: 'Policy',
       slug: 'policy',
       desc: 'Governance, Law, Global Policy & Economics',
-      icon: BookOpen
+      icon: BookOpen,
+      articleCount: 1
     }
   ];
+
+  // Dynamic topics: actively driven by database categories, gracefully falling back to defaults
+  const displayTopics = React.useMemo(() => {
+    const activeDbCategories = Array.isArray(categories)
+      ? categories.filter((c) => c.isActive !== false)
+      : [];
+
+    if (activeDbCategories.length > 0) {
+      return activeDbCategories.map((c) => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        desc: c.description || `Empirical analysis, benchmarks, and research in ${c.name}.`,
+        icon: getCategoryIcon(c.slug, c.name),
+        articleCount: c._count?.articles ?? 0
+      }));
+    }
+
+    return defaultTopicCards;
+  }, [categories]);
 
   // Reader Testimonials (4 items for even count)
   const testimonials = [
@@ -368,21 +429,12 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-paper text-ink">
-      {/* SEO METADATA */}
-      <Helmet>
-        <title>Research Factors — Empirical Research, Product Comparisons & Editorial Insights</title>
-        <meta
-          name="description"
-          content="Explore in-depth research, product comparisons, industry analysis, and expert perspectives across technology, business, science, lifestyle, and more."
-        />
-        <meta property="og:title" content="Research Factors — Research. Read. Share." />
-        <meta
-          property="og:description"
-          content="Evidence-led research, side-by-side product comparisons, and transparent brand collaborations."
-        />
-        <meta property="og:type" content="website" />
-        <link rel="canonical" href={window.location.origin} />
-      </Helmet>
+      {/* Production-Grade Dynamic SEO & Schema.org Graph */}
+      <SeoHead
+        seo={pageSeo}
+        title="Research Factors — Empirical Research, Product Comparisons & Editorial Insights"
+        description="Explore in-depth research, product comparisons, industry analysis, and expert perspectives across technology, business, science, lifestyle, and more."
+      />
 
       <Header />
 
@@ -514,7 +566,7 @@ export default function HomePage() {
                       trending.slice(0, 6).map((item, index) => (
                         <Link
                           key={item.id}
-                          to={`/research/${item.slug}`}
+                          to={`/${item.category?.slug || 'research'}/${item.slug}`}
                           className="group flex items-start space-x-3 py-3 hover:bg-paper/50 rounded-lg px-1.5 transition-colors"
                         >
                           <span className="w-6 h-6 rounded-full bg-paper border border-paper-border text-slate-700 font-bold text-xs sm:text-sm flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-rfblue group-hover:text-white group-hover:border-rfblue transition-colors">
@@ -566,7 +618,7 @@ export default function HomePage() {
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-10">
               <div>
                 <div className="inline-flex items-center space-x-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-rfblue mb-2">
-                  <Compass className="w-4 h-4 text-rfblue" />
+                  <Search className="w-4 h-4 text-rfblue" />
                   <span>Explore Topics</span>
                 </div>
                 <h2>
@@ -587,49 +639,91 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* Topic Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 sm:gap-6">
-              {topicCards.map((topic) => {
-                const IconComponent = topic.icon;
-                const matchCategory = categories.find(
-                  (c) => c.slug?.toLowerCase() === topic.slug || c.name?.toLowerCase() === topic.name.toLowerCase()
-                );
-                return (
-                  <Link
-                    key={topic.slug}
-                    to={`/research?category=${matchCategory?.slug || topic.slug}`}
-                    className="group bg-white p-6 rounded-xl border border-paper-border hover:border-rfblue/40 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between"
-                  >
-                    <div>
-                      {/* Uni-Color Icon Container */}
-                      <div className="w-11 h-11 rounded-lg bg-rfblue-50 text-rfblue flex items-center justify-center mb-4 group-hover:bg-rfblue group-hover:text-white transition-colors">
-                        <IconComponent className="w-5 h-5" />
-                      </div>
-                      <h3 className="text-card-title group-hover:text-rfblue transition-colors">
-                        {topic.name}
-                      </h3>
-                      <p className="mt-2 text-xs sm:text-sm text-ink-muted leading-relaxed line-clamp-2">
-                        {matchCategory?.description || topic.desc}
-                      </p>
-                    </div>
+            {/* Dynamic Category Cards: Single Row Grid (<= 5) or Infinite Marquee Slider (> 5) */}
+            {displayTopics.length > 5 ? (
+              <div className="relative w-full overflow-hidden py-1">
+                {/* Left and Right Edge Fade Gradients */}
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-12 sm:w-24 bg-gradient-to-r from-paper-warm via-paper-warm/80 to-transparent z-10" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-12 sm:w-24 bg-gradient-to-l from-paper-warm via-paper-warm/80 to-transparent z-10" />
 
-                    <div className="mt-6 pt-4 border-t border-paper-border/60 flex items-center justify-between">
-                      <span className="text-xs sm:text-sm font-semibold text-ink-muted">
-                        {matchCategory?._count?.articles || 'Explore'} articles
-                      </span>
-                      <div className="w-7 h-7 rounded-full bg-paper flex items-center justify-center text-ink group-hover:bg-rfblue group-hover:text-white transition-colors">
-                        <ArrowRight className="w-3.5 h-3.5" />
+                <div className="animate-marquee-smooth flex gap-5 flex-nowrap items-stretch">
+                  {displayTopics.concat(displayTopics).map((topic, idx) => {
+                    const IconComponent = topic.icon;
+                    return (
+                      <Link
+                        key={`${topic.slug}-${idx}`}
+                        to={`/categories/${topic.slug}`}
+                        className="group bg-white p-5 sm:p-6 rounded-xl border border-paper-border hover:border-rfblue/40 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between w-[260px] sm:w-[280px] shrink-0 h-[215px]"
+                      >
+                        <div>
+                          {/* Uni-Color Icon Container */}
+                          <div className="w-11 h-11 rounded-lg bg-rfblue-50 text-rfblue flex items-center justify-center mb-3 group-hover:bg-rfblue group-hover:text-white transition-colors">
+                            <IconComponent className="w-5 h-5" />
+                          </div>
+                          <h3 className="text-card-title group-hover:text-rfblue transition-colors line-clamp-1">
+                            {topic.name}
+                          </h3>
+                          <p className="mt-2 text-xs sm:text-sm text-ink-muted leading-relaxed line-clamp-2">
+                            {topic.desc}
+                          </p>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-paper-border/60 flex items-center justify-between">
+                          <span className="text-xs sm:text-sm font-semibold text-ink-muted">
+                            {topic.articleCount} {typeof topic.articleCount === 'number' ? 'articles' : ''}
+                          </span>
+                          <div className="w-7 h-7 rounded-full bg-paper flex items-center justify-center text-ink group-hover:bg-rfblue group-hover:text-white transition-colors">
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className={`flex gap-5 overflow-x-auto no-scrollbar snap-x pb-2 lg:pb-0 lg:grid ${
+                displayTopics.length <= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-5'
+              }`}>
+                {displayTopics.map((topic) => {
+                  const IconComponent = topic.icon;
+                  return (
+                    <Link
+                      key={topic.slug}
+                      to={`/categories/${topic.slug}`}
+                      className="group bg-white p-5 sm:p-6 rounded-xl border border-paper-border hover:border-rfblue/40 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between w-[260px] sm:w-[280px] lg:w-auto shrink-0 lg:shrink snap-start"
+                    >
+                      <div>
+                        {/* Uni-Color Icon Container */}
+                        <div className="w-11 h-11 rounded-lg bg-rfblue-50 text-rfblue flex items-center justify-center mb-3 group-hover:bg-rfblue group-hover:text-white transition-colors">
+                          <IconComponent className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-card-title group-hover:text-rfblue transition-colors line-clamp-1">
+                          {topic.name}
+                        </h3>
+                        <p className="mt-2 text-xs sm:text-sm text-ink-muted leading-relaxed line-clamp-2">
+                          {topic.desc}
+                        </p>
                       </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+
+                      <div className="mt-4 pt-3 border-t border-paper-border/60 flex items-center justify-between">
+                        <span className="text-xs sm:text-sm font-semibold text-ink-muted">
+                          {topic.articleCount} {typeof topic.articleCount === 'number' ? 'articles' : ''}
+                        </span>
+                        <div className="w-7 h-7 rounded-full bg-paper flex items-center justify-center text-ink group-hover:bg-rfblue group-hover:text-white transition-colors">
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
 
         {/* 3. FEATURED RESEARCH / HERO ARTICLE INFINITE CAROUSEL */}
-        {carouselArticles.length > 0 && (
+        {carouselArticles?.length > 0 && (
           <FeaturedArticlesCarousel articles={carouselArticles} />
         )}
 

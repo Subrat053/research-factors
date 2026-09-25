@@ -77,10 +77,11 @@ flowchart TD
 #### 1. `fallbackData.categories` (6 items)
 - **Service Interceptor**: `articlesApi.getCategories()`, `articlesApi.getCategoryBySlug(slug)` in [`articles.api.js`](file:///d:/Wizmonk/ResearchFactor/frontend/src/services/articles.api.js).
 - **Consuming Views**:
-  - `Header.jsx`: Desktop & mobile navigation categories dropdown/bar.
-  - `HomePage.jsx`: Category filtering pills in recent research section.
+  - `Header.jsx`: Desktop composite `Category` hover dropdown, mobile drawer `Categories` 2-column grid.
+  - `Footer.jsx`: Dynamic 2-column footer `Categories` directory (gated by `showInFooter`).
+  - `HomePage.jsx`: Category filtering pills in recent research section & topic cards.
   - `ResearchListingPage.jsx`: Filter sidebar & category badge list.
-  - `CategoryPage.jsx`: Category header title, description, and metadata.
+  - `CategoryPage.jsx`: Dynamic category header title, description, SEO metadata, and sibling categories.
 
 #### 2. `fallbackData.articles` (18 items, min 3 per category)
 - **Service Interceptor**: `articlesApi.getArticles(params)`, `articlesApi.getFeaturedArticle()`, `articlesApi.getArticleBySlug(slug)`, `articlesApi.search(q)` in [`articles.api.js`](file:///d:/Wizmonk/ResearchFactor/frontend/src/services/articles.api.js).

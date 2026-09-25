@@ -85,7 +85,8 @@ For paginated collections:
 ### Public Content (`/api/v1/articles`, `/api/v1/categories`, `/api/v1/tags`, `/api/v1/search`)
 - `GET /articles`: Paginated list of published articles with `category`, `tag`, `type` (format enum: `RESEARCH`, `REVIEW`, `COMPARISON`, `GUIDE`, `ANALYSIS`, `OPINION`), and `sort` filters.
 - `GET /articles/:slug`: Full published article with blocks, author info, and related items.
-- `GET /categories`: Active category hierarchy.
+- `GET /categories`: Active public category listing and hierarchy (returns `id`, `name`, `slug`, `description`, `imageUrl`, `isActive`, `showInFooter`, `seoTitle`, `seoDescription`, `seoKeywords`, `canonicalUrl`, `parent`, and published article count `_count.articles`).
+- `GET /categories/:slug`: Public category detail by slug (returns single category metadata, custom SEO configuration fields, and active article counts; powers dynamic `/categories/:categorySlug` portal).
 - `GET /tags`: Query and autocomplete tags with active article counts (`?search=query`).
 - `GET /tags/:slug`: Get tag metadata and article counts by slug.
 - `GET /tags/trending`: Most popular tags.
@@ -96,18 +97,30 @@ For paginated collections:
 
 ### Author Workspace (`/api/v1/author/articles`)
 - `GET /author/articles`: List all articles created by the authenticated author.
-- `POST /author/articles`: Initialize a new draft article (supports dynamic category, `type` editorial format, & dual-format tags).
-- `PATCH /author/articles/:id/draft`: Debounced autosave endpoint for draft header, `type` editorial format, & blocks.
-- `GET /author/articles/:id/preview`: Secure author preview of draft content.
+- `POST /author/articles`: Initialize a new draft article (supports dynamic category, `type` editorial format, dual-format tags, brand sponsorship fields (`isSponsored`, `sponsorName`, `sponsorDescription`, `sponsorUrl`, `sponsorLogoUrl`), and SEO metadata (`seoTitle`, `seoDescription`, `canonicalUrl`)).
+- `PATCH /author/articles/:id/draft`: Debounced autosave endpoint for draft header, `type` editorial format, blocks, brand sponsorship, and SEO metadata.
+- `GET /author/articles/:id/preview`: Secure author preview of draft content with sidebar sponsorship simulation and normal-form tags.
 - `POST /author/articles/:id/submit`: Transition article from `DRAFT` or `REJECTED` to `PENDING_REVIEW`.
 
-### Editorial & Administration (`/api/v1/admin/articles`, `/api/v1/categories`)
+### Article Data Transfer Objects (DTO) Schema
+- **`ArticleDTO.toPublicSummary`**: `id`, `title`, `slug`, `subtitle`, `excerpt`, `coverImageUrl`, `coverImageAlt`, `type`, `status`, `readingTimeMin`, `viewCount`, `isFeatured`, `isSponsored`, `sponsorName`, `sponsorDescription`, `sponsorUrl`, `sponsorLogoUrl`, `publishedAt`, `category`, `author`, `tags`, `commentCount`.
+- **`ArticleDTO.toPublicDetail`**: Extends summary with `seoTitle`, `seoDescription`, `canonicalUrl`, `blocks` (ordered and sanitized), and `related` publications.
+- **`ArticleDTO.toAuthorAdmin`**: Extends detail with `rejectionReason`, `scheduledAt`, `createdById`, `publishedById`, `createdAt`, `updatedAt`.
+
+### Editorial & Administration (`/api/v1/admin/articles`, `/api/v1/categories`, `/api/v1/admin/users`)
 - `GET /admin/articles`: Filter all articles across system statuses (`PENDING_REVIEW`, etc.).
 - `POST /admin/articles/:id/approve`: Move article to `APPROVED`.
 - `POST /admin/articles/:id/reject`: Reject article with required `rejectionReason`.
 - `POST /admin/articles/:id/publish`: Publish article live directly or from review queue (`article.publish` permission; updates status to `PUBLISHED`, locks slug history, & sets `publishedAt`).
 - `POST /admin/articles/:id/schedule`: Set future publication time.
 - `POST /admin/articles/:id/unpublish`: Revert live article to `ARCHIVED` (`article.publish` / `article.unpublish` permission).
+- `POST /admin/articles/bulk-status`: Batch transition article statuses (`{ articleIds: string[], action: 'PUBLISH' | 'ARCHIVE' }`, requires `article.publish`).
+- `POST /admin/articles/bulk-delete`: Batch force delete articles and cascade cleanups (`{ articleIds: string[] }`, requires `article.delete_any`).
+- `PATCH /admin/users/bulk-status`: Batch update user account statuses (`{ userIds: string[], status: 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED', reason?: string }`, requires `user.suspend`, includes actor self-exclusion safeguard).
+- `GET /categories/all`: Admin listing of all categories including inactive records and full hierarchy (requires `category.manage`).
+- `POST /categories`: Create new category with SEO metadata and `showInFooter` toggle (requires `category.manage`).
+- `PUT /categories/:id`: Update category fields including SEO metadata, active status, and `showInFooter` (requires `category.manage`).
+- `DELETE /categories/:id`: Delete category (requires `category.manage`).
 - `POST /categories/merge`: Merge duplicate category into target category transactionally (`category.merge` / `category.manage`).
 
 ### Community (`/api/v1/comments`, `/api/v1/bookmarks`)
@@ -131,4 +144,6 @@ For paginated collections:
 - `GET /admin/contact-messages`: Permission-gated (`contact.manage`) paginated list with `status` (`unread`, `pending`, `resolved`) and `type` (`sponsorship`, `general`) filters, plus keyword search.
 - `PATCH /admin/contact-messages/:id`: Permission-gated (`contact.manage`) update to toggle `isRead` or `isResolved` status (creates audit log).
 - `DELETE /admin/contact-messages/:id`: Permission-gated (`contact.manage`) deletion of inquiry (creates audit log).
+- `PATCH /admin/contact-messages/bulk`: Batch update status or read state across selected inquiries (`{ messageIds: string[], status?: 'unread' | 'pending' | 'resolved', isRead?: boolean }`, requires `contact.manage`).
+- `POST /admin/contact-messages/bulk-delete`: Batch permanently delete selected inquiries (`{ messageIds: string[] }`, requires `contact.manage`).
 

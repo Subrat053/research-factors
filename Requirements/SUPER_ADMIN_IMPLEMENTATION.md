@@ -23,7 +23,7 @@ The platform enforces 34 atomic permissions organized across 9 architectural dom
 
 | Domain | Action / Permission | Description |
 | :--- | :--- | :--- |
-| **Article** | `article.create` | Author manuscript draft creation |
+| **Article** | `article.create` | Author article draft creation |
 | | `article.read_draft` | Access unpublished manuscripts |
 | | `article.update_own` | Edit authored drafts |
 | | `article.update_any` | Administrative editorial modifications |

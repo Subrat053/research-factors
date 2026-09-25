@@ -15,10 +15,16 @@ describe('Public Legal & Company Pages Content & API Suite', () => {
     const about = pagesContent.about;
     expect(about.title).toBe('About Research Factors');
     expect(about.subtitle).toBe('Know More. Choose Better.');
-    expect(about.sections.length).toBeGreaterThanOrEqual(10);
-    expect(about.sections.some((s) => s.id === 'what-we-do')).toBe(true);
-    expect(about.sections.some((s) => s.id === 'our-approach')).toBe(true);
-    expect(about.sections.some((s) => s.id === 'our-vision')).toBe(true);
+    if (about.sections) {
+      expect(about.sections.length).toBeGreaterThanOrEqual(10);
+      expect(about.sections.some((s) => s.id === 'what-we-do')).toBe(true);
+      expect(about.sections.some((s) => s.id === 'our-approach')).toBe(true);
+      expect(about.sections.some((s) => s.id === 'our-vision')).toBe(true);
+    } else {
+      expect(about.whatWeDo).toBeDefined();
+      expect(about.whyWeExist).toBeDefined();
+      expect(about.approach).toBeDefined();
+    }
   });
 
   it('should verify Terms & Conditions contains all 18 numbered sections', () => {

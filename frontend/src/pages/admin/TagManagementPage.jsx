@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { adminApi } from '../../services/admin.api.js';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
+import { useConfirm } from '../../context/ModalContext.jsx';
 import {
   Tags,
   Plus,
@@ -18,6 +19,7 @@ import {
 
 export default function TagManagementPage() {
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
@@ -164,12 +166,12 @@ export default function TagManagementPage() {
         <div
           className={`mb-6 p-4 rounded-xl flex items-center justify-between text-xs font-medium border ${
             alertMsg.type === 'success'
-              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-              : 'bg-red-500/10 text-red-300 border-red-500/30'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
+              : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800/60'
           }`}
         >
           <span>{alertMsg.text}</span>
-          <button onClick={() => setAlertMsg(null)} className="p-1 hover:opacity-75">
+          <button onClick={() => setAlertMsg(null)} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -246,8 +248,15 @@ export default function TagManagementPage() {
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Delete tag '#${t.name}'?`)) {
+                          onClick={async () => {
+                            const ok = await confirm({
+                              title: 'Delete Tag',
+                              message: `Are you sure you want to delete tag '${t.name}'? Existing articles will retain their editorial records, but the tag will be removed from suggestions.`,
+                              confirmText: 'Delete Tag',
+                              cancelText: 'Cancel',
+                              variant: 'danger'
+                            });
+                            if (ok) {
                               deleteMutation.mutate(t.id);
                             }
                           }}

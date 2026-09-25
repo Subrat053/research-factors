@@ -32,6 +32,7 @@ export const mediaApi = {
 
 // Static platform branding assets respecting Vite subfolder/root base path
 export const LOGO_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$/, '')}/logo.png`;
+export const LOGO_WHITE_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$/, '')}/logo-white.png`;
 export const LOGO_ICON_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$/, '')}/logo-icon.png`;
 
 /**

@@ -34,9 +34,9 @@ export default function SystemSettingsPage() {
   });
 
   const [seoForm, setSeoForm] = useState({
-    defaultTitle: '',
-    defaultDescription: '',
-    openGraphImage: ''
+    defaultTitle: 'Research Factors — Empirical Research & Peer-Reviewed Insights',
+    defaultDescription: 'Discover empirical research, scholarly insights, and high-impact analysis across science, technology, economics, and medicine.',
+    openGraphImage: typeof window !== 'undefined' ? `${window.location.origin}/images/og-default.png` : '/images/og-default.png'
   });
 
   const [policiesForm, setPoliciesForm] = useState({
@@ -89,9 +89,9 @@ export default function SystemSettingsPage() {
       });
 
       setSeoForm({
-        defaultTitle: s.defaultTitle || '',
-        defaultDescription: s.defaultDescription || '',
-        openGraphImage: s.openGraphImage || ''
+        defaultTitle: s.defaultTitle || 'Research Factors — Empirical Research & Peer-Reviewed Insights',
+        defaultDescription: s.defaultDescription || 'Discover empirical research, scholarly insights, and high-impact analysis across science, technology, economics, and medicine.',
+        openGraphImage: s.openGraphImage || (typeof window !== 'undefined' ? `${window.location.origin}/images/og-default.png` : '/images/og-default.png')
       });
 
       setPoliciesForm({
@@ -176,12 +176,12 @@ export default function SystemSettingsPage() {
         <div
           className={`mb-6 p-4 rounded-xl flex items-center justify-between text-xs font-medium border ${
             alertMsg.type === 'success'
-              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-              : 'bg-red-500/10 text-red-300 border-red-500/30'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
+              : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800/60'
           }`}
         >
           <span>{alertMsg.text}</span>
-          <button onClick={() => setAlertMsg(null)} className="p-1 hover:opacity-75">
+          <button onClick={() => setAlertMsg(null)} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
             <X className="w-4 h-4" />
           </button>
         </div>

@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { Header } from '../../components/layout/Header.jsx';
 import { Footer } from '../../components/layout/Footer.jsx';
 import { usePageContent } from '../../services/pages.api.js';
+import { seoApi } from '../../services/seo.api.js';
+import { SeoHead } from '../../components/common/SeoHead.jsx';
 import {
   FileText,
   ShieldAlert,
@@ -64,30 +67,20 @@ export default function TermsPage() {
     }
   };
 
+  const { data: seoData } = useQuery({
+    queryKey: ['seo', 'PAGE', 'terms'],
+    queryFn: () => seoApi.resolveSeo({ type: 'PAGE', id: 'terms' }),
+    staleTime: 1000 * 60 * 5,
+  });
+
   return (
     <div className="min-h-screen flex flex-col bg-paper text-ink selection:bg-rfblue-100 selection:text-rfblue-900">
-      <Helmet>
-        <title>Terms & Conditions | Research Factors</title>
-        <meta
-          name="description"
-          content="Review the terms and conditions governing the use of Research Factors, including content usage, user submissions, intellectual property, and disclaimers."
-        />
-        <link rel="canonical" href="https://researchfactors.com/terms" />
-        <meta property="og:title" content="Terms & Conditions | Research Factors" />
-        <meta
-          property="og:description"
-          content="Governing terms, editorial usage, and reader community agreements for Research Factors."
-        />
-        <meta property="og:type" content="article" />
-        <meta property="og:url" content="https://researchfactors.com/terms" />
-        <meta name="twitter:card" content="summary" />
-        <meta name="twitter:title" content="Terms & Conditions | Research Factors" />
-        <meta
-          name="twitter:description"
-          content="Review the governing legal terms and conditions for Research Factors."
-        />
-        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
-      </Helmet>
+      <SeoHead
+        seo={seoData?.seo}
+        fallbackTitle="Terms & Conditions — Research Factors"
+        fallbackDescription="The Terms & Conditions governing access, editorial research usage, peer review submissions, and legal disclaimers for Research Factors."
+        canonicalUrl={`${window.location.origin}/terms`}
+      />
 
       <Header />
 

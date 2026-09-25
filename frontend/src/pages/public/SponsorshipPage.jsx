@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { contactApi } from '../../services/contact.api.js';
+import { seoApi } from '../../services/seo.api.js';
 import { normalizeMediaUrl } from '../../services/media.api.js';
+import { SeoHead } from '../../components/common/SeoHead.jsx';
 import { Header } from '../../components/layout/Header.jsx';
 import { Footer } from '../../components/layout/Footer.jsx';
 import {
@@ -40,7 +42,7 @@ export default function SponsorshipPage() {
     email: '',
     company: '',
     website: '',
-    sponsorshipType: 'sponsored-research',
+    sponsorshipType: 'launch-article',
     budgetTimeline: 'q4-2026',
     message: ''
   });
@@ -68,6 +70,78 @@ export default function SponsorshipPage() {
   const toggleFaq = (index) => {
     setOpenFaqIndex((prev) => (prev === index ? null : index));
   };
+
+  const handleSelectTier = (tierId) => {
+    setFormData((prev) => ({ ...prev, sponsorshipType: tierId }));
+    const formEl = document.getElementById('inquiry-form');
+    if (formEl) {
+      formEl.scrollIntoView({ behavior: 'smooth' });
+      const nameInput = formEl.querySelector('input[type="text"]');
+      if (nameInput) {
+        setTimeout(() => nameInput.focus(), 400);
+      }
+    }
+  };
+
+  const pricingTiers = [
+    {
+      id: 'launch-article',
+      name: 'Launch Article',
+      kicker: 'Starter',
+      price: '₹14,999',
+      period: 'Single Study Investment',
+      description: 'Best for one-time brand visibility and technical awareness with an evidence-led sponsored study or review.',
+      features: [
+        '1 Sponsored research article or review (up to 1,500 words)',
+        '1 Primary category hub directory listing',
+        'Full Schema.org JSON-LD & OpenGraph SEO metadata',
+        'Transparent commercial disclosure badge',
+        'Contextual brand callout box with outbound link',
+        '1 Editorial revision & factual verification round',
+        'Permanent indexing in universal Research Archive'
+      ],
+      cta: 'Start With Starter',
+      isPopular: false
+    },
+    {
+      id: 'authority-series',
+      name: 'Authority Series',
+      kicker: 'Growth',
+      price: '₹34,999',
+      period: '3-Part Research Package',
+      description: 'Designed for brands seeking compounding search visibility, comparative positioning, and deep category authority.',
+      features: [
+        '3 Long-form research articles or reviews (up to 2,000 words each)',
+        'Priority placement across multiple category hubs',
+        'Structured side-by-side comparison matrix integration',
+        'Featured placement in Homepage Latest Research section',
+        'Dedicated brand CTA card with custom trial/documentation link',
+        '2 Editorial revision rounds with direct desk review',
+        'Quarterly verified reader engagement summary'
+      ],
+      cta: 'Choose Growth',
+      isPopular: true
+    },
+    {
+      id: 'enterprise-benchmark',
+      name: 'Enterprise & Benchmark',
+      kicker: 'Scale',
+      price: '₹74,999',
+      period: 'Comprehensive Partnership',
+      description: 'For technology leaders and enterprise solutions requiring definitive market leadership and extensive editorial reach.',
+      features: [
+        'Co-branded Industry Benchmark Report or 6-article series (up to 2,500 words)',
+        'Homepage Featured Research Carousel rotation',
+        'Executive / engineering interview (Brand Insight Feature)',
+        'Cross-category syndication & indexed topic tag network',
+        'Priority editorial turnaround with dedicated senior editor',
+        'Comprehensive reader engagement & audience analytics dossier',
+        'Custom whitepaper or lead generation integration'
+      ],
+      cta: 'Inquire Enterprise',
+      isPopular: false
+    }
+  ];
 
   const sponsorshipFormats = [
     {
@@ -216,20 +290,21 @@ export default function SponsorshipPage() {
     }
   ];
 
+  const { data: seoResponse } = useQuery({
+    queryKey: ['seo', 'page', 'sponsorship'],
+    queryFn: () => seoApi.resolveSeo({ type: 'PAGE', id: 'sponsorship' }),
+    staleTime: 1000 * 60 * 10
+  });
+  const pageSeo = seoResponse?.data || null;
+
   return (
     <div className="min-h-screen flex flex-col bg-paper text-ink">
-      <Helmet>
-        <title>Brand Sponsorships & Research Collaborations | Research Factors</title>
-        <meta
-          name="description"
-          content="Reach readers who research before they decide. Research Factors helps brands turn products, technologies, and ideas into useful research-driven content with transparent commercial disclosure."
-        />
-        <meta property="og:title" content="Brand Sponsorships | Research Factors" />
-        <meta
-          property="og:description"
-          content="Put your brand in front of an engaged, research-minded audience actively evaluating products and market developments."
-        />
-      </Helmet>
+      <SeoHead
+        seo={pageSeo}
+        title="Research Sponsorship & Academic Grants | Research Factors"
+        description="Reach readers who research before they decide. Research Factors helps brands turn products, technologies, and ideas into useful research-driven content with transparent commercial disclosure."
+        canonicalUrl={typeof window !== 'undefined' ? `${window.location.origin}/sponsorship` : 'https://researchfactors.com/sponsorship'}
+      />
 
       <Header />
 
@@ -257,17 +332,17 @@ export default function SponsorshipPage() {
 
                 <div className="mt-8 flex flex-wrap gap-4 items-center">
                   <a
-                    href="#inquiry-form"
+                    href="#tiers"
                     className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-semibold text-white bg-rfblue hover:bg-rfblue-700 shadow-xs transition-all"
                   >
-                    <span>Discuss a Sponsorship</span>
+                    <span>View Packages & Pricing</span>
                     <ArrowRight className="ml-2 w-4 h-4" />
                   </a>
                   <a
                     href="#sponsorship-formats"
                     className="inline-flex items-center px-6 py-3 rounded-xl text-sm font-semibold text-ink-muted hover:text-ink-darkest bg-paper hover:bg-paper-warm border border-paper-border transition-colors"
                   >
-                    <span>Explore Sponsorship Formats</span>
+                    <span>Explore Formats</span>
                   </a>
                 </div>
 
@@ -434,11 +509,108 @@ export default function SponsorshipPage() {
           </div>
         </section>
 
-       
+        {/* 5. PRICING & SPONSORSHIP PACKAGES */}
+        <section id="tiers" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            
+            <h2 className="text-ink-darkest tracking-tight">
+              Sponsorship Packages & Pricing
+            </h2>
+            <p className="mt-3 text-base text-ink-muted leading-relaxed font-normal">
+              Direct, transparent rates for brands seeking research-backed editorial presence. Every package includes permanent archiving, full SEO indexing, and transparent commercial disclosure.
+            </p>
+          </div>
 
-        
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch pt-2">
+            {pricingTiers.map((tier) => (
+              <div
+                key={tier.id}
+                className={`bg-white rounded-3xl p-7 sm:p-8 flex flex-col justify-between transition-all duration-300 relative ${
+                  tier.isPopular
+                    ? 'border-2 border-rfblue shadow-lg -translate-y-1'
+                    : 'border border-paper-border shadow-xs hover:border-paper-border/80 hover:shadow-sm'
+                }`}
+              >
+                {tier.isPopular && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rfblue text-white shadow-xs">
+                      <Sparkles className="w-3 h-3" />
+                      <span>Most Popular</span>
+                    </span>
+                  </div>
+                )}
 
-        
+                <div>
+                  <div className="mb-6">
+                    <span className="text-xs font-bold uppercase tracking-wider text-rfblue block mb-2">
+                      {tier.kicker}
+                    </span>
+                    <h3 className="text-2xl font-serif font-bold text-ink-darkest mb-3">
+                      {tier.name}
+                    </h3>
+                    <div className="flex items-baseline gap-1.5 mb-1.5">
+                      <span className="text-4xl sm:text-5xl font-bold font-sans text-ink-darkest tracking-tight">
+                        {tier.price}
+                      </span>
+                    </div>
+                    <span className="text-xs text-ink-light block mb-4">
+                      {tier.period}
+                    </span>
+                    <p className="text-sm text-ink-muted leading-relaxed min-h-[44px]">
+                      {tier.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-6 border-t border-paper-border/70 mb-8">
+                    <span className="text-xs font-bold uppercase tracking-wider text-ink-darkest block mb-4">
+                      What's Included:
+                    </span>
+                    <ul className="space-y-3 text-xs sm:text-sm text-ink">
+                      {tier.features.map((feature, idx) => (
+                        <li key={idx} className="flex items-start gap-2.5">
+                          <div className="w-4 h-4 rounded-full bg-rfblue-50 text-rfblue flex items-center justify-center shrink-0 mt-0.5">
+                            <Check className="w-2.5 h-2.5 stroke-[2.5]" />
+                          </div>
+                          <span className="leading-snug text-ink-muted">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTier(tier.id)}
+                    className={`w-full py-3.5 px-6 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      tier.isPopular
+                        ? 'bg-rfblue hover:bg-rfblue-700 text-white shadow-xs hover:shadow'
+                        : 'bg-paper hover:bg-rfblue hover:text-white text-ink-darkest border border-paper-border hover:border-rfblue'
+                    }`}
+                  >
+                    <span>{tier.cta}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Bespoke Collaboration Notice */}
+          <div className="mt-12 p-6 rounded-2xl bg-paper border border-paper-border max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-left">
+              <h4 className="text-sm font-bold text-ink-darkest">Looking for a Custom Campaign or Category Co-Sponsorship?</h4>
+              <p className="text-xs text-ink-muted mt-0.5">We accommodate custom whitepaper syndication, multi-quarter research tracks, and live datasets.</p>
+            </div>
+            <a
+              href="#inquiry-form"
+              onClick={() => handleSelectTier('custom-collaboration')}
+              className="shrink-0 text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-lg border border-paper-border hover:border-rfblue bg-white hover:text-rfblue text-ink-darkest transition-colors cursor-pointer"
+            >
+              Discuss Custom Scope
+            </a>
+          </div>
+        </section>
 
         {/* 8. SPONSORSHIP FAQS (Interactive Accordion) */}
         <section id="faqs" className="py-20 bg-paper-warm border-y border-paper-border">
@@ -615,24 +787,32 @@ export default function SponsorshipPage() {
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-ink-darkest mb-2">
-                    Sponsorship Format
+                    What would you like to sponsor?
                   </label>
                   <select
                     value={formData.sponsorshipType}
                     onChange={(e) => setFormData({ ...formData, sponsorshipType: e.target.value })}
                     className="w-full px-4 py-3 rounded-lg border border-paper-border bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-rfblue/20 focus:border-rfblue transition-all"
                   >
-                    <option value="sponsored-research">Native Sponsored Research Article</option>
-                    <option value="product-review">Sponsored Product Review</option>
-                    <option value="product-comparison">Product & Solution Comparison</option>
-                    <option value="expert-insight">Expert & Brand Insight Feature</option>
-                    <option value="industry-report">Industry Benchmark Report Sponsorship</option>
+                    <optgroup label="Sponsorship Packages">
+                      <option value="launch-article">Launch Article — ₹14,999</option>
+                      <option value="authority-series">Authority Series — ₹34,999 (Most Popular)</option>
+                      <option value="enterprise-benchmark">Enterprise & Benchmark — ₹74,999</option>
+                    </optgroup>
+                    <optgroup label="Bespoke Formats & Custom">
+                      <option value="sponsored-research">Native Research Article</option>
+                      <option value="product-review">Product Review</option>
+                      <option value="product-comparison">Product & Solution Comparison</option>
+                      <option value="expert-insight">Brand Insight Feature</option>
+                      <option value="industry-report">Industry Benchmark Report</option>
+                      <option value="custom-collaboration">Custom Collaboration</option>
+                    </optgroup>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-ink-darkest mb-2">
-                    Project Details & Objectives
+                    Tell Us what you want
                   </label>
                   <textarea
                     rows={4}
@@ -654,7 +834,7 @@ export default function SponsorshipPage() {
                   ) : (
                     <Send className="w-4 h-4 mr-2" />
                   )}
-                  <span>{inquiryMutation.isPending ? 'Dispatching Inquiry...' : 'Send Sponsorship Inquiry'}</span>
+                  <span>{inquiryMutation.isPending ? 'Sharing Your Idea With Us...' : 'Share Your Idea With Us'}</span>
                 </button>
               </form>
             )}

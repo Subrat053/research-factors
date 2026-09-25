@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heart, Reply, Flag, Trash2, CheckCircle, Loader2 } from 'lucide-react';
+import { Heart, Reply, TriangleAlert, Flag, Trash2, CheckCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { normalizeMediaUrl } from '../../services/media.api.js';
 
@@ -103,7 +103,8 @@ export const CommentItem = ({
               className="p-1 text-slate-400 hover:text-red-500 rounded transition-colors"
               title="Report response"
             >
-              <Flag className="w-3.5 h-3.5" />
+              <TriangleAlert className="w-3.5 h-3.5"/>
+              {/* <Flag className="w-3.5 h-3.5" /> */}
             </button>
           )}
           {canDelete && (

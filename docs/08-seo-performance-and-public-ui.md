@@ -19,79 +19,173 @@ Research Factors must evoke the prestige, rigor, and visual poise of premier dig
 
 ---
 
-## 2. Dynamic SEO Architecture for React SPA
+## 2. Deterministic 4-Tier SEO Architecture for React SPA
 
-Because the frontend is a React SPA (built with Vite), search engine bots must receive rich, crawlable HTML with complete meta tags.
+Because the frontend is a client-side React SPA (built with Vite), search engine crawlers and social scrapers require rich, deterministic, crawlable metadata and structured Schema.org graphs.
+
+### The 4-Tier Resolution Hierarchy
+Every public and editorial route resolves SEO metadata strictly through a deterministic 4-tier fallback system implemented in `backend/src/modules/seo/seo-resolver.service.js`:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Tier 1: Admin / Author Manual Custom Override               │
+│ (Explicit user overrides in SeoMetadata: customTitle, etc.)  │
+└──────────────────────────────┬──────────────────────────────┘
+                               ▼ (if blank or null)
+┌─────────────────────────────────────────────────────────────┐
+│ Tier 2: Persisted Generated SEO Metadata                    │
+│ (Deterministic, non-clickbait values created by Service)   │
+└──────────────────────────────┬──────────────────────────────┘
+                               ▼ (if missing or record absent)
+┌─────────────────────────────────────────────────────────────┐
+│ Tier 3: Entity Content Model Fallback                       │
+│ (Manuscript title, excerpt/abstract, coverImageUrl, slug)   │
+└──────────────────────────────┬──────────────────────────────┘
+                               ▼ (if content fields blank)
+┌─────────────────────────────────────────────────────────────┐
+│ Tier 4: Platform Site Default Configuration                 │
+│ (Brand name, site description, default OG image, home URL)  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+> **Strict Rule on Keywords**: In compliance with modern search engine standards, the system **NEVER** emits `<meta name="keywords">` in public HTML (Google explicitly ignores this tag since 2009). The `focusKeyword` and `secondaryKeywords` fields are strictly utilized for backoffice content quality auditing and internal semantic discovery.
 
 ### Hybrid SEO Rendering Strategy
-1. **Dynamic Open Graph & Meta Injection Middleware**:
-   The Express backend serves as a reverse proxy for public article pages when accessed by social scrapers (Facebook, Twitter/X, WhatsApp, LinkedIn, Slack):
-   - User-Agent detection identifies social crawler bots.
-   - When a crawler requests `/research/:category/:slug`, Express intercepts the request, queries Prisma for article metadata, and injects `<title>`, `<meta name="description">`, `<meta property="og:image">`, and `<script type="application/ld+json">` directly into the `index.html` template before returning the response.
-2. **Client Head Management**:
-   The React SPA utilizes `react-helmet-async` to dynamically update document title, canonical link, and meta tags during in-app client-side navigation.
+1. **Crawler & Social Scraper Prerender Middleware (`backend/src/middleware/crawlerPrerender.js`)**:
+   - Detects social scraper and crawler user-agents (`facebookexternalhit`, `Facebot`, `Twitterbot`, `LinkedInBot`, `WhatsApp`, `TelegramBot`, `Pinterest`, `Slackbot`, `Googlebot`, `bingbot`, `Applebot`).
+   - Intercepts requests for public article routes (`/research/:slug` and `/rf/research/:slug`), category routes, and static pages.
+   - Fetches the active entity data via Prisma, executes `SeoResolverService.resolveSEO()`, and constructs a complete, valid HTML `<head>` payload containing:
+     - Document `<title>`
+     - Meta description
+     - Canonical `<link rel="canonical" href="...">`
+     - Full Open Graph tags (`og:title`, `og:description`, `og:image`, `og:url`, `og:type`, `og:site_name`)
+     - Twitter Card tags (`twitter:card`, `twitter:title`, `twitter:description`, `twitter:image`)
+     - Complete Schema.org JSON-LD graph (`<script type="application/ld+json">`)
+   - Emits an instant, rich HTML response to social bots, ensuring perfect link previews on social platforms without requiring headless browser overhead.
+2. **Client-Side Head Management (`frontend/src/components/common/SeoHead.jsx`)**:
+   - Powered by `react-helmet-async`.
+   - Injects the resolved 4-tier SEO parameters dynamically into the DOM during client-side navigation.
+   - Handles `noindex, follow` directives automatically for search and archive query pages to prevent duplicate content indexing.
 
 ---
 
 ## 3. Schema.org JSON-LD Structured Data
 
-Every published article embeds structured metadata conforming to Schema.org standards:
+Every public route generates a linked `@graph` structure conforming to Schema.org specifications:
 
+### Published Article Schema (`ScholarlyArticle` / `Article`)
 ```json
 {
   "@context": "https://schema.org",
-  "@type": "Article",
-  "headline": "Empirical Performance Analysis of Hybrid Quantum Processors",
-  "description": "A comprehensive benchmark examining thermal dissipation and gate fidelity in commercial quantum computing.",
-  "image": [
-    "https://cdn.researchfactors.com/media/quantum-setup.webp"
-  ],
-  "datePublished": "2026-09-01T08:00:00.000Z",
-  "dateModified": "2026-09-05T12:30:00.000Z",
-  "author": {
-    "@type": "Person",
-    "name": "Dr. Eleanor Vance",
-    "url": "https://researchfactors.com/authors/eleanor-vance"
-  },
-  "publisher": {
-    "@type": "Organization",
-    "name": "Research Factors",
-    "logo": {
-      "@type": "ImageObject",
-      "url": "https://researchfactors.com/logo.png"
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://researchfactors.com/#organization",
+      "name": "Research Factors",
+      "url": "https://researchfactors.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://researchfactors.com/logo.png"
+      }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://researchfactors.com/#website",
+      "url": "https://researchfactors.com",
+      "name": "Research Factors",
+      "publisher": { "@id": "https://researchfactors.com/#organization" }
+    },
+    {
+      "@type": "ScholarlyArticle",
+      "@id": "https://researchfactors.com/rf/technology/empirical-quantum-processors#article",
+      "isPartOf": { "@id": "https://researchfactors.com/#website" },
+      "headline": "Empirical Performance Analysis of Hybrid Quantum Processors",
+      "description": "A comprehensive benchmark examining thermal dissipation and gate fidelity in commercial quantum computing.",
+      "image": ["https://researchfactors.com/uploads/media/quantum-setup.webp"],
+      "datePublished": "2026-09-01T08:00:00.000Z",
+      "dateModified": "2026-09-05T12:30:00.000Z",
+      "author": {
+        "@type": "Person",
+        "name": "Dr. Eleanor Vance",
+        "jobTitle": "Lead Quantum Researcher"
+      },
+      "publisher": { "@id": "https://researchfactors.com/#organization" },
+      "mainEntityOfPage": "https://researchfactors.com/rf/technology/empirical-quantum-processors",
+      "wordCount": 1850,
+      "timeRequired": "PT8M"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://researchfactors.com/rf/technology/empirical-quantum-processors#breadcrumb",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://researchfactors.com" },
+        { "@type": "ListItem", "position": 2, "name": "Technology", "item": "https://researchfactors.com/categories/technology" },
+        { "@type": "ListItem", "position": 3, "name": "Empirical Performance Analysis of Hybrid Quantum Processors" }
+      ]
     }
-  },
-  "mainEntityOfPage": {
-    "@type": "WebPage",
-    "@id": "https://researchfactors.com/research/technology/empirical-quantum-processors"
-  }
+  ]
 }
 ```
 
 ---
 
-## 4. URL Structure & Slug Redirect Engine
+## 4. URL Structure & Automatic 301 Permanent Redirects
 
-### URL Hierarchy
-- Homepage: `/`
-- Research Archive: `/research`
-- Category Hub: `/research/:categorySlug`
-- Public Article: `/research/:categorySlug/:articleSlug`
-- Author Profile: `/authors/:authorId`
-- Search Engine: `/search?q=quantum`
+### Dynamic Category-Scoped URL Architecture
+To maximize topical authority, semantic hierarchy, and search engine discoverability, article URLs are dynamically scoped by their primary category:
+- **Canonical Article URL**: `/:categorySlug/:slug` (e.g. `http://localhost:5173/rf/technology/new-article-for-testing` or `https://researchfactors.com/rf/quantum-physics/empirical-quantum-processors`)
+- **Homepage**: `/`
+- **Research Archive**: `/research` (supports query params `?sort=...&type=...&tag=...`)
+- **Category Subject Portal**: `/categories/:categorySlug`
+- **Author Bio & Works**: `/authors/:id`
+- **Admin SEO Governance**: `/admin/seo`
 
-### Automatic 301 Permanent Redirection
-When an article slug is updated (e.g. from `quantum-cpu-v1` to `empirical-quantum-processors`):
-1. The old slug is saved in `ArticleSlugHistory`.
-2. When a visitor hits the old URL, the backend detects the historical slug in `ArticleSlugHistory`.
-3. The server immediately returns an **HTTP 301 Permanent Redirect** to the new canonical URL.
-4. Backlinks, search engine equity, and social shares are 100% preserved.
+### Dynamic Routing & Backward-Compatibility Layer
+1. **React Router Architecture**:
+   - Primary dynamic route: `<Route path="/:categorySlug/:slug" element={<ArticleDetailPage />} />`
+   - Backward-compatibility legacy routes:
+     - `<Route path="/research/:slug" element={<ArticleDetailPage />} />`
+     - `<Route path="/articles/:slug" element={<ArticleDetailPage />} />`
+2. **Seamless Client-Side Canonicalization**:
+   - If an article is accessed through legacy `/research/:slug`, `/articles/:slug`, or an outdated category slug, `ArticleDetailPage.jsx` dynamically detects the mismatch against the article's real primary category and updates the browser address bar with `navigate('/' + correctCategorySlug + '/' + article.slug, { replace: true })`.
+3. **Crawler & Social Bot Prerendering (`crawlerPrerender.js`)**:
+   - Intercepts requests for `/:categorySlug/:articleSlug`, `/rf/:categorySlug/:articleSlug`, `/research/:slug`, and `/articles/:slug`.
+   - Excludes single-segment top-level routes (`api`, `admin`, `author`, `categories`, `research`, etc.) so that all category-scoped article paths receive instant, high-fidelity Open Graph and Schema.org metadata previews.
+4. **Automated Sitemaps Integration**:
+   - In `/sitemaps/articles.xml`, all article locations (`<loc>`) are dynamically emitted as `${baseUrl}/${categorySlug}/${article.slug}`.
+
+### Automatic 301 Permanent Redirection (`ArticleSlugHistory`)
+When an editor or author updates a published manuscript's slug (e.g. from `quantum-v1` to `empirical-quantum-processors`):
+1. The prior slug is automatically preserved in the `ArticleSlugHistory` table via Prisma interactive transaction.
+2. In the public article endpoint (`GET /api/v1/articles/:slug`), if the requested slug is not found on an active article, the service immediately checks `ArticleSlugHistory`.
+3. If a match is found:
+   - The backend controller returns an **HTTP 301 Permanent Redirect** with `Location: /:categorySlug/:newSlug` (or JSON payload `{ redirect: true, newSlug, categorySlug }` for SPA client-side router navigation).
+   - In the frontend `ArticleDetailPage.jsx`, the SPA catches `{ redirect: true }` and executes an immediate `navigate('/' + (categorySlug || 'research') + '/' + newSlug, { replace: true })`.
+4. External search engine equity (PageRank), existing backlinks, academic citations, and social shares are completely preserved.
 
 ---
 
-## 5. Dynamic Sitemap & Robots.txt
+## 5. Automated XML Sitemaps Index & Robots.txt Directives
 
-### `robots.txt`
+### XML Sitemap Index Architecture
+The system generates dynamic, real-time XML sitemaps following the official sitemap protocol (`http://www.sitemaps.org/schemas/sitemap/0.9`):
+
+- **Master Sitemap Index (`/sitemap.xml`)**:
+  Declares and links all component sub-sitemaps:
+  - Articles: `https://researchfactors.com/sitemaps/articles.xml`
+  - Categories: `https://researchfactors.com/sitemaps/categories.xml`
+  - Static Pages: `https://researchfactors.com/sitemaps/pages.xml`
+- **Articles Sub-sitemap (`/sitemaps/articles.xml`)**:
+  - Dynamically lists all `PUBLISHED` articles where `isNoIndex` is `false`.
+  - Includes `<loc>`, `<lastmod>`, `<changefreq>weekly</changefreq>`, and `<priority>0.8</priority>`.
+- **Categories Sub-sitemap (`/sitemaps/categories.xml`)**:
+  - Lists all active categories that contain at least one published article.
+  - Priority: `0.7`.
+- **Static Pages Sub-sitemap (`/sitemaps/pages.xml`)**:
+  - Lists core public routes: Home (`/`, priority `1.0`), Research Archive (`/research`, priority `0.9`), About (`/about`, `0.6`), Sponsorship (`/sponsorship`, `0.6`), Privacy Policy (`/privacy-policy`, `0.3`), Terms (`/terms`, `0.3`), and Cookie Policy (`/cookie-policy`, `0.3`).
+
+### Dynamic `robots.txt` (`/robots.txt`)
+Dynamically served based on environment configuration:
 ```txt
 User-agent: *
 Allow: /
@@ -103,13 +197,62 @@ Disallow: /api/
 Sitemap: https://researchfactors.com/sitemap.xml
 ```
 
-### `sitemap.xml`
-Generated dynamically by the backend:
-- Includes all `PUBLISHED` articles with `<lastmod>` timestamps.
-- Includes active category landing pages.
-- Includes public author bio pages.
-- Never includes drafts, pending reviews, or private user routes.
-- Supports sitemap index splitting (`sitemap-articles-1.xml`, `sitemap-categories.xml`) if the catalog exceeds 10,000 items.
+- **Public Footer Exposure**: Direct XML sitemap index links (`/sitemap.xml`) are integrated into:
+  - **Company Navigation**: Visible in the main footer column as `Sitemap (XML)`.
+  - **Sub-Footer Baseline**: Direct `sitemap.xml` link adjacent to the editorial slogan ("Research. Compare. Choose Better.") and copyright notice.
+- **Development & Production Proxying**: Vite development server proxies `/sitemap.xml`, `/sitemaps`, and `/robots.txt` directly to the backend service.
+
+---
+
+## 5.1. How Administrators & Authors Manipulate SEO
+
+### 1. In the Article Editor (`/admin/editor/:id`)
+Every publication includes the **Editorial SEO & Social Studio** (`ArticleSeoStudio.jsx`) featuring 4 functional tabs:
+1. **Search Engine (SERP) Tab**:
+   - **SEO Meta Title**: Custom headline override. Live counter flags when title falls outside the recommended 45–65 character window.
+   - **Reset to Generated Title**: One-click button to clear manual override and inherit the automated title.
+   - **SEO Meta Description**: Custom snippet override with 120–165 character counter.
+   - **Reset to Generated Description**: Clears override to inherit automated abstract.
+   - **Focus Academic Keyword**: Input target keyword. Audits whether the keyword appears in the title and description in real-time.
+   - **Secondary Keywords**: Comma-separated list for structured metadata storage.
+   - **Canonical URL**: Custom override for articles originally published in external journals; self-referencing by default.
+   - **Robots Directives**:
+     - `noindex`: Checkbox to exclude publication from Google index.
+     - `nofollow`: Checkbox to tell crawlers not to follow outbound links.
+   - **Schema.org Specification**: Select between `ScholarlyArticle`, `Article`, `NewsArticle`, or `TechArticle`.
+2. **Social Sharing (OG) Tab**:
+   - Customize Open Graph Title, Description, and Social Share Image URL (1200×630px). Inherits SERP values automatically if unedited.
+3. **Live Previews Tab**:
+   - **Google Search Result**: Toggle between Desktop and Mobile preview formats.
+   - **Social Share Card**: Real-time rendering of Facebook / LinkedIn / X (Twitter) large summary cards.
+4. **SEO Health & Audit Tab**:
+   - Live score percentage (0–100%) checking title length, description length, keyword placement, cover image & alt text, and section heading hierarchy.
+5. **Regenerate SEO from Manuscript**:
+   - Button calling `POST /api/v1/admin/seo/regenerate/ARTICLE/:id` to refresh generated fallbacks without wiping manual overrides.
+
+### 2. In the SEO Governance & Audit Dashboard (`/admin/seo`)
+Accessible to administrators via **System Governance → SEO Governance**:
+- **KPI Metrics Cards**:
+  - Catalog SEO Coverage percentage.
+  - Indexable Publications vs `noindex` count.
+  - Active vs empty categories.
+  - 301 URL redirect mappings count.
+- **XML Sitemaps Central**:
+  - Direct links to `/sitemap.xml`, `/sitemaps/articles.xml`, `/sitemaps/categories.xml`, `/sitemaps/pages.xml`, and `/robots.txt`.
+  - One-click "Copy URL" buttons for Google Search Console submission.
+- **Backfill Missing SEO (`Migrate Catalog`)**:
+  - Click **[Backfill Missing SEO]** to run batch initialization for any articles or categories lacking metadata records.
+- **Editorial Diagnostics Table**:
+  - Live table of publications flagged with short snippets, missing cover images, missing alt text, or short/long titles.
+  - Quick **[Fix in Editor]** button linking directly to the manuscript editor.
+
+### 3. Step-by-Step Google Search Console Submission
+1. Navigate to [Google Search Console](https://search.google.com/search-console).
+2. Add your domain property (`https://researchfactors.com`).
+3. Under **Index → Sitemaps**, enter the master sitemap URL:
+   `https://researchfactors.com/sitemap.xml`
+4. Click **Submit**. Google will automatically discover and ingest `/sitemaps/articles.xml`, `/sitemaps/categories.xml`, and `/sitemaps/pages.xml`.
+5. Under **URL Inspection**, test an individual article URL (e.g. `/research/empirical-quantum-processors`) to verify that the Schema.org `ScholarlyArticle` and Open Graph tags validate without errors.
 
 ---
 
@@ -141,18 +284,28 @@ The homepage transforms Research Factors from a simple blog into an authoritativ
 1. **Header & Navigation (`Header.jsx`)**:
    - **Desktop Layout (`≥ lg`) (3-Part Balanced Structure)**:
      - **Left (`lg:flex-1 lg:justify-start`)**: Primary RF brand mark with tagline ("Research. Read. Share.").
-     - **Middle (`shrink-0 justify-center`)**: Clean baseline-aligned, dead-centered navigation: `Home`, `All Research`, `Topics` (dropdown with categories), `Trending`, `For Brands` (`/sponsorship`), and `About`.
-     - **Right (`lg:flex-1 lg:justify-end`)**: Normalized height (`h-10`) actions: compact search button with `[ / ]` shortcut key, "Become an Author" pill, and user profile avatar / authentication dropdown.
+     - **Middle (`shrink-0 justify-center`)**: Clean baseline-aligned, dead-centered navigation: `Home` (`/`), composite **`Category`** item (dual-action: direct left-click navigates to `/research`, while hovering smoothly reveals a dynamic category dropdown linking to individual category portals at `/categories/:categorySlug` with an "all research" archive shortcut), `Trending` (`/research?sort=popular`), `For Sponsorship` (`/sponsorship`), and `About` (`/about`).
+     - **Dead-Centered Dropdown Alignment**: The desktop category dropdown utilizes Framer Motion `x: '-50%'` coordinates (`initial={{ opacity: 0, y: 10, scale: 0.98, x: '-50%' }}`, `animate={{ opacity: 1, y: 0, scale: 1, x: '-50%' }}`, `exit={{ opacity: 0, y: 8, scale: 0.98, x: '-50%' }}`) anchored to `left-1/2 top-full`, eliminating CSS transform conflicts and locking the popover perfectly centered under the navigation trigger.
+     - **Right (`lg:flex-1 lg:justify-end`)**: Normalized height (`h-10`) actions: compact search button with `[ / ]` or `Ctrl+K` shortcut key, and user profile avatar / authentication dropdown.
    - **Mobile Layout (`< lg`)**:
      - Top bar features strictly the brand logo (`h-8 w-auto`), compact search icon button (`w-9 h-9`), and hamburger button (`w-9 h-9`), eliminating all horizontal crowding and logo truncation on 375px screens.
      - **Slide-Over Navigation Drawer (Right Side)**: Persistent DOM with smooth 300ms ease-in-out open and close transitions (`translate-x-full` ↔ `translate-x-0`) and fading backdrop overlay (`opacity-0` ↔ `opacity-100`).
-     - **Integrated Mobile User Account**: User avatar, profile details, quick links (Write Article, Studio/Dashboard, Settings, Bookmarks), and Sign Out / Join actions are housed cleanly inside the drawer with automatic body scroll lock.
+     - **Redesigned User Account Card**: Clean editorial surface (`rounded-2xl bg-white border border-paper-border shadow-2xs`) displaying user initial avatar, full name, email, high-contrast role badges (`Administrator`, `Author`, `Reader`), icon action shortcuts (Write Article, Studio/Dashboard, Profile Settings, Saved Articles), and an accented red Sign Out action.
+     - **Interactive Category Accordion Navigation**: The mobile navigation features an expandable accordion for "Category" with smooth Framer Motion height transitions (`height: 'auto'`), a rotating chevron indicator, a direct "All Research Archive" shortcut, and dynamic links to `/categories/:categorySlug` with active state highlights.
+     - **Refined Mobile Drawer Footer**: Features a horizontal utility link bar (`About`, `Contact`, `Sponsorship`, `Privacy`, `Terms`), platform scope manifesto ("Empirical research, comparative benchmarks, and independent editorial insights."), and clean copyright line.
 2. **Hero Section (3-Column Flow)**:
    - **Left**: Badge ("Trusted Research. Informed Decisions." with `BadgeCheck` verification icon), primary serif headline ("Real Research. Smarter Choices."), descriptive copy, CTA buttons, and qualitative trust signals (`Expert Written`, `Data Backed`, `Unbiased` with uni-color icons).
    - **Center**: High-res editorial researcher photography (`/images/hero_researcher.jpg`) with floating glassmorphism cards ("In-depth Analysis", "Expert Insights").
    - **Right**: "Trending Today" ranked list (1-5) populated dynamically from `GET /api/v1/articles/trending`.
 3. **Explore Topics ("Dive Into What Interests You")**:
-   - Modern cards (`rounded-xl`, `border-paper-border`) with uni-color icons for Technology, Business, Lifestyle, Science, and Policy.
+   - **Dynamic Database-Driven Cards**: Actively resolves categories from `GET /api/v1/categories`, filtering active entries (`isActive !== false`) and computing live article counts. Gracefully falls back to curated core defaults if offline or loading.
+   - **Strict Single-Row Architecture ($\le 5$ Categories)**: Displays as a clean, balanced single row (`lg:grid-cols-5` or `lg:grid-cols-4` on desktop, horizontal swipe snap on mobile/tablet) avoiding multi-line wrapping and preserving compact vertical rhythm.
+   - **Infinite Smooth Marquee Slider ($> 5$ Categories)**: When backend categories exceed 5, the section automatically transforms into an infinitely smooth marquee ticker powered by continuous CSS keyframe transforms (`@keyframes marquee-scroll`) with duplicated cards for a seamless loop.
+   - **Hover-to-Pause Interaction**: Hovering anywhere over the marquee slider instantaneously freezes the animation (`animation-play-state: paused`), ensuring cards can be read and clicked without motion interruption.
+   - **Editorial Edge Fade Masks**: Elegant left and right gradient masks (`bg-gradient-to-r` and `bg-gradient-to-l` from `paper-warm`) soften the track edges.
+   - **Dynamic Canonical Routing**: Clicking any category card in either mode navigates directly to its canonical URL at `/categories/:categorySlug`.
+   - **Smart Editorial Icon Mapping**: Category slugs and keywords are dynamically resolved to tailored Lucide icons (`technology` → `Cpu`, `science` → `FlaskConical`, `policy` → `BookOpen`, `economics` → `TrendingUp`, `business` → `Briefcase`, `lifestyle` → `ShoppingBag`, with `Layers` as universal fallback).
+   - **Article Card Category Badges**: Every category badge across all article cards (`featured`, `standard`, and `compact` variants) is an interactive link to `/categories/:categorySlug` with `stopPropagation` to allow instantaneous category exploration without opening the article detail page.
 4. **Featured Research Hero Article**:
    - Prominent editorial research article block with badge and author credentials.
 5. **Latest Research & Insights**:
@@ -179,7 +332,22 @@ The homepage transforms Research Factors from a simple blog into an authoritativ
     - For Readers: "Have Something You Want to Understand Better?" → Explore Research Library.
     - For Businesses: "Have a Product, Service, or Story Worth Exploring?" → Partner via Sponsorship.
 14. **Footer (`Footer.jsx`)**:
-    - 5-column editorial footer with Explore, Research Domains, For Authors, For Brands, Company links, and legal notices.
+    - **Midnight Navy Editorial Architecture (`bg-[#060D1A]`)**: Replaced the light card stack with a high-contrast 3-tier publication footer:
+    - **Tier 1: Masthead & 5-Column Directory**:
+      - **Editorial Column Headings**: Styled with distinct blue baseline underlines (`inline-block pb-1.5 border-b-2 border-blue-500 font-bold uppercase tracking-widest text-slate-100 text-xs`) for `Explore`, `Categories`, `Company`, and `Stay Updated`, providing unmistakable structural hierarchy above link items.
+      - **Micro-Interactive Links**: Every directory item uses a layout-stable left indicator transition (`border-l-2 border-transparent hover:border-blue-500 active:border-blue-400 pl-0 hover:pl-2.5 text-slate-300 hover:text-white active:text-blue-200 transition-all duration-200 block py-0.5`).
+      - **Brand & Ethos**: White RF brand mark (`/logo-white.png`), serif headline ("Real Research. Better Decisions."), and narrative scope paragraph.
+      - **Explore Column**: Direct routes to `Home` (`/`), `Research Library` (`/research`), `Reviews` (`/research?type=REVIEW`), `Comparisons` (`/research?type=COMPARISON`), `Trending` (`/research?sort=popular`), and `About Us` (`/about`).
+      - **Dynamic Categories Column**: Populated dynamically from `/api/categories` with active taxonomy links (`/categories/:categorySlug`).
+      - **Company Column**: Direct routes to `Contact Us` (`/contact`), `Sponsorship` (`/sponsorship`), `Pricing` (`/sponsorship#tiers`), `Privacy Policy` (`/privacy-policy`), `Terms & Conditions` (`/terms`), `Editorial Guidelines` (`/editorial-guidelines`), and `Careers` (`/contact?topic=careers`).
+      - **Stay Updated Column**: Interactive email newsletter capsule with circular submit button and live confirmation badge, accompanied by vibrant, official brand-colored circular icon buttons (`w-8 h-8 rounded-full shadow-sm hover:scale-110 active:scale-95 transition-all duration-200`) for Facebook (`bg-[#1877F2]`), Instagram (`bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF]`), X / Twitter (`bg-[#1DA1F2]`), and YouTube (`bg-[#FF0000]`).
+    - **Tier 2: Trust Verification Cards & Editorial Creed**:
+      - **3 Trust Verification Cards (8 Columns)**: Equal-height editorial cards with semantically color-coded icon badge containers, high-contrast headings, and descriptive sub-labels:
+        1. `Verified Information`: Evidence-backed data (`ShieldCheck` with emerald badge `bg-emerald-950/80 border-emerald-500/30 text-emerald-400`)
+        2. `Independent Analysis`: Objective evaluations (`Search` with blue badge `bg-blue-950/80 border-blue-500/30 text-blue-400`)
+        3. `Real User Perspectives`: Practitioner insights (`Users` with amber badge `bg-amber-950/80 border-amber-500/30 text-amber-400`)
+      - **Editorial Quote Block (4 Columns)**: High-contrast blockquote highlighting the publication's core philosophy ("Better information leads to better decisions. — Research Factors") separated by an editorial border.
+    - **Tier 3: Sub-Footer Baseline**: Responsive copyright and platform slogan (*"Research. Compare. Choose Better."*).
 
 ---
 
@@ -188,6 +356,13 @@ The homepage transforms Research Factors from a simple blog into an authoritativ
 - **Strict Terminology**: Generic advertising terms are strictly avoided. All commercial participation is framed around **Brand Sponsorships**, **Sponsored Research**, and **Brand Collaborations**.
 - **Dedicated Portal (`/sponsorship`)**: Explains sponsorship products, transparent disclosure policies, and includes an interactive inquiry form.
 - **Visual Separation**: Sponsored articles carry distinct badge tags and sponsor attribution, ensuring reader trust remains uncompromised.
+- **Transparent 3-Tier Sponsorship Packages (`/sponsorship#tiers`)**:
+  - Direct, transparent pricing table designed around academic-editorial research deliverables:
+    - **Launch Article (₹14,999)**: 1 sponsored research article or structured review (up to 1,500 words), 1 category placement, Schema.org SEO, transparent disclosure badge, contextual brand callout box, 1 revision round, and permanent archive indexing.
+    - **Authority Series (₹34,999 - Most Popular)**: 3 long-form studies or comparisons (up to 2,000 words each), priority multi-category placement, structured side-by-side comparison matrix, Homepage Latest Research placement, brand CTA card with documentation/trial link, 2 revision rounds, and quarterly engagement review. Elevated with a "Most Popular" badge and blue accent border.
+    - **Enterprise & Benchmark (₹74,999)**: Co-branded Industry Benchmark Report or 6-article series (up to 2,500 words each), Homepage Featured Carousel rotation, executive/engineering interview ("Brand Insight Feature"), cross-category syndication, dedicated senior editor, comprehensive reader analytics dossier, and custom whitepaper lead capture.
+  - **Interactive CTA Synchronization**: Selecting any package smoothly scrolls the viewport to `#inquiry-form`, automatically pre-selects the package in the form's format dropdown, and focuses the user input field.
+  - **Bespoke Collaboration Channel**: Dedicated route to discuss custom enterprise syndications, live datasets, and multi-quarter research tracks.
 
 ---
 
@@ -195,22 +370,38 @@ The homepage transforms Research Factors from a simple blog into an authoritativ
 
 The article reading experience is organized into an editorial 2-column layout:
 - **Left Column (`lg:col-span-8`)**:
-  - Breadcrumbs & Category Badge.
+  - **Dynamic 3-Tier Breadcrumbs**: Structured navigation hierarchy (`Home > Category > [Category Name]`):
+    - `Home` links to `/`
+    - `Category` links to `/research` (Research Archive & Directory)
+    - `[Category Name]` links to `/categories/:categorySlug` (or fallback to `Research` if uncategorized)
+  - Format & Reading Time badges.
   - Primary H1 headline & Subtitle.
-  - Author byline with verified checkmark and social `ShareBar`.
+  - Author byline with verified checkmark and editorial `ShareBar` + `ShareModal`:
+    - **Dynamic Public URL Resolution Engine (`shareUrl.js`)**: Computes canonical, clean public URLs using `article.canonicalUrl`, active origin, and base path (`/research/:slug`).
+    - **Editorial Share Dialog (`ShareModal.jsx`)**: Accessible, Framer Motion-animated modal presenting:
+      1. Dynamic shareable link in a copyable input with instant visual confirmation badge ("Copied! ✓").
+      2. Bulletproof 2-tier clipboard engine (modern `navigator.clipboard.writeText` with synchronous `document.execCommand('copy')` fallback for restricted/iframe environments).
+      3. Multi-channel quick share grid with authentic vector brand icons (X/Twitter, LinkedIn, WhatsApp, Reddit).
+      4. Native Device Share (`navigator.share` Web Share API) on mobile and supported browsers alongside direct Email share.
   - Full-width cover image figure.
   - Article prose blocks rendered via `BlockRenderer` (full width of the parent column).
   - Topic tags & Author biography card.
+  - **Mobile Layout Flow**:
+    - On viewports `< 1024px`, the Related Articles section dynamically appears directly after author bio in a 2-column grid (`sm:grid-cols-2`).
+    - **Mobile Sponsorship Opportunity Banner**: Displayed across all article pages (regardless of whether the article has an active sponsor), rendering an elegant editorial banner with midnight navy gradient, sector callout ("Want your organization to be part of the research?"), and direct CTA button linking to `/sponsorship`.
   - Peer discussion & `CommentSection`.
 - **Right Column (`lg:col-span-4`)**:
-  - Sticky sidebar container (`sticky top-24`).
+  - Natural flow editorial sidebar container without restrictive clipping (`space-y-6`).
+  - Topic tags card.
   - Table of Contents (`TableOfContents`) when headings exist.
+  - Active Sponsor Disclosure Card (when `article.isSponsored` is true).
   - **"Related Articles" Section**:
     - Horizontal split cards containing strictly **cover image on the left** (`w-20 h-20 rounded-lg`) and **article heading on the right** (`font-serif font-bold text-sm sm:text-base`).
     - Dynamic data query pipeline: uses `article.related` array, enriched with a category fallback query if fewer than 4 items exist, deduplicating the active article.
-- **Mobile Responsiveness**:
-  - On viewports `< 1024px`, the layout smoothly collapses into a single column.
-  - The Related Articles section dynamically appears directly after the author biography and before comments in a responsive 2-column grid (`sm:grid-cols-2`), eliminating horizontal scrolling and cramped sidebars.
+  - **Desktop Sticky Sponsorship Opportunity Banner**:
+    - Positioned as the final item in the desktop sidebar across all article pages (whether sponsored or not).
+    - Features `sticky top-24` positioning: scrolls naturally past the initial cards, then locks at `top-24` (below the fixed header) to stay continuously visible throughout long article manuscripts until the footer appears, when it smoothly flows upward out of view.
+    - High-contrast midnight navy gradient (`from-[#060D1A] via-[#0F172A] to-[#1E3A8A]`), headline ("Want your organization to be part of the research?"), value proposition copy, and direct CTA linking to `/sponsorship`.
 
 ---
 
@@ -230,14 +421,14 @@ The article reading experience is organized into an editorial 2-column layout:
 - **Dynamic Tag Discovery & Filtering**: Clicking any tag badge directs readers to `/research?tag=:slug`, activating an indexed database query and showing an active tag filter chip with a one-click dismiss `[X]` action.
 
 ### 2. Live Production Simulation Preview (`/research/preview/:id`)
-- Authors and editors can inspect the exact real-world typography, block hierarchy, code blocks, images, and metadata of a manuscript draft without publishing.
+- Authors and editors can inspect the exact real-world typography, block hierarchy, code blocks, images, and metadata of a article draft without publishing.
 - Features a prominent top sticky production simulation banner with draft status indicator and a quick "Return to Editor" action.
 - Protected by centralized resource ownership and RBAC permissions (`requireArticleOwnership`).
 
 ### 3. Clickable Article Format Discovery & Filtering (`/research?type=:type`)
 - Every article displays its editorial format pill (e.g. `RESEARCH`, `COMPARISON`, `REVIEW`, `ANALYSIS`, `GUIDE`, `OPINION`) beneath the headline and alongside reading time.
 - Clicking the format pill routes readers to `/research?type=:type`.
-- On the Research Archive & Search view (`/research`), an active **Format filter chip** is displayed with a dismiss `[X]` button, allowing instant one-click removal and synchronized dropdown filter state.
+- On the Research Archive & Search view (`/research`), a unified filter toolbar houses keyword search alongside dynamic **Topic/Category**, **Format**, and **Sort** dropdown selectors. Active filter chips (for Topic, Format, and Tag) provide clear indicators with one-click dismiss `[X]` actions and a global "Clear all" shortcut.
 
 ## 12. Homepage Impact Metrics & Swipeable Reader Testimonials
 
@@ -262,6 +453,12 @@ The article reading experience is organized into an editorial 2-column layout:
   - `ArticleCard` (`variant="featured"`) adopts a balanced 50/50 two-column grid (`md:grid-cols-2`) with equal visual weight between cover media and editorial content, clamped headings (`line-clamp-2`), fallback gradient for missing covers, and bottom-pinned author byline.
 - **Spring Physics**: Animated using Framer Motion with spring physics (`stiffness: 240`, `damping: 28`, `mass: 0.8`), simultaneously interpolating horizontal position (`x`), size/scale, and opacity so cards physically shrink and grow as they transition between slots.
 - **Infinite Modulo Math & Duplication Protection**: Driven by modulo arithmetic `(activeIndex + position) % total`, with automatic virtual duplication when only 2 articles exist to prevent key collisions or empty slots.
+- **Autoslide & Interaction Safety**:
+  - Automatically advances cards every 4000ms (`autoSlideInterval = 4000`, configurable via props).
+  - **Bulletproof Interval & Animation Guard**: Uses an autonomous interval with an animation timeout safety fallback (`animationTimerRef`), guaranteeing `isAnimating` never stays stuck even if Framer Motion skips `onAnimationComplete`.
+  - **Drag Resilience**: Pauses tick execution during active horizontal card dragging/swiping gestures (`isDraggingRef`).
+  - **Manual Navigation Cadence Reset**: Clicking next/prev or pagination dots immediately triggers the slide and smoothly restarts the countdown so the user receives a full 4s window before the next automatic slide.
+  - **Tab Visibility Guard**: Listens to browser `visibilitychange` to pause auto-sliding when the tab is hidden in the background, preventing desynchronization or sudden jumps upon returning.
 ### 4. Methodology Illustration & Staggered Scroll-Reveal Process
 - **Visual Pillar (`/images/research_methodology.jpg`)**:
   - Encapsulates research metrics, system workflow, trust verification, and accredited authorship within a responsive editorial container (`w-full max-w-[500px] aspect-square rounded-2xl`).
@@ -319,12 +516,96 @@ All backoffice modules adhere to the dual-theme token standards:
 
 ---
 
-## 13. Future Roadmap
+---
+
+## 14. Dynamic Category Articles Page & Dual-Mode SEO Architecture (`/categories/:categorySlug`)
+
+The category reading experience (`CategoryPage.jsx`) transforms static category pages into an elite editorial subject portal while preserving the global **All Research** listing (`/research`):
+
+### 1. Dual-Mode SEO Engine (Admin-Configured + Intelligent Automatic Fallback)
+Every category dynamically injects rich, high-authority metadata into the document `<head>` via `<Helmet>`:
+- **Admin Customization**: Administrators can specify custom `seoTitle`, `seoDescription`, `seoKeywords`, and `canonicalUrl` in the Backoffice Category Management modal (`CategoryManagementPage.jsx`).
+- **Intelligent Automatic Fallback**: If custom SEO fields are left blank, the system automatically synthesizes:
+  - **Dynamic Title**: `{Category Name} Research, Analysis & Comparative Studies — Research Factors`
+  - **Dynamic Meta Description**: `{category.description}` or `Explore peer-reviewed empirical research, comparative benchmarks, and authoritative analyses in {Category Name} at Research Factors.`
+  - **Dynamic Keywords**: `{Category Name}, {Category Name} research, comparative studies, technical analysis, peer-reviewed, benchmarks, research factors`
+  - **Canonical URL**: Dynamic canonical URL pointing to `/categories/:categorySlug`
+  - **Social Sharing**: OpenGraph (`og:title`, `og:description`, `og:url`, `og:image`, `og:type="website"`, `og:site_name`) and Twitter Card (`twitter:card="summary_large_image"`, `twitter:title`, `twitter:description`, `twitter:image`).
+  - **Schema.org JSON-LD Graph**: Injects linked `@graph` metadata containing:
+    - `CollectionPage`: Declares the subject hub, URL, description, and website association.
+    - `BreadcrumbList`: Structured path from Home (`/`) → All Research (`/research`) → `{Category Name}` (`/categories/:categorySlug`).
+
+### 2. In-Category Interactive Filtering & Real-Time Querying
+- **In-Category Keyword Search**: Real-time filtering within the category without navigating away.
+- **Article Format Filter**: Dropdown filter for formats (`RESEARCH`, `REVIEW`, `COMPARISON`, `ANALYSIS`, `GUIDE`, `OPINION`).
+- **Sort Selector**: Sort by `Latest Published`, `Most Popular`, or `Alphabetical`.
+- **Dynamic Topic Tag Chips**: Tags extracted from current articles allowing sub-topic filtering.
+- **URL Synchronization**: All filter parameters (`page`, `sort`, `type`, `search`, `tag`) synchronize with URL query parameters for shareable and bookmarkable links.
+- **Responsive Pagination**: Numbered pagination bar with previous/next navigation.
+- **Cross-Domain Discovery**: Sibling category chips at the base of the page for exploratory cross-reading.
+
+---
+
+## 15. Auto-Generated SEO Input Field Pre-Population & Live Reactive Synchronization
+
+To eliminate ambiguity and prevent blank-input confusion across editorial workflows, all administrative and authoring views visibly display auto-generated SEO values inside the input fields rather than relying on faint placeholders or hidden backend defaults.
+
+### 1. Unified Operational Principles
+1. **Visible Text Pre-Population**:
+   - Every SEO input field (`SEO Meta Title`, `SEO Meta Description`, `Canonical URL`, `Social Share Title`, `Social Share Description`, `Social Share Image URL`) is populated with live, editable text.
+   - Authors and administrators immediately see the exact values that search engine crawlers and social scrapers will consume if left untouched.
+2. **Reactive Live Synchronization**:
+   - Input fields dynamically update in real time as the underlying manuscript or category changes.
+   - Editing an article's headline title instantly updates `seoTitle`, `canonicalUrl`, and `customOgTitle` if they are in live-sync mode.
+   - Editing an article's excerpt or abstract immediately updates `seoDescription` and `customOgDescription`.
+   - Attaching or uploading a manuscript cover image updates `customOgImage`.
+   - Adding the first topic tag automatically pre-populates the `focusKeyword` field for content quality audits.
+3. **Explicit State Contract (`Auto-Generated` vs `Custom Override`)**:
+   - Each input is equipped with a visual badge:
+     - `Auto-Generated (Live Sync)` (Emerald badge with `Sparkles` icon): Indicates the field is currently reacting to changes in the core manuscript or category content.
+     - `Custom Override Active` (Amber badge): Indicates the user has customized the field with bespoke text.
+   - A dedicated one-click `[Re-sync]` button appears whenever a custom override is active, allowing the editor to instantly discard manual overrides, inherit the latest auto-generated value, and re-engage reactive live synchronization.
+4. **Intelligent Backend Persist Contract**:
+   - When a field is in `Auto-Generated (Live Sync)` mode (or when its value matches the dynamically generated value), the backend stores `customTitle = null`, `customDescription = null`, etc., in `SeoMetadata`.
+   - This ensures that if the author later changes the article title from "Draft A" to "Empirical Study B", the backend dynamically regenerates and updates `generatedTitle` without locking stale override text in the database.
+
+### 2. Implementation Locations
+| Module | Location | Auto-Generated Synchronized Fields | Override & Re-sync Controls |
+| :--- | :--- | :--- | :--- |
+| **Article Authoring Studio** | `ArticleEditorPage.jsx` & `ArticleSeoStudio.jsx` | `seoTitle`, `seoDescription`, `canonicalUrl`, `focusKeyword`, `customOgTitle`, `customOgDescription`, `customOgImage` | Per-field status badges, one-click `[Re-sync with Manuscript]`, and `[Regenerate SEO from Manuscript]` action |
+| **Category Management** | `CategoryManagementPage.jsx` | `seoTitle`, `seoDescription`, `seoKeywords`, `canonicalUrl` | Per-field status badges and one-click `[Re-sync]` buttons |
+| **System Settings** | `SystemSettingsPage.jsx` | `defaultTitle`, `defaultDescription`, `openGraphImage` | Pre-populated global fallback values across system settings |
+
+---
+
+## 16. Editorial Guidelines Architecture & Mobile-Responsive Design (`/editorial-guidelines`)
+
+The dedicated Editorial Guidelines page (`/editorial-guidelines`) provides a structured, authoritative codification of Research Factors' empirical standards and peer-review practices:
+
+### 1. Visual & Layout Design
+- **Document Masthead**: Displays breadcrumb hierarchy (`Home > Editorial Guidelines`), editorial badge (`BookOpen`), primary headline, subtitle, timestamped last-updated date, and a native print trigger (`window.print()`).
+- **Desktop 2-Column Grid (`lg:grid-cols-12`)**:
+  - **Left Sidebar (`lg:col-span-4`)**: Sticky Table of Contents (`sticky top-24`) with smooth-scrolling anchors and real-time scrollspy active section tracking. Also houses an editorial ombudsman contact card.
+  - **Right Column (`lg:col-span-8`)**: Structured manuscript rendering 8 numbered sections, formatted subsection cards (`grid sm:grid-cols-2`), highlighted directive bullet boxes, and an errata reporting card.
+- **Mobile & Tablet Responsiveness (`< 1024px`)**:
+  - Sticky horizontal quick-jump pill bar (`sticky top-16 z-20`) with horizontal scroll snapping, allowing readers on phones to tap and jump directly to any numbered section without scrolling fatigue.
+  - Fluid padding (`px-4 sm:px-6 lg:px-8`) and scalable serif typography.
+  - Touch-friendly action buttons (minimum 44px hit height).
+
+### 2. Comprehensive SEO & Structured Data Graph
+- **Dynamic SEO Head (`<SeoHead>`)**: Resolves through `seoApi.resolveSeo({ type: 'PAGE', id: 'editorial-guidelines' })` with metadata fallback from `SeoGeneratorService`.
+- **Schema.org JSON-LD Graph**: Injects `@graph` metadata including `WebPage` and `BreadcrumbList`.
+- **Search Engine Discovery**: Registered in backend `sitemap.xml`, `robots.txt` (`Allow: /editorial-guidelines`), and `crawlerPrerender.js` for headless indexing.
+
+---
+
+## 17. Future Roadmap
 
 1. **Sponsorship Self-Serve Dashboard**: Enable sponsor brands to track anonymous content impressions, average reading time, and click-through metrics for their sponsored research.
 2. **Dynamic Schema.org for Comparisons**: Add Product and Dataset Schema.org structured data to side-by-side comparison tables.
 3. **Automated Newsletter Dispatch**: Connect the frontend newsletter subscription form to an email queue service for automated weekly digest delivery.
 4. **Tag Aliasing & Synonym Auto-Redirects**: Extend tag management to support tag redirects when legacy tags are merged into new canonical topics.
 5. **System-Synchronized Color Scheme Option**: Add an "Auto / System" theme option in addition to explicit Light and Dark toggles to follow `prefers-color-scheme`.
+
 
 

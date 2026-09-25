@@ -3,6 +3,8 @@ import sanitizeHtml from 'sanitize-html';
 import { prisma } from '../../config/db.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { CategoryService } from '../categories/category.service.js';
+import { SeoGeneratorService } from '../seo/seo-generator.service.js';
+import { SeoResolverService } from '../seo/seo-resolver.service.js';
 
 const RICH_BLOCK_SANITIZE_OPTIONS = {
   allowedTags: [
@@ -223,11 +225,15 @@ export class ArticleService {
     if (!article) {
       const history = await prisma.articleSlugHistory.findUnique({
         where: { slug },
-        include: { article: true }
+        include: { article: { include: { category: true } } }
       });
 
       if (history?.article) {
-        return { redirect: true, newSlug: history.article.slug };
+        return {
+          redirect: true,
+          newSlug: history.article.slug,
+          categorySlug: history.article.category?.slug || 'research'
+        };
       }
 
       throw new AppError('Article not found', 404, 'ARTICLE_NOT_FOUND');
@@ -258,6 +264,19 @@ export class ArticleService {
         _count: { select: { comments: true } }
       }
     });
+
+    // Resolve SEO
+    let seo = null;
+    try {
+      seo = await SeoResolverService.resolveSEO({
+        entityType: 'ARTICLE',
+        entityId: article.id,
+        entityData: article
+      });
+    } catch {
+      // Fallback gracefully
+    }
+    article.seo = seo;
 
     return { article, related };
   }
@@ -344,9 +363,24 @@ export class ArticleService {
       }
     });
 
-    if (!article) {
-      throw new AppError('Draft manuscript not found', 404, 'DRAFT_NOT_FOUND');
-    }
+    const [seoMetadata, resolvedSeo] = await Promise.all([
+      prisma.seoMetadata.findUnique({
+        where: {
+          entityType_entityId: {
+            entityType: 'ARTICLE',
+            entityId: articleId
+          }
+        }
+      }).catch(() => null),
+      SeoResolverService.resolveSEO({
+        entityType: 'ARTICLE',
+        entityId: article.id,
+        entityData: article
+      }).catch(() => null)
+    ]);
+
+    article.seoMetadata = seoMetadata;
+    article.seo = resolvedSeo;
 
     return article;
   }
@@ -456,9 +490,14 @@ export class ArticleService {
           type: normalizedType,
           status: 'DRAFT',
           readingTimeMin,
-          seoTitle: data.seoTitle || null,
-          seoDescription: data.seoDescription || null,
-          canonicalUrl: data.canonicalUrl || null,
+          isSponsored: Boolean(data.isSponsored),
+          sponsorName: data.isSponsored && data.sponsorName ? data.sponsorName.trim() : null,
+          sponsorDescription: data.isSponsored && data.sponsorDescription ? data.sponsorDescription.trim() : null,
+          sponsorUrl: data.isSponsored && data.sponsorUrl ? data.sponsorUrl.trim() : null,
+          sponsorLogoUrl: data.isSponsored && data.sponsorLogoUrl ? data.sponsorLogoUrl.trim() : null,
+          seoTitle: data.seoTitle ? data.seoTitle.trim() : null,
+          seoDescription: data.seoDescription ? data.seoDescription.trim() : null,
+          canonicalUrl: data.canonicalUrl ? data.canonicalUrl.trim() : null,
           authorId,
           categoryId: resolvedCategory.id,
           createdById: authorId
@@ -487,6 +526,28 @@ export class ArticleService {
             }))
           });
         }
+      }
+
+      // 5. Generate and persist baseline SeoMetadata
+      try {
+        const generatedSeo = SeoGeneratorService.generateArticleSeo(
+          article,
+          resolvedCategory,
+          data.tags || []
+        );
+
+        await tx.seoMetadata.create({
+          data: {
+            entityType: 'ARTICLE',
+            entityId: article.id,
+            customTitle: data.seoTitle ? data.seoTitle.trim() : null,
+            customDescription: data.seoDescription ? data.seoDescription.trim() : null,
+            customCanonicalUrl: data.canonicalUrl ? data.canonicalUrl.trim() : null,
+            ...generatedSeo
+          }
+        });
+      } catch {
+        // Never fail article draft creation on SEO error
       }
 
       return tx.article.findUnique({
@@ -527,8 +588,24 @@ export class ArticleService {
           updateData.type = candidate;
         }
       }
-      if (data.seoTitle !== undefined) updateData.seoTitle = data.seoTitle;
-      if (data.seoDescription !== undefined) updateData.seoDescription = data.seoDescription;
+      if (data.seoTitle !== undefined) updateData.seoTitle = data.seoTitle ? data.seoTitle.trim() : null;
+      if (data.seoDescription !== undefined) updateData.seoDescription = data.seoDescription ? data.seoDescription.trim() : null;
+      if (data.canonicalUrl !== undefined) updateData.canonicalUrl = data.canonicalUrl ? data.canonicalUrl.trim() : null;
+
+      // Sponsorship handling
+      if (data.isSponsored !== undefined) {
+        updateData.isSponsored = Boolean(data.isSponsored);
+        if (!data.isSponsored) {
+          updateData.sponsorName = null;
+          updateData.sponsorDescription = null;
+          updateData.sponsorUrl = null;
+          updateData.sponsorLogoUrl = null;
+        }
+      }
+      if (data.sponsorName !== undefined) updateData.sponsorName = data.sponsorName ? data.sponsorName.trim() : null;
+      if (data.sponsorDescription !== undefined) updateData.sponsorDescription = data.sponsorDescription ? data.sponsorDescription.trim() : null;
+      if (data.sponsorUrl !== undefined) updateData.sponsorUrl = data.sponsorUrl ? data.sponsorUrl.trim() : null;
+      if (data.sponsorLogoUrl !== undefined) updateData.sponsorLogoUrl = data.sponsorLogoUrl ? data.sponsorLogoUrl.trim() : null;
 
       // Dynamic category resolution on update
       if (data.categoryName || data.categoryId) {
@@ -576,7 +653,107 @@ export class ArticleService {
         }
       }
 
-      return tx.article.findUnique({
+      // Track 301 slug redirect history if slug changed on a published article
+      const currentArticle = await tx.article.findUnique({
+        where: { id: articleId },
+        select: { slug: true, status: true }
+      });
+
+      if (data.slug && data.slug.trim() !== currentArticle.slug && currentArticle.status === 'PUBLISHED') {
+        const newSlug = data.slug.trim();
+        updateData.slug = newSlug;
+        await tx.articleSlugHistory.upsert({
+          where: { slug: currentArticle.slug },
+          update: { articleId },
+          create: { slug: currentArticle.slug, articleId }
+        });
+      }
+
+      // Update or create SeoMetadata without wiping custom overrides
+      try {
+        const existingSeo = await tx.seoMetadata.findUnique({
+          where: { entityType_entityId: { entityType: 'ARTICLE', entityId: articleId } }
+        });
+
+        const generatedSeo = SeoGeneratorService.generateArticleSeo(
+          { ...currentArticle, ...updateData, blocks: data.blocks || [] },
+          null,
+          data.tags || []
+        );
+
+        const seoData = {
+          generatedTitle: generatedSeo.generatedTitle,
+          generatedDescription: generatedSeo.generatedDescription,
+          generatedCanonicalUrl: generatedSeo.generatedCanonicalUrl,
+          generatedOgTitle: generatedSeo.generatedOgTitle,
+          generatedOgDescription: generatedSeo.generatedOgDescription,
+          generatedOgImage: generatedSeo.generatedOgImage,
+          generatedTwitterTitle: generatedSeo.generatedTwitterTitle,
+          generatedTwitterDescription: generatedSeo.generatedTwitterDescription
+        };
+
+        if (data.isSeoTitleCustom === false || (data.seoTitle && data.seoTitle === generatedSeo.generatedTitle)) {
+          seoData.customTitle = null;
+        } else if (data.seoTitle !== undefined) {
+          seoData.customTitle = data.seoTitle ? data.seoTitle.trim() : null;
+        }
+
+        if (data.isSeoDescCustom === false || (data.seoDescription && data.seoDescription === generatedSeo.generatedDescription)) {
+          seoData.customDescription = null;
+        } else if (data.seoDescription !== undefined) {
+          seoData.customDescription = data.seoDescription ? data.seoDescription.trim() : null;
+        }
+
+        if (data.isCanonicalCustom === false || (data.canonicalUrl && data.canonicalUrl === generatedSeo.generatedCanonicalUrl)) {
+          seoData.customCanonicalUrl = null;
+        } else if (data.canonicalUrl !== undefined) {
+          seoData.customCanonicalUrl = data.canonicalUrl ? data.canonicalUrl.trim() : null;
+        }
+
+        if (data.isOgTitleCustom === false || (data.customOgTitle && data.customOgTitle === generatedSeo.generatedOgTitle)) {
+          seoData.customOgTitle = null;
+        } else if (data.customOgTitle !== undefined) {
+          seoData.customOgTitle = data.customOgTitle ? data.customOgTitle.trim() : null;
+        }
+
+        if (data.isOgDescCustom === false || (data.customOgDescription && data.customOgDescription === generatedSeo.generatedOgDescription)) {
+          seoData.customOgDescription = null;
+        } else if (data.customOgDescription !== undefined) {
+          seoData.customOgDescription = data.customOgDescription ? data.customOgDescription.trim() : null;
+        }
+
+        if (data.isOgImageCustom === false || (data.customOgImage && data.customOgImage === generatedSeo.generatedOgImage)) {
+          seoData.customOgImage = null;
+        } else if (data.customOgImage !== undefined) {
+          seoData.customOgImage = data.customOgImage ? data.customOgImage.trim() : null;
+        }
+
+        if (data.isNoIndex !== undefined) seoData.isNoIndex = Boolean(data.isNoIndex);
+        if (data.isNoFollow !== undefined) seoData.isNoFollow = Boolean(data.isNoFollow);
+        if (data.focusKeyword !== undefined) seoData.focusKeyword = data.focusKeyword ? data.focusKeyword.trim() : null;
+        if (data.secondaryKeywords !== undefined) seoData.secondaryKeywords = data.secondaryKeywords;
+        if (data.schemaType !== undefined) seoData.schemaType = data.schemaType;
+
+        if (existingSeo) {
+          await tx.seoMetadata.update({
+            where: { id: existingSeo.id },
+            data: seoData
+          });
+        } else {
+          await tx.seoMetadata.create({
+            data: {
+              entityType: 'ARTICLE',
+              entityId: articleId,
+              ...generatedSeo,
+              ...seoData
+            }
+          });
+        }
+      } catch {
+        // Do not fail manuscript update if SEO sync fails
+      }
+
+      const updatedArticle = await tx.article.findUnique({
         where: { id: articleId },
         include: {
           category: true,
@@ -584,6 +761,23 @@ export class ArticleService {
           tags: { include: { tag: true } }
         }
       });
+
+      if (updatedArticle) {
+        const [seoMeta, resolved] = await Promise.all([
+          tx.seoMetadata.findUnique({
+            where: { entityType_entityId: { entityType: 'ARTICLE', entityId: articleId } }
+          }).catch(() => null),
+          SeoResolverService.resolveSEO({
+            entityType: 'ARTICLE',
+            entityId: articleId,
+            entityData: updatedArticle
+          }).catch(() => null)
+        ]);
+        updatedArticle.seoMetadata = seoMeta;
+        updatedArticle.seo = resolved;
+      }
+
+      return updatedArticle;
     });
   }
 
@@ -694,6 +888,37 @@ export class ArticleService {
         update: { articleId: updated.id },
         create: { slug: updated.slug, articleId: updated.id }
       });
+
+      // Ensure baseline SeoMetadata exists upon publication
+      try {
+        const existingSeo = await tx.seoMetadata.findUnique({
+          where: { entityType_entityId: { entityType: 'ARTICLE', entityId: articleId } }
+        });
+
+        if (!existingSeo) {
+          const fullArticle = await tx.article.findUnique({
+            where: { id: articleId },
+            include: { category: true, tags: { include: { tag: true } }, blocks: true }
+          });
+          const generatedSeo = SeoGeneratorService.generateArticleSeo(
+            fullArticle,
+            fullArticle.category,
+            fullArticle.tags
+          );
+          await tx.seoMetadata.create({
+            data: {
+              entityType: 'ARTICLE',
+              entityId: articleId,
+              customTitle: fullArticle.seoTitle || null,
+              customDescription: fullArticle.seoDescription || null,
+              customCanonicalUrl: fullArticle.canonicalUrl || null,
+              ...generatedSeo
+            }
+          });
+        }
+      } catch {
+        // Never fail publishing on SEO generation issue
+      }
 
       await tx.auditLog.create({
         data: {

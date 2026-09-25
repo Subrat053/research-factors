@@ -1,9 +1,12 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { Header } from '../../components/layout/Header.jsx';
 import { Footer } from '../../components/layout/Footer.jsx';
 import { usePageContent } from '../../services/pages.api.js';
+import { seoApi } from '../../services/seo.api.js';
+import { SeoHead } from '../../components/common/SeoHead.jsx';
 import {
   Search,
   Scale,
@@ -52,30 +55,22 @@ export default function AboutPage() {
     'We bring research, comparisons, reviews, observations, and relevant information together in one place so readers can understand their options before making a decision.'
   ];
 
+  const { data: seoResponse } = useQuery({
+    queryKey: ['seo', 'page', 'about'],
+    queryFn: () => seoApi.resolveSeo({ type: 'PAGE', id: 'about' }),
+    staleTime: 1000 * 60 * 10
+  });
+  const pageSeo = seoResponse?.data || null;
+
   return (
     <div className="min-h-screen flex flex-col bg-paper text-ink selection:bg-rfblue-100 selection:text-rfblue-900">
-      <Helmet>
-        <title>About Research Factors — Know More. Choose Better.</title>
-        <meta
-          name="description"
-          content="Research Factors is a research-driven platform publishing in-depth articles, comparisons, and expert insights to help readers make informed, confident choices."
-        />
-        <link rel="canonical" href="https://researchfactors.com/about" />
-        <meta property="og:title" content="About Research Factors — Know More. Choose Better." />
-        <meta
-          property="og:description"
-          content="We turn scattered opinions into structured, empirical research. Explore our editorial mission, methodology, and verification principles."
-        />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://researchfactors.com/about" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="About Research Factors — Know More. Choose Better." />
-        <meta
-          name="twitter:description"
-          content="Independent research, contextual comparisons, and transparent disclosures."
-        />
-        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
-      </Helmet>
+      <SeoHead
+        seo={pageSeo}
+        title="About Research Factors — Editorial Creed & Peer Review Standards"
+        description="Research Factors is a research-driven platform publishing in-depth articles, comparisons, and expert insights to help readers make informed, confident choices."
+        canonicalUrl={typeof window !== 'undefined' ? `${window.location.origin}/about` : 'https://researchfactors.com/about'}
+        jsonLd={pageSeo?.schema?.jsonLd || jsonLd}
+      />
 
       <Header />
 

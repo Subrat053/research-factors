@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { Header } from '../../components/layout/Header.jsx';
 import { Footer } from '../../components/layout/Footer.jsx';
 import { usePageContent } from '../../services/pages.api.js';
+import { seoApi } from '../../services/seo.api.js';
+import { SeoHead } from '../../components/common/SeoHead.jsx';
 import {
   Shield,
   Calendar,
@@ -64,30 +67,22 @@ export default function PrivacyPolicyPage() {
     }
   };
 
+  const { data: seoResponse } = useQuery({
+    queryKey: ['seo', 'page', 'privacy-policy'],
+    queryFn: () => seoApi.resolveSeo({ type: 'PAGE', id: 'privacy-policy' }),
+    staleTime: 1000 * 60 * 10
+  });
+  const pageSeo = seoResponse?.data || null;
+
   return (
     <div className="min-h-screen flex flex-col bg-paper text-ink selection:bg-rfblue-100 selection:text-rfblue-900">
-      <Helmet>
-        <title>Privacy Policy | Research Factors</title>
-        <meta
-          name="description"
-          content="Learn how Research Factors collects, uses, protects, and handles personal data, cookies, and reader privacy across our digital research platform."
-        />
-        <link rel="canonical" href="https://researchfactors.com/privacy-policy" />
-        <meta property="og:title" content="Privacy Policy | Research Factors" />
-        <meta
-          property="og:description"
-          content="Transparency and reader privacy at Research Factors. Review how we protect and process personal data."
-        />
-        <meta property="og:type" content="article" />
-        <meta property="og:url" content="https://researchfactors.com/privacy-policy" />
-        <meta name="twitter:card" content="summary" />
-        <meta name="twitter:title" content="Privacy Policy | Research Factors" />
-        <meta
-          name="twitter:description"
-          content="How Research Factors respects and protects your privacy and personal data."
-        />
-        <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
-      </Helmet>
+      <SeoHead
+        seo={pageSeo}
+        title="Privacy Policy | Research Factors"
+        description="Learn how Research Factors collects, uses, protects, and handles personal data, cookies, and reader privacy across our digital research platform."
+        canonicalUrl={typeof window !== 'undefined' ? `${window.location.origin}/privacy-policy` : 'https://researchfactors.com/privacy-policy'}
+        jsonLd={pageSeo?.schema?.jsonLd || jsonLd}
+      />
 
       <Header />
 

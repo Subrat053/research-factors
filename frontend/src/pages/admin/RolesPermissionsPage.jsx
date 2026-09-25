@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { adminApi } from '../../services/admin.api.js';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
+import { useConfirm } from '../../context/ModalContext.jsx';
 import {
   KeyRound,
   Shield,
@@ -19,6 +20,7 @@ import {
 
 export default function RolesPermissionsPage() {
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const [activeRoleId, setActiveRoleId] = useState(null);
   const [rolePermissionsState, setRolePermissionsState] = useState({});
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -155,12 +157,12 @@ export default function RolesPermissionsPage() {
         <div
           className={`mb-6 p-4 rounded-xl flex items-center justify-between text-xs font-medium border ${
             alertMsg.type === 'success'
-              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-              : 'bg-red-500/10 text-red-300 border-red-500/30'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
+              : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800/60'
           }`}
         >
           <span>{alertMsg.text}</span>
-          <button onClick={() => setAlertMsg(null)} className="p-1 hover:opacity-75">
+          <button onClick={() => setAlertMsg(null)} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -207,9 +209,16 @@ export default function RolesPermissionsPage() {
 
                     {!r.isSystem && (
                       <button
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
-                          if (window.confirm(`Are you sure you want to delete role '${r.name}'?`)) {
+                          const ok = await confirm({
+                            title: 'Delete Custom Role',
+                            message: `Are you sure you want to delete role '${r.name}'? Users currently assigned to this role will need to be reassigned. This action cannot be undone.`,
+                            confirmText: 'Delete Role',
+                            cancelText: 'Cancel',
+                            variant: 'danger'
+                          });
+                          if (ok) {
                             deleteRoleMutation.mutate(r.id);
                           }
                         }}

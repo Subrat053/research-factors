@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useConfirm } from '../../context/ModalContext.jsx';
 import {
   Save,
   Send,
@@ -31,20 +32,72 @@ import {
   AlertCircle,
   Clock,
   Globe,
-  Archive
+  Archive,
+  Search,
+  Megaphone
 } from 'lucide-react';
 import { articlesApi } from '../../services/articles.api.js';
 import { adminApi } from '../../services/admin.api.js';
 import { mediaApi, normalizeMediaUrl } from '../../services/media.api.js';
+import { seoApi } from '../../services/seo.api.js';
 import { BlockRenderer } from '../../components/article/BlockRenderer.jsx';
 import { RichTextEditor } from '../../components/article/RichTextEditor.jsx';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
+import { ArticleSeoStudio } from '../../components/article/ArticleSeoStudio.jsx';
+
+const slugify = (text) => {
+  return String(text || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
+const getGeneratedArticleSeo = (data = {}, categoriesList = []) => {
+  const cleanTitle = (data.title || '').trim();
+  const title = cleanTitle ? `${cleanTitle} | Research Factors` : 'Untitled Manuscript | Research Factors';
+  const cleanExcerpt = (data.excerpt || '').trim();
+  const description = cleanExcerpt
+    ? (cleanExcerpt.length > 160 ? cleanExcerpt.slice(0, 157).trim() + '...' : cleanExcerpt)
+    : 'Empirical research findings, methodologies, and analysis published on Research Factors.';
+  const slug = data.slug || slugify(cleanTitle) || 'manuscript-slug';
+
+  // Dynamic category determination
+  let categorySlug = 'research';
+  if (data.category && typeof data.category === 'object' && data.category.slug) {
+    categorySlug = data.category.slug;
+  } else if (data.categorySlug) {
+    categorySlug = data.categorySlug;
+  } else if (data.categoryId && Array.isArray(categoriesList)) {
+    const matched = categoriesList.find(c => c.id === data.categoryId);
+    if (matched?.slug) categorySlug = matched.slug;
+  } else if (data.categoryName) {
+    categorySlug = slugify(data.categoryName);
+  }
+
+  const canonicalUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/rf/${categorySlug}/${slug}`
+    : `/rf/${categorySlug}/${slug}`;
+  const ogImage = normalizeMediaUrl(data.coverImageUrl || '') ||
+    (typeof window !== 'undefined' ? `${window.location.origin}/images/og-default.png` : '/images/og-default.png');
+
+  return {
+    title,
+    description,
+    canonicalUrl,
+    ogTitle: title,
+    ogDescription: description,
+    ogImage
+  };
+};
 
 export default function ArticleEditorPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, hasPermission } = useAuth();
+  const confirm = useConfirm();
 
   // Dynamic RBAC Permission Checks
   const canCreate = hasPermission('article.create');
@@ -63,6 +116,28 @@ export default function ArticleEditorPage() {
     type: 'RESEARCH',
     tags: [],
     status: 'DRAFT',
+    isSponsored: false,
+    sponsorName: '',
+    sponsorDescription: '',
+    sponsorUrl: '',
+    sponsorLogoUrl: '',
+    seoTitle: '',
+    isSeoTitleCustom: false,
+    seoDescription: '',
+    isSeoDescCustom: false,
+    canonicalUrl: '',
+    isCanonicalCustom: false,
+    focusKeyword: '',
+    secondaryKeywords: [],
+    isNoIndex: false,
+    isNoFollow: false,
+    customOgTitle: '',
+    isOgTitleCustom: false,
+    customOgDescription: '',
+    isOgDescCustom: false,
+    customOgImage: '',
+    isOgImageCustom: false,
+    schemaType: 'ScholarlyArticle',
     rejectionReason: null,
     blocks: [
       {
@@ -73,6 +148,10 @@ export default function ArticleEditorPage() {
       }
     ]
   });
+
+  const [seoMetadata, setSeoMetadata] = useState(null);
+  const [resolvedSeo, setResolvedSeo] = useState(null);
+  const [isRegeneratingSeo, setIsRegeneratingSeo] = useState(false);
 
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -133,6 +212,43 @@ export default function ArticleEditorPage() {
         .then(res => {
           if (res.data) {
             const data = res.data;
+            if (data.seoMetadata) setSeoMetadata(data.seoMetadata);
+            if (data.seo) setResolvedSeo(data.seo);
+
+            const seoMeta = data.seoMetadata || {};
+            const generated = getGeneratedArticleSeo(data, categories);
+
+            const hasCustomTitle = Boolean(seoMeta.customTitle);
+            const hasCustomDesc = Boolean(seoMeta.customDescription);
+            const hasCustomCanonical = Boolean(seoMeta.customCanonicalUrl);
+            const hasCustomOgTitle = Boolean(seoMeta.customOgTitle);
+            const hasCustomOgDesc = Boolean(seoMeta.customOgDescription);
+            const hasCustomOgImage = Boolean(seoMeta.customOgImage);
+
+            const initialSeoTitle = hasCustomTitle
+              ? seoMeta.customTitle
+              : (seoMeta.generatedTitle || data.seoTitle || generated.title);
+            const initialSeoDesc = hasCustomDesc
+              ? seoMeta.customDescription
+              : (seoMeta.generatedDescription || data.seoDescription || generated.description);
+            const initialCanonical = hasCustomCanonical
+              ? seoMeta.customCanonicalUrl
+              : (seoMeta.generatedCanonicalUrl || data.canonicalUrl || generated.canonicalUrl);
+            const initialOgTitle = hasCustomOgTitle
+              ? seoMeta.customOgTitle
+              : (seoMeta.generatedOgTitle || initialSeoTitle);
+            const initialOgDesc = hasCustomOgDesc
+              ? seoMeta.customOgDescription
+              : (seoMeta.generatedOgDescription || initialSeoDesc);
+            const initialOgImage = hasCustomOgImage
+              ? seoMeta.customOgImage
+              : (seoMeta.generatedOgImage || normalizeMediaUrl(data.coverImageUrl || '') || generated.ogImage);
+
+            const firstTagName = Array.isArray(data.tags) && data.tags.length > 0
+              ? (typeof data.tags[0] === 'string' ? data.tags[0] : (data.tags[0].name || data.tags[0].slug || ''))
+              : '';
+            const initialFocusKeyword = seoMeta.focusKeyword || firstTagName;
+
             setArticle({
               title: data.title || '',
               subtitle: data.subtitle || '',
@@ -143,6 +259,28 @@ export default function ArticleEditorPage() {
               type: data.type || 'RESEARCH',
               tags: Array.isArray(data.tags) ? data.tags : [],
               status: data.status || 'DRAFT',
+              isSponsored: Boolean(data.isSponsored),
+              sponsorName: data.sponsorName || '',
+              sponsorDescription: data.sponsorDescription || '',
+              sponsorUrl: data.sponsorUrl || '',
+              sponsorLogoUrl: data.sponsorLogoUrl || '',
+              seoTitle: initialSeoTitle,
+              isSeoTitleCustom: hasCustomTitle,
+              seoDescription: initialSeoDesc,
+              isSeoDescCustom: hasCustomDesc,
+              canonicalUrl: initialCanonical,
+              isCanonicalCustom: hasCustomCanonical,
+              focusKeyword: initialFocusKeyword,
+              secondaryKeywords: seoMeta.secondaryKeywords || [],
+              isNoIndex: Boolean(seoMeta.isNoIndex),
+              isNoFollow: Boolean(seoMeta.isNoFollow),
+              customOgTitle: initialOgTitle,
+              isOgTitleCustom: hasCustomOgTitle,
+              customOgDescription: initialOgDesc,
+              isOgDescCustom: hasCustomOgDesc,
+              customOgImage: initialOgImage,
+              isOgImageCustom: hasCustomOgImage,
+              schemaType: seoMeta.schemaType || 'ScholarlyArticle',
               rejectionReason: data.rejectionReason || null,
               blocks: Array.isArray(data.blocks) && data.blocks.length > 0
                 ? data.blocks.map((b, idx) => ({
@@ -170,6 +308,43 @@ export default function ArticleEditorPage() {
             .then(res => {
               const found = (res.data || []).find(a => a.id === id);
               if (found) {
+                if (found.seoMetadata) setSeoMetadata(found.seoMetadata);
+                if (found.seo) setResolvedSeo(found.seo);
+
+                const seoMeta = found.seoMetadata || {};
+                const generated = getGeneratedArticleSeo(found, categories);
+
+                const hasCustomTitle = Boolean(seoMeta.customTitle);
+                const hasCustomDesc = Boolean(seoMeta.customDescription);
+                const hasCustomCanonical = Boolean(seoMeta.customCanonicalUrl);
+                const hasCustomOgTitle = Boolean(seoMeta.customOgTitle);
+                const hasCustomOgDesc = Boolean(seoMeta.customOgDescription);
+                const hasCustomOgImage = Boolean(seoMeta.customOgImage);
+
+                const initialSeoTitle = hasCustomTitle
+                  ? seoMeta.customTitle
+                  : (seoMeta.generatedTitle || found.seoTitle || generated.title);
+                const initialSeoDesc = hasCustomDesc
+                  ? seoMeta.customDescription
+                  : (seoMeta.generatedDescription || found.seoDescription || generated.description);
+                const initialCanonical = hasCustomCanonical
+                  ? seoMeta.customCanonicalUrl
+                  : (seoMeta.generatedCanonicalUrl || found.canonicalUrl || generated.canonicalUrl);
+                const initialOgTitle = hasCustomOgTitle
+                  ? seoMeta.customOgTitle
+                  : (seoMeta.generatedOgTitle || initialSeoTitle);
+                const initialOgDesc = hasCustomOgDesc
+                  ? seoMeta.customOgDescription
+                  : (seoMeta.generatedOgDescription || initialSeoDesc);
+                const initialOgImage = hasCustomOgImage
+                  ? seoMeta.customOgImage
+                  : (seoMeta.generatedOgImage || normalizeMediaUrl(found.coverImageUrl || '') || generated.ogImage);
+
+                const firstTagName = Array.isArray(found.tags) && found.tags.length > 0
+                  ? (typeof found.tags[0] === 'string' ? found.tags[0] : (found.tags[0].name || found.tags[0].slug || ''))
+                  : '';
+                const initialFocusKeyword = seoMeta.focusKeyword || firstTagName;
+
                 setArticle({
                   title: found.title || '',
                   subtitle: found.subtitle || '',
@@ -180,6 +355,28 @@ export default function ArticleEditorPage() {
                   type: found.type || 'RESEARCH',
                   tags: Array.isArray(found.tags) ? found.tags : [],
                   status: found.status || 'DRAFT',
+                  isSponsored: Boolean(found.isSponsored),
+                  sponsorName: found.sponsorName || '',
+                  sponsorDescription: found.sponsorDescription || '',
+                  sponsorUrl: found.sponsorUrl || '',
+                  sponsorLogoUrl: found.sponsorLogoUrl || '',
+                  seoTitle: initialSeoTitle,
+                  isSeoTitleCustom: hasCustomTitle,
+                  seoDescription: initialSeoDesc,
+                  isSeoDescCustom: hasCustomDesc,
+                  canonicalUrl: initialCanonical,
+                  isCanonicalCustom: hasCustomCanonical,
+                  focusKeyword: initialFocusKeyword,
+                  secondaryKeywords: seoMeta.secondaryKeywords || [],
+                  isNoIndex: Boolean(seoMeta.isNoIndex),
+                  isNoFollow: Boolean(seoMeta.isNoFollow),
+                  customOgTitle: initialOgTitle,
+                  isOgTitleCustom: hasCustomOgTitle,
+                  customOgDescription: initialOgDesc,
+                  isOgDescCustom: hasCustomOgDesc,
+                  customOgImage: initialOgImage,
+                  isOgImageCustom: hasCustomOgImage,
+                  schemaType: seoMeta.schemaType || 'ScholarlyArticle',
                   rejectionReason: found.rejectionReason || null,
                   blocks: Array.isArray(found.blocks) && found.blocks.length > 0
                     ? found.blocks.map(b => b.blockType === 'image' && b.content?.url ? { ...b, content: { ...b.content, url: normalizeMediaUrl(b.content.url) } } : b)
@@ -226,17 +423,59 @@ export default function ArticleEditorPage() {
   };
 
   const handleChange = (field, value) => {
-    const updated = { ...article, [field]: value };
+    let updated;
+    if (typeof field === 'object' && field !== null) {
+      updated = { ...article, ...field };
+    } else {
+      updated = { ...article, [field]: value };
+    }
+
+    // Live auto-synchronize generated SEO into input fields when manuscript content changes
+    if (typeof field === 'string') {
+      if (field === 'title') {
+        const generated = getGeneratedArticleSeo({ ...updated, title: value }, categories);
+        if (!updated.isSeoTitleCustom) {
+          updated.seoTitle = generated.title;
+        }
+        if (!updated.isCanonicalCustom) {
+          updated.canonicalUrl = generated.canonicalUrl;
+        }
+        if (!updated.isOgTitleCustom) {
+          updated.customOgTitle = generated.ogTitle;
+        }
+      } else if (field === 'categoryId') {
+        const generated = getGeneratedArticleSeo({ ...updated, categoryId: value }, categories);
+        if (!updated.isCanonicalCustom) {
+          updated.canonicalUrl = generated.canonicalUrl;
+        }
+      } else if (field === 'excerpt') {
+        const generated = getGeneratedArticleSeo({ ...updated, excerpt: value }, categories);
+        if (!updated.isSeoDescCustom) {
+          updated.seoDescription = generated.description;
+        }
+        if (!updated.isOgDescCustom) {
+          updated.customOgDescription = generated.ogDescription;
+        }
+      } else if (field === 'coverImageUrl') {
+        const generated = getGeneratedArticleSeo({ ...updated, coverImageUrl: value }, categories);
+        if (!updated.isOgImageCustom) {
+          updated.customOgImage = generated.ogImage;
+        }
+      }
+    }
+
     setArticle(updated);
     triggerAutosave(updated);
   };
 
   const handleAddTag = (tagToAdd) => {
-    const raw = (typeof tagToAdd === 'string' ? tagToAdd : (tagToAdd.name || tagToAdd.slug || '')).trim();
-    if (!raw) return;
+    let clean = (typeof tagToAdd === 'string' ? tagToAdd : (tagToAdd.name || tagToAdd.slug || '')).trim();
+    if (!clean) return;
+    clean = clean.replace(/^#+/, '').trim();
+    if (!clean) return;
 
     // Normalize for comparison
-    const cleanSlug = raw.replace(/^#+/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const cleanSlug = clean.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const existingSlugs = (article.tags || []).map(t =>
       (typeof t === 'string' ? t.replace(/^#+/, '') : (t.slug || t.name || '')).toLowerCase().replace(/[^a-z0-9]+/g, '-')
     );
@@ -252,8 +491,16 @@ export default function ArticleEditorPage() {
       return;
     }
 
-    const updatedTags = [...(article.tags || []), tagToAdd];
-    handleChange('tags', updatedTags);
+    const tagObj = (typeof tagToAdd === 'object' && tagToAdd.id)
+      ? tagToAdd
+      : { name: clean, slug: cleanSlug };
+
+    const updatedTags = [...(article.tags || []), tagObj];
+    const updates = { tags: updatedTags };
+    if (!article.focusKeyword) {
+      updates.focusKeyword = clean;
+    }
+    handleChange(updates);
     setTagInput('');
     setShowTagSuggestions(false);
   };
@@ -367,7 +614,7 @@ export default function ArticleEditorPage() {
     setActiveAlert(null);
     try {
       const res = await mediaApi.upload(file, {
-        altText: article.coverImageAlt || article.title || 'Manuscript Cover'
+        altText: article.coverImageAlt || article.title || 'Article Cover'
       });
       const publicUrl = res.data?.publicUrl || res.publicUrl;
       if (!publicUrl) throw new Error('Failed to obtain uploaded file URL from storage provider.');
@@ -431,7 +678,7 @@ export default function ArticleEditorPage() {
     if (!article.title || article.title.trim().length < 5) {
       setActiveAlert({
         type: 'error',
-        message: 'Manuscript title must be at least 5 characters long before saving.'
+        message: 'Article title must be at least 5 characters long before saving.'
       });
       return null;
     }
@@ -461,19 +708,23 @@ export default function ArticleEditorPage() {
         const res = await articlesApi.createDraft(payload);
         const newId = res.data.id;
         setCurrentId(newId);
+        if (res.data?.seoMetadata) setSeoMetadata(res.data.seoMetadata);
+        if (res.data?.seo) setResolvedSeo(res.data.seo);
         setSaveStatus('saved');
         setActiveAlert({
           type: 'success',
-          message: 'Manuscript draft created and saved successfully!'
+          message: 'Article draft created and saved successfully!'
         });
         navigate(`/admin/editor/${newId}`, { replace: true });
         return newId;
       } else {
-        await articlesApi.updateDraft(currentId, payload);
+        const res = await articlesApi.updateDraft(currentId, payload);
+        if (res.data?.seoMetadata) setSeoMetadata(res.data.seoMetadata);
+        if (res.data?.seo) setResolvedSeo(res.data.seo);
         setSaveStatus('saved');
         setActiveAlert({
           type: 'success',
-          message: 'Manuscript draft saved successfully!'
+          message: 'Article draft saved successfully!'
         });
         return currentId;
       }
@@ -486,6 +737,56 @@ export default function ArticleEditorPage() {
       return null;
     } finally {
       setSavingDraft(false);
+    }
+  };
+
+  const handleRegenerateSeo = async () => {
+    if (!currentId) {
+      setActiveAlert({
+        type: 'error',
+        message: 'Please save your draft first before regenerating SEO metadata.'
+      });
+      return;
+    }
+    setIsRegeneratingSeo(true);
+    try {
+      const res = await seoApi.regenerateSeo('ARTICLE', currentId);
+      if (res.data) {
+        setSeoMetadata(res.data);
+        const resolved = await seoApi.resolveSeo({ type: 'ARTICLE', id: currentId });
+        if (resolved?.seo) setResolvedSeo(resolved.seo);
+
+        // Populate regenerated values into input fields and mark them as live-sync auto-generated
+        const updated = {
+          ...article,
+          seoTitle: res.data.generatedTitle || article.seoTitle,
+          isSeoTitleCustom: false,
+          seoDescription: res.data.generatedDescription || article.seoDescription,
+          isSeoDescCustom: false,
+          canonicalUrl: res.data.generatedCanonicalUrl || article.canonicalUrl,
+          isCanonicalCustom: false,
+          customOgTitle: res.data.generatedOgTitle || res.data.generatedTitle || article.customOgTitle,
+          isOgTitleCustom: false,
+          customOgDescription: res.data.generatedOgDescription || res.data.generatedDescription || article.customOgDescription,
+          isOgDescCustom: false,
+          customOgImage: res.data.generatedOgImage || article.customOgImage,
+          isOgImageCustom: false
+        };
+        setArticle(updated);
+        triggerAutosave(updated);
+
+        setActiveAlert({
+          type: 'success',
+          message: 'SEO metadata regenerated and populated into editor input fields successfully!'
+        });
+      }
+    } catch (err) {
+      setActiveAlert({
+        type: 'error',
+        message: err.message || 'Failed to regenerate SEO metadata.'
+      });
+    } finally {
+      setIsRegeneratingSeo(false);
     }
   };
 
@@ -515,7 +816,7 @@ export default function ArticleEditorPage() {
     if (!article.title || article.title.trim().length < 5) {
       setActiveAlert({
         type: 'error',
-        message: 'Manuscript title must be at least 5 characters long before submission.'
+        message: 'Article title must be at least 5 characters long before submission.'
       });
       return;
     }
@@ -569,7 +870,7 @@ export default function ArticleEditorPage() {
       setSaveStatus('saved');
       setActiveAlert({
         type: 'success',
-        message: 'Manuscript successfully submitted for peer editorial review!'
+        message: 'Article successfully submitted for peer editorial review!'
       });
     } catch (err) {
       setActiveAlert({
@@ -596,7 +897,7 @@ export default function ArticleEditorPage() {
     if (!article.title || article.title.trim().length < 3) {
       setActiveAlert({
         type: 'error',
-        message: 'Manuscript title must be at least 3 characters long before publishing.'
+        message: 'Article title must be at least 3 characters long before publishing.'
       });
       return;
     }
@@ -643,7 +944,7 @@ export default function ArticleEditorPage() {
       setSaveStatus('saved');
       setActiveAlert({
         type: 'success',
-        message: 'Manuscript published live to public magazine successfully!'
+        message: 'Article published live to public magazine successfully!'
       });
     } catch (err) {
       setActiveAlert({
@@ -658,9 +959,14 @@ export default function ArticleEditorPage() {
   // Unpublish / archive for admin / publisher
   const handleUnpublish = async () => {
     if (!currentId) return;
-    if (!window.confirm(`Unpublish '${article.title || 'this manuscript'}' and return to archive?`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Unpublish Manuscript',
+      message: `Are you sure you want to unpublish '${article.title || 'this manuscript'}' and return it to the archive? It will no longer be visible to the public.`,
+      confirmText: 'Unpublish',
+      cancelText: 'Cancel',
+      variant: 'warning'
+    });
+    if (!ok) return;
 
     setSubmitting(true);
     try {
@@ -796,7 +1102,7 @@ export default function ArticleEditorPage() {
           type="button"
           disabled
           title="This manuscript is already published live."
-          className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold cursor-not-allowed"
+          className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold cursor-not-allowed"
         >
           <Check className="w-3.5 h-3.5" />
           <span>Published</span>
@@ -818,8 +1124,8 @@ export default function ArticleEditorPage() {
 
   return (
     <AdminLayout
-      title={currentId ? 'Manuscript Editor' : 'Write Article'}
-      subtitle={article.title ? `Draft: "${article.title}"` : 'Draft, structure content blocks, and submit manuscripts for peer editorial review.'}
+      title={currentId ? 'Editor' : 'Write Article'}
+      subtitle={article.title ? `Draft: "${article.title}"` : 'Draft, structure content blocks, and submit articles for peer editorial review.'}
       actions={editorActions}
     >
       <Helmet>
@@ -832,8 +1138,8 @@ export default function ArticleEditorPage() {
           <div
             className={`p-4 rounded-2xl flex items-start justify-between border ${
               activeAlert.type === 'error'
-                ? 'bg-red-500/10 border-red-500/30 text-red-300'
-                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/60 text-red-800 dark:text-red-300'
+                : 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300'
             }`}
           >
             <div className="flex items-start space-x-2.5">
@@ -869,7 +1175,7 @@ export default function ArticleEditorPage() {
         {loading ? (
           <div className="py-24 text-center">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-3" />
-            <p className="text-sm text-slate-400">Loading manuscript workspace...</p>
+            <p className="text-sm text-slate-400">Loading article workspace...</p>
           </div>
         ) : (
           /* Live Block Authoring Mode */
@@ -881,7 +1187,7 @@ export default function ArticleEditorPage() {
                 <div className="md:col-span-5">
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Primary Research Category <span className="text-red-500">*</span>
+                      Article Category <span className="text-red-500">*</span>
                     </label>
                     <button
                       type="button"
@@ -967,8 +1273,8 @@ export default function ArticleEditorPage() {
                   type="text"
                   value={article.title}
                   onChange={(e) => handleChange('title', e.target.value)}
-                  placeholder="Manuscript Title (e.g. Empirical Benchmarks of Quantum Processors...)"
-                  className="w-full text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent border-b border-transparent focus:border-blue-500 pb-1"
+                  placeholder="Article Title (e.g. Empirical Benchmarks of Quantum Processors...)"
+                  className="w-full text-2xl sm:text-3xl lg:text-4xl font-semibold text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent border-b border-transparent focus:border-blue-500 pb-1"
                 />
               </div>
 
@@ -1067,7 +1373,7 @@ export default function ArticleEditorPage() {
                     <>
                       <UploadCloud className="w-8 h-8 text-blue-600 dark:text-blue-400 mb-2" />
                       <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                        Upload Manuscript Cover Image
+                        Upload Article Cover Image
                       </span>
                       <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                         PNG, JPG, WebP up to 8MB (Auto-optimized to modern WebP)
@@ -1151,7 +1457,7 @@ export default function ArticleEditorPage() {
                               : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                           }`}
                         >
-                          H2 Section
+                          H3 Section
                         </button>
                         <button
                           type="button"
@@ -1162,7 +1468,7 @@ export default function ArticleEditorPage() {
                               : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                           }`}
                         >
-                          H3 Subsection
+                          H4 Subsection
                         </button>
                       </div>
                       <input
@@ -1170,7 +1476,7 @@ export default function ArticleEditorPage() {
                         value={block.content?.text || ''}
                         onChange={(e) => handleBlockContentChange(index, { text: e.target.value })}
                         placeholder="Section Heading Title..."
-                        className="w-full text-xl font-bold text-slate-900 dark:text-white focus:outline-none border-b border-slate-200 dark:border-slate-800 focus:border-blue-500 pb-1 bg-transparent placeholder-slate-400 dark:placeholder-slate-500"
+                        className="w-full text-xl font-semibold text-slate-900 dark:text-white focus:outline-none border-b border-slate-200 dark:border-slate-800 focus:border-blue-500 pb-1 bg-transparent placeholder-slate-400 dark:placeholder-slate-500"
                       />
                     </div>
                   )}
@@ -1580,7 +1886,7 @@ export default function ArticleEditorPage() {
               </div>
             </div>
 
-            {/* 5. TOPIC TAGS SECTION (Matches Article Footer Taxonomies on Public Frontend) */}
+            {/* 5. TOPIC TAGS SECTION (Rendered in normal readable form on Public Frontend) */}
             <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800/80 shadow-xs space-y-4 transition-colors">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/80">
                 <div>
@@ -1588,32 +1894,35 @@ export default function ArticleEditorPage() {
                     Topic Tags (Research Taxonomies)
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Index manuscript under domain topics (rendered as clickable hashtags at article footer)
+                    Index manuscript under domain topics (rendered in normal form as pill badges in article sidebar)
                   </p>
                 </div>
                 <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                  {(article.tags || []).length}/8 Tags • Dual Format (#tag_name or Title)
+                  {(article.tags || []).length}/8 Tags
                 </span>
               </div>
 
-              {/* Tag Chips */}
+              {/* Tag Chips in Normal Form */}
               {(article.tags || []).length > 0 && (
                 <div className="flex flex-wrap gap-2 pt-1">
                   {article.tags.map((tag, idx) => {
-                    const raw = typeof tag === 'string' ? tag : (tag.slug || tag.name || '');
-                    const formatted = raw.startsWith('#')
-                      ? raw
-                      : `#${raw.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '')}`;
+                    const raw = typeof tag === 'string' ? tag : (tag.name || tag.slug || '');
+                    const clean = String(raw).replace(/^#+/, '').trim();
+                    let displayName = (typeof tag === 'object' && tag.name) ? tag.name : clean;
+                    displayName = displayName.replace(/^#+/, '').trim();
+                    if (displayName.includes('_') || (displayName.includes('-') && !displayName.includes(' '))) {
+                      displayName = displayName.replace(/[-_]/g, ' ');
+                    }
                     return (
                       <span
                         key={idx}
-                        className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 dark:border-blue-500/30 shadow-2xs"
+                        className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium bg-[#eef5f6] dark:bg-[#152e35] text-[#0f5466] dark:text-[#5eead4] border border-[#d6e7eb] dark:border-[#1e444e] shadow-2xs"
                       >
-                        <span>{formatted}</span>
+                        <span>{displayName}</span>
                         <button
                           type="button"
                           onClick={() => handleRemoveTag(idx)}
-                          className="p-0.5 hover:bg-blue-500/20 rounded-full text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors cursor-pointer"
+                          className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors cursor-pointer"
                           title="Remove tag"
                         >
                           <X className="w-3 h-3" />
@@ -1627,30 +1936,24 @@ export default function ArticleEditorPage() {
               {/* Tag Input Field & Autocomplete */}
               <div className="relative">
                 <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-xs font-mono font-bold">
-                      #
-                    </span>
-                    <input
-                      type="text"
-                      value={tagInput}
-                      onChange={(e) => {
-                        setTagInput(e.target.value);
-                        setShowTagSuggestions(true);
-                      }}
-                      onFocus={() => setShowTagSuggestions(true)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ',') {
-                          e.preventDefault();
-                          if (tagInput.trim()) {
-                            handleAddTag(tagInput.trim());
-                          }
+                  <input
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => {
+                      setTagInput(e.target.value);
+                      setShowTagSuggestions(true);
+                    }}
+                    onFocus={() => setShowTagSuggestions(true)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        if (tagInput.trim()) {
+                          handleAddTag(tagInput.trim());
                         }
-                      }}
-                      placeholder="Enter tag (e.g. #semiconductor_architecture or Semiconductor Architecture) and press Enter"
-                      className="w-full text-xs pl-7 pr-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium placeholder-slate-400 dark:placeholder-slate-500"
-                    />
-                  </div>
+                      }
+                    }}
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
+                  />
                   <button
                     type="button"
                     onClick={() => {
@@ -1667,7 +1970,7 @@ export default function ArticleEditorPage() {
                 {showTagSuggestions && suggestedTags.length > 0 && (
                   <div className="absolute top-full left-0 mt-1.5 w-full bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-750 py-1.5 z-30 max-h-48 overflow-y-auto">
                     <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Platform Taxonomies
+                      Suggested Platform Taxonomies
                     </div>
                     {suggestedTags.map(st => (
                       <button
@@ -1676,9 +1979,9 @@ export default function ArticleEditorPage() {
                         onClick={() => handleAddTag(st)}
                         className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
                       >
-                        <span className="font-medium">#{st.slug.replace(/-/g, '_')}</span>
+                        <span className="font-medium">{st.name}</span>
                         <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
-                          {st.name} ({st.articlesCount} {st.articlesCount === 1 ? 'article' : 'articles'})
+                          {st.articlesCount || 0} {st.articlesCount === 1 ? 'article' : 'articles'}
                         </span>
                       </button>
                     ))}
@@ -1686,6 +1989,130 @@ export default function ArticleEditorPage() {
                 )}
               </div>
             </div>
+
+            {/* 6. BRAND SPONSORSHIP SECTION (NO PLACEHOLDERS) */}
+            <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800/80 shadow-xs space-y-5 transition-colors">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/80">
+                <div className="flex items-center space-x-2">
+                  <Megaphone className="w-4 h-4 text-[#c25e34] dark:text-[#f87171]" />
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      Brand Sponsorship & Commercial Underwriting
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Disclose sponsoring organizations or commercial underwriting for this publication
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sponsorship Active Toggle */}
+              <div>
+                <label className="inline-flex items-center space-x-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(article.isSponsored)}
+                    onChange={(e) => handleChange('isSponsored', e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 cursor-pointer"
+                  />
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    This article is sponsored or commercially underwritten
+                  </span>
+                </label>
+              </div>
+
+              {/* Conditional Sponsorship Input Fields (NO PLACEHOLDERS) */}
+              {article.isSponsored && (
+                <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Sponsor Name */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Sponsor / Brand Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={article.sponsorName || ''}
+                        onChange={(e) => handleChange('sponsorName', e.target.value)}
+                        className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
+                      />
+                    </div>
+
+                    {/* Sponsor Website / Action URL */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Sponsor Target Action URL (Website / Offer link)
+                      </label>
+                      <input
+                        type="url"
+                        value={article.sponsorUrl || ''}
+                        onChange={(e) => handleChange('sponsorUrl', e.target.value)}
+                        className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sponsor Partnership Statement / Description */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Sponsor Partnership Statement / Description
+                    </label>
+                    <textarea
+                      value={article.sponsorDescription || ''}
+                      onChange={(e) => handleChange('sponsorDescription', e.target.value)}
+                      rows={3}
+                      className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
+                    />
+                  </div>
+
+                  {/* Sponsor Logo URL (Future use) */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Sponsor Logo URL (Optional, for future branding)
+                    </label>
+                    <input
+                      type="url"
+                      value={article.sponsorLogoUrl || ''}
+                      onChange={(e) => handleChange('sponsorLogoUrl', e.target.value)}
+                      className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
+                    />
+                  </div>
+
+                  {/* Live Sponsorship Sidebar Preview Widget */}
+                  <div className="pt-3">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-2">
+                      Right Sidebar Card Preview
+                    </span>
+                    <div className="p-6 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-xs max-w-sm space-y-3">
+                      <span className="text-[11px] font-bold tracking-widest text-rfblue dark:text-[#f87171] uppercase block">
+                        SPONSORED
+                      </span>
+                      <h4 className="font-serif text-xl font-bold text-slate-900 dark:text-white leading-snug">
+                        {article.sponsorName || 'Sponsor Name'}
+                      </h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                        {article.sponsorDescription || 'Sponsor partnership statement and description will be displayed here.'}
+                      </p>
+                      <div className="pt-1">
+                        <span className="inline-flex items-center justify-center px-5 py-2.5 rounded-full text-xs font-semibold text-white bg-rfblue shadow-2xs">
+                          Visit Sponsor
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 7. EDITORIAL SEO & SOCIAL STUDIO */}
+            <ArticleSeoStudio
+              article={article}
+              onChange={handleChange}
+              seoMetadata={seoMetadata}
+              resolvedSeo={resolvedSeo}
+              onRegenerate={currentId ? handleRegenerateSeo : null}
+              isRegenerating={isRegeneratingSeo}
+            />
           </div>
         )}
       </div>

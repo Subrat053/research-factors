@@ -1,12 +1,20 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Award } from 'lucide-react';
 import { ArticleCard } from './ArticleCard.jsx';
 
-export function FeaturedArticlesCarousel({ articles = [] }) {
+export function FeaturedArticlesCarousel({
+  articles = [],
+  autoSlide = true,
+  autoSlideInterval = 4000
+}) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [timerKey, setTimerKey] = useState(0);
+  const isDraggingRef = useRef(false);
+  const animationTimerRef = useRef(null);
 
   // Safeguard against duplicate keys and layout glitches if only 2 articles are available
   const effectiveArticles = useMemo(() => {
@@ -31,19 +39,33 @@ export function FeaturedArticlesCarousel({ articles = [] }) {
     [total]
   );
 
-  const handleNext = useCallback(() => {
-    if (isAnimating || total <= 1) return;
-    setDirection(1);
+  const resetTimer = useCallback(() => {
+    setTimerKey((k) => k + 1);
+  }, []);
+
+  const triggerSlide = useCallback((dir, nextIndex) => {
+    setDirection(dir);
     setIsAnimating(true);
-    setActiveIndex((prev) => prev + 1);
-  }, [isAnimating, total]);
+    setActiveIndex(nextIndex);
+
+    // Hard fallback timeout: ensure isAnimating never stays stuck even if Framer Motion skips onAnimationComplete
+    if (animationTimerRef.current) clearTimeout(animationTimerRef.current);
+    animationTimerRef.current = setTimeout(() => {
+      setIsAnimating(false);
+    }, 450);
+  }, []);
+
+  const handleNext = useCallback(() => {
+    if (total <= 1) return;
+    triggerSlide(1, (prev) => prev + 1);
+    resetTimer();
+  }, [total, triggerSlide, resetTimer]);
 
   const handlePrev = useCallback(() => {
-    if (isAnimating || total <= 1) return;
-    setDirection(-1);
-    setIsAnimating(true);
-    setActiveIndex((prev) => prev - 1);
-  }, [isAnimating, total]);
+    if (total <= 1) return;
+    triggerSlide(-1, (prev) => prev - 1);
+    resetTimer();
+  }, [total, triggerSlide, resetTimer]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -54,6 +76,38 @@ export function FeaturedArticlesCarousel({ articles = [] }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handlePrev, handleNext]);
+
+  // Pause auto-sliding if tab is hidden in background
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsVisible(document.visibilityState === 'visible');
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Robust Auto-slide timer: advances every autoSlideInterval reliably
+  useEffect(() => {
+    if (!autoSlide || total <= 1 || !isVisible) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      if (isDraggingRef.current) return;
+      triggerSlide(1, (prev) => prev + 1);
+    }, autoSlideInterval);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [autoSlide, autoSlideInterval, total, isVisible, timerKey, triggerSlide]);
+
+  // Clean up animation fallback timer on unmount
+  useEffect(() => {
+    return () => {
+      if (animationTimerRef.current) clearTimeout(animationTimerRef.current);
+    };
+  }, []);
 
   // Spring transition parameters
   const springTransition = useMemo(
@@ -128,7 +182,10 @@ export function FeaturedArticlesCarousel({ articles = [] }) {
   const visiblePositions = [-1, 0, 1];
 
   return (
-    <section className="py-14 sm:py-16 lg:py-20 border-b border-paper-border bg-white overflow-hidden">
+    <section
+      className="py-14 sm:py-16 lg:py-20 border-b border-paper-border bg-white overflow-hidden"
+      aria-label="Featured Research Carousel"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header with Title and Carousel Controls */}
         <div className="flex items-center justify-between mb-6 pb-2">
@@ -184,12 +241,19 @@ export function FeaturedArticlesCarousel({ articles = [] }) {
                     exit="exit"
                     transition={springTransition}
                     onAnimationComplete={() => {
-                      if (pos === 0) setIsAnimating(false);
+                      if (pos === 0) {
+                        setIsAnimating(false);
+                        if (animationTimerRef.current) clearTimeout(animationTimerRef.current);
+                      }
                     }}
                     drag="x"
                     dragConstraints={{ left: 0, right: 0 }}
                     dragElastic={0.15}
+                    onDragStart={() => {
+                      isDraggingRef.current = true;
+                    }}
                     onDragEnd={(e, info) => {
+                      isDraggingRef.current = false;
                       if (info.offset.x < -40) handleNext();
                       else if (info.offset.x > 40) handlePrev();
                     }}
@@ -230,11 +294,12 @@ export function FeaturedArticlesCarousel({ articles = [] }) {
             return (
               <button
                 key={i}
+                disabled={isAnimating}
                 onClick={() => {
                   if (isActive) return;
                   const diff = i - currentDisplayIndex;
-                  setDirection(diff > 0 ? 1 : -1);
-                  setActiveIndex((prev) => prev + diff);
+                  triggerSlide(diff > 0 ? 1 : -1, (prev) => prev + diff);
+                  resetTimer();
                 }}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
                   isActive

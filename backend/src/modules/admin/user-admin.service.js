@@ -237,6 +237,85 @@ export class UserAdminService {
   }
 
   /**
+   * Bulk updates user status with safeguards (excludes self, prevents non-super-admin modifying super admin)
+   */
+  static async bulkUpdateUserStatus(userIds, { status, reason = null }, actorUser) {
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      throw new AppError('userIds array is required and must not be empty', 400, 'INVALID_USER_IDS');
+    }
+
+    if (!['ACTIVE', 'SUSPENDED'].includes(status)) {
+      throw new AppError('Invalid status. Allowed: ACTIVE, SUSPENDED', 400, 'INVALID_STATUS');
+    }
+
+    // Filter out actorUser.id to prevent accidental self-suspension
+    const eligibleIds = userIds.filter(id => id !== actorUser.id);
+    const skippedSelf = userIds.length > eligibleIds.length;
+
+    if (eligibleIds.length === 0) {
+      return { updatedCount: 0, skippedSelf: true, message: 'No eligible users to update (cannot change your own status)' };
+    }
+
+    // Retrieve target users to check Super Admin constraints
+    const targetUsers = await prisma.user.findMany({
+      where: { id: { in: eligibleIds } },
+      include: { roles: { include: { role: true } } }
+    });
+
+    const isActorSuperAdmin = Boolean(actorUser.isSuperAdmin);
+
+    // If actor is not Super Admin, prevent modifying any Super Admin
+    const safeTargetIds = targetUsers
+      .filter(u => {
+        const isTargetSuperAdmin = u.roles.some(r => r.role.name === 'SUPER_ADMIN');
+        return isActorSuperAdmin || !isTargetSuperAdmin;
+      })
+      .map(u => u.id);
+
+    if (safeTargetIds.length === 0) {
+      return { updatedCount: 0, skippedSelf, message: 'No authorized users to update' };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.updateMany({
+        where: { id: { in: safeTargetIds } },
+        data: { status }
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actorUser.id,
+          action: `user.bulk_${status.toLowerCase()}`,
+          entityType: 'User',
+          entityId: 'bulk',
+          metadata: {
+            targetCount: safeTargetIds.length,
+            targetIds: safeTargetIds,
+            newStatus: status,
+            reason: reason || 'Administrative bulk status change'
+          }
+        }
+      });
+
+      if (status === 'SUSPENDED') {
+        const notificationsData = safeTargetIds.map(userId => ({
+          userId,
+          type: 'ACCOUNT_SUSPENDED',
+          title: 'Account Suspended',
+          message: reason ? `Your account has been suspended: ${reason}` : 'Your account has been suspended by administration.'
+        }));
+        await tx.notification.createMany({ data: notificationsData });
+      }
+    });
+
+    return {
+      updatedCount: safeTargetIds.length,
+      skippedSelf,
+      message: `Successfully updated ${safeTargetIds.length} user(s) to ${status}`
+    };
+  }
+
+  /**
    * Reassigns roles to a user with anti-escalation and anti-lockout safeguards
    */
   static async assignUserRoles(targetUserId, { roleNames }, actorUser) {

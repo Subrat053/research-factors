@@ -8,7 +8,7 @@ export const contactApi = {
     apiClient.post('/contact/sponsorship', data),
 
   /**
-   * Dispatches a general reader/visitor contact inquiry
+   * Dispatches a general contact inquiry
    */
   submitContactMessage: (data) =>
     apiClient.post('/contact', data)

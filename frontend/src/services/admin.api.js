@@ -27,6 +27,12 @@ export const adminApi = {
   forceDeleteArticle: (id) =>
     apiClient.delete(`/admin/articles/${id}`),
 
+  bulkUpdateArticleStatus: (data) =>
+    apiClient.post('/admin/articles/bulk-status', data),
+
+  bulkDeleteArticles: (data) =>
+    apiClient.post('/admin/articles/bulk-delete', data),
+
   // Users Directory & Status
   getUsers: (params = {}) =>
     apiClient.get('/admin/users', { params }),
@@ -36,6 +42,9 @@ export const adminApi = {
 
   updateUserStatus: (id, data) =>
     apiClient.patch(`/admin/users/${id}/status`, data),
+
+  bulkUpdateUserStatus: (data) =>
+    apiClient.patch('/admin/users/bulk-status', data),
 
   assignUserRoles: (id, data) =>
     apiClient.patch(`/admin/users/${id}/role`, data),
@@ -138,6 +147,12 @@ export const adminApi = {
 
   deleteContactMessage: (id) =>
     apiClient.delete(`/admin/contact-messages/${id}`),
+
+  bulkUpdateContactMessages: (data) =>
+    apiClient.patch('/admin/contact-messages/bulk', data),
+
+  bulkDeleteContactMessages: (data) =>
+    apiClient.post('/admin/contact-messages/bulk-delete', data),
 
   // Media Management
   listMedia: (params = {}) =>

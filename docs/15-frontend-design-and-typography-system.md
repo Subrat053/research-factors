@@ -274,8 +274,10 @@ Below is the exhaustive mapping of how typography is applied across all public a
 - **[Header.jsx](file:///d:/Wizmonk/ResearchFactor/frontend/src/components/layout/Header.jsx)**:
   - Navigation links: `text-xs sm:text-sm font-semibold tracking-wide text-ink hover:text-rfblue`
 - **[Footer.jsx](file:///d:/Wizmonk/ResearchFactor/frontend/src/components/layout/Footer.jsx)**:
-  - Footer headings: `text-xs font-bold uppercase tracking-wider text-ink-darkest`
-  - Footer links: `text-xs sm:text-sm font-normal text-ink-muted`
+  - Footer headings: `text-xs font-bold uppercase tracking-widest text-slate-100 inline-block pb-1.5 border-b-2 border-blue-500`
+  - Footer links: `border-l-2 border-transparent hover:border-blue-500 active:border-blue-400 pl-0 hover:pl-2.5 text-slate-300 hover:text-white active:text-blue-200 transition-all duration-200 block py-0.5 text-xs sm:text-sm`
+  - Social Brand Buttons: `w-8 h-8 rounded-full text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-sm hover:brightness-110` with official brand backgrounds (`#1877F2` Facebook, Instagram gradient, `#1DA1F2` X/Twitter, `#FF0000` YouTube)
+  - Trust Verification Badges: `w-10 h-10 rounded-lg flex items-center justify-center shrink-0` color-coded by domain (`emerald` for Verified, `blue` for Analysis, `amber` for User Perspectives)
 
 ---
 
@@ -377,4 +379,185 @@ To safely modify any base variable, font, or dependent styling in the future:
 2. ❌ **Do NOT re-introduce `font-serif` or `font-light` (300 weight)**: Weight 300 causes washed-out text on non-Retina displays. Keep body copy at 400 normal weight.
 3. ❌ **Do NOT add external font `<link>` tags in `index.html` without updating `tailwind.config.js` and auditing performance**: External fonts degrade First Contentful Paint (FCP) and introduce Cumulative Layout Shift (CLS).
 4. ❌ **Do NOT use `!important` (`!text-red-500`) to force styles**: If a style is not taking effect, inspect the cascade order. Adding `!important` creates specificity debt that is hard to debug.
+
+---
+
+## 6. Article Detail Right Sidebar Hierarchy & Natural Flow
+
+The article detail page (`/rf/research/:slug`) utilizes a 12-column responsive grid layout:
+- **Left Column (`lg:col-span-8`)**: Main research manuscript flow (Breadcrumb -> Format -> Title -> Subtitle -> Cover Asset -> Prose Blocks -> Author Bio -> Comments).
+- **Right Column (`lg:col-span-4`)**: Desktop editorial sidebar with a strict vertical hierarchy.
+
+### Non-Sticky Natural Flow Architecture
+- **Design Decision**: The sidebar does not use `sticky` positioning or internal scrolling (`max-h-[...] overflow-y-auto`).
+- **Rationale**: Internal scrollbars inside sidebars create clipping, trap mouse wheels, and hide lower cards. Instead, the sidebar uses `<div className="space-y-6">` with natural document flow, allowing all editorial cards to be visible as the user scrolls down the page.
+
+### Desktop Sidebar Component Order:
+1. **Tags Card**:
+   - Header: `font-serif text-2xl font-bold text-ink-darkest mb-4`.
+   - Content: Normal-form tag pills.
+2. **Table of Contents (TOC) Card**:
+   - Placed directly beneath the Tags card base.
+   - Dynamic IntersectionObserver scrollspy highlighting active section.
+3. **Sponsored Disclosure Card** (conditional on `article.isSponsored`):
+   - Eyebrow: `SPONSORED` in uppercase bold tracking-widest terracotta accent (`text-[#c25e34] dark:text-[#f87171]`).
+   - Sponsor Name: `font-serif text-xl sm:text-2xl font-bold text-ink-darkest`.
+   - Sponsor Partnership Statement: `text-xs sm:text-sm text-ink-muted leading-relaxed`.
+   - Action Button: "Visit Sponsor" pill button with `rel="noopener noreferrer sponsored"`.
+4. **Related Publications Card**:
+   - Horizontal publication preview cards.
+5. **Sticky Sponsorship Opportunity Banner** (Available on all article pages):
+   - Displayed on all article publications as the final sidebar item.
+   - Elegant dark editorial card (`bg-gradient-to-br from-[#060D1A] via-[#0F172A] to-[#1E3A8A]`) with targeted headline and direct CTA linking to `/sponsorship`.
+   - Uses `sticky top-24` to lock in place during long manuscript reading and flows out when the footer arrives. Also mirrors in mobile view before comments.
+
+---
+
+## 7. Normal-Form Topic Tags Specification
+
+Topic tags represent editorial taxonomy categories and must be presented in standard human-readable prose format:
+
+- **Formatting Rules**:
+  - **No `#` Hashtag Prefix**: Tags are rendered as clean titles (e.g. `Bhubaneswar land investment`, NOT `#bhubaneswar_land_investment`).
+  - **No Raw Underscores or Hyphens**: Slugs are normalized into space-separated words.
+  - **Pill Badge Styling**:
+    - Light Mode: `bg-[#eef5f6] text-[#0f5466] border border-[#d6e7eb] hover:bg-[#dbebee]`.
+    - Dark Mode: `dark:bg-[#152e35] dark:text-[#5eead4] dark:border-[#1e444e] dark:hover:bg-[#1b3d46]`.
+    - Dimensions: `px-3.5 py-1.5 rounded-full text-xs sm:text-[13px] font-medium shadow-2xs`.
+- **Responsive Handling**:
+  - Desktop (`>= 1024px`): Featured prominently in the top right sidebar card.
+  - Mobile (`< 1024px`): Displayed at the base of the article prose blocks before author biography.
+
+---
+
+## 8. Brand Sponsorship & Commercial Underwriting Pattern
+
+For sponsored research publications, editorial transparency and FTC/regulatory compliance require explicit disclosures:
+
+- **Database Model**: `Article` model attributes `isSponsored` (`Boolean`), `sponsorName` (`String?`), `sponsorDescription` (`String?`), `sponsorUrl` (`String?`), and `sponsorLogoUrl` (`String?`).
+- **Author Editor Interface**:
+  - Dedicated card with toggle switch: *"This article is sponsored or commercially underwritten"*.
+  - Strict **No-Placeholder Rule**: Inputs use clean labels and helper text without placeholder attributes.
+  - Live sidebar simulation card reflecting real-time sponsor inputs.
+- **Public Rendering**:
+  - Displayed prominently in the desktop sidebar between Table of Contents and Related Articles.
+  - Displayed in the main column on mobile viewports.
+  - Action link enforces `rel="noopener noreferrer sponsored"` for SEO compliance.
+
+---
+
+## 9. Admin Toolbar & Filter Button Pattern
+
+To maximize vertical viewport efficiency and maintain consistent UX across administrative workspaces:
+
+- **Single Horizontal Row Layout**:
+  - The admin toolbar container (`.admin-toolbar`) must organize primary channels, search controls, and filter buttons in a single responsive horizontal row (`flex flex-col md:flex-row md:items-center md:justify-between gap-3`).
+  - Left Section: Categorical channel switcher pills (e.g. `All`, `Sponsorships`, `General`).
+  - Right Section: Search input + Status Filter Button (`flex items-center gap-2.5 flex-1 md:justify-end`).
+- **Filter Dropdown Button Specification**:
+  - Instead of multi-line status pills occupying separate rows, status filtering is condensed into an interactive **Filter Button** (`<button>`) with an active indicator and dropdown menu.
+  - Button states:
+    - Active Filter: Accent tint (`bg-blue-50 dark:bg-blue-950/40 border-blue-300 text-blue-700`) displaying the current selection (e.g. *Unread*, *Pending*, *Resolved*).
+    - Inactive / All: Neutral slate border and text (`All Statuses`).
+  - Dropdown popover: Floating container with `z-30`, outside-click dismissal, clear header, and checkmark indicators for the selected state.
+
+---
+
+## 10. Universal Confirmation & Alert Modal System
+
+To deliver an elite, editorial experience and eliminate native browser alert/confirm interruptions:
+
+- **Core Abstraction Layer (`ConfirmationModal.jsx` & `ModalContext.jsx`)**:
+  - **`useConfirm()` Hook**:
+    - Returns a `Promise<boolean>`: `const ok = await confirm({ title, message, confirmText, cancelText, variant, customIcon })`.
+    - Resolves `true` when confirmed, `false` on cancel/escape/backdrop click.
+  - **`useAlert()` Hook**:
+    - Returns a `Promise<void>`: `await showAlert({ title, message, confirmText, variant, customIcon })`.
+    - Renders a single acknowledgment button with no cancellation option.
+- **Visual Design & Centered Split-Grid Architecture**:
+  - **Backdrop**: Smooth dark blur (`fixed inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-xs z-50`).
+  - **Dialog Surface**: Centered editorial surface (`bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 max-w-sm sm:max-w-[390px] w-full overflow-hidden`).
+  - **Upper Body (Centered Flow)**:
+    - Padded layout (`pt-7 pb-6 px-6 text-center flex flex-col items-center`).
+    - **Centered Circular Icon Badge**: Large circular pill (`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center border mx-auto mb-4`) with theme-tailored background and border tints.
+    - **Centered Headline**: `text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight mb-2 leading-snug`.
+    - **Centered Message Description**: `text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-[320px] mx-auto`.
+  - **Lower Footer (Full-Bleed Action Grid)**:
+    - Continuous horizontal boundary: `border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50`.
+    - **Confirmation Mode**: Two full-bleed buttons in a 50/50 grid (`grid grid-cols-2 divide-x divide-slate-200 dark:divide-slate-800`).
+      - Left ("No" / Cancel): `w-full py-3.5 sm:py-4 px-4 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 active:bg-slate-200`.
+      - Right (Confirm): `w-full py-3.5 sm:py-4 px-4 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors` with theme-accented text colors (e.g. `text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 font-bold`).
+    - **Alert Mode**: Single full-width button spanning `w-full py-3.5 sm:py-4 text-sm font-semibold text-center`.
+  - **Severity Variants**:
+    - `danger`: Red circular badge (`bg-red-50 dark:bg-red-950/60 border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400`) + red action text (`text-red-600 dark:text-red-400`).
+    - `warning`: Amber circular badge (`bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-900/60 text-amber-600 dark:text-amber-400`) + amber action text (`text-amber-600 dark:text-amber-400`).
+    - `info`: Blue circular badge (`bg-blue-50 dark:bg-blue-950/60 border-blue-200 dark:border-blue-900/60 text-blue-600 dark:text-blue-400`) + blue action text (`text-blue-600 dark:text-blue-400`).
+    - `success`: Emerald circular badge (`bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-900/60 text-emerald-600 dark:text-emerald-400`) + emerald action text (`text-emerald-600 dark:text-emerald-400`).
+- **Smooth Opening & Closing Animations (`AnimatePresence`)**:
+  - Backdrop fades smoothly on enter (`opacity: 0 -> 1`) and exit (`opacity: 1 -> 0`) over 200ms.
+  - Modal surface executes a fluid spring scale/pop on enter (`scale: 0.94 -> 1, y: 10 -> 0`) and graceful fade/drop on exit (`scale: 1 -> 0.94, y: 0 -> 10, opacity: 1 -> 0`) using cubic bezier easing (`[0.16, 1, 0.3, 1]`, duration: 220ms).
+- **Accessibility & Focus**:
+  - Implements `role="dialog"` and `aria-modal="true"`.
+  - Auto-focuses the primary action button after entrance animation begins.
+  - Automatically captures `Escape` key events to smoothly dismiss.
+
+---
+
+## 11. Multi-Select & Bulk Operations Architecture
+
+To enable high-throughput administrative moderation and editorial governance across `/rf/admin/users`, `/rf/admin/articles`, and `/rf/admin/contact-messages`:
+
+### 1. Selection State Management & Master Checkboxes
+- **State Pattern**: Independent selection arrays (`selectedUserIds`, `selectedArticleIds`, `selectedMessageIds`) coupled with fast toggle helpers (`toggleSelectAll`, `toggleSelectOne`).
+- **Master Header Checkbox (`<th>` / List Header)**:
+  - Controlled checkbox reflecting full page selection (`checked={items.length > 0 && selectedIds.length === items.length}`).
+  - Accessible label/title (`title="Select all on this page"`).
+- **Row & Card Checkboxes**:
+  - Placed in the leading column (`w-10 text-center` in tables) or message metadata row.
+  - Event propagation isolation (`e.stopPropagation()`) prevents row clicks from inadvertently toggling checkboxes or opening modal views.
+- **Row Selection Visual Feedback**:
+  - Selected table rows receive a distinct accent highlight: `bg-blue-50/70 dark:bg-blue-900/20`.
+
+### 2. Floating / Contextual Bulk Action Bars
+- Renders dynamically whenever `selectedIds.length > 0` with entry micro-animation (`animate-in fade-in duration-150`).
+- **Counter Badge**: Highlights selected count with high-contrast pill (`bg-blue-600 text-white rounded-full`).
+- **Action Buttons**:
+  - **Activate / Publish**: Emerald accent (`bg-emerald-600 hover:bg-emerald-500 text-white`).
+  - **Suspend / Archive**: Amber / Red accent with semantic icons (`Ban`, `Archive`).
+  - **Permanent Deletion**: Red warning accent (`bg-red-600 hover:bg-red-500 text-white`).
+  - **Deselect All**: Ghost button quickly clearing the selection array.
+- **Safety Guarantee via `useConfirm()`**:
+  - All irreversible bulk actions (suspension, unpublishing, permanent purging) trigger the universal modal confirmation system with clear consequence descriptions before mutation dispatch.
+
+### 3. Header Action Responsive Card & Theme Token Compliance
+- **Zero Hardcoded Themes**:
+  - Controls like the **Public Signup Toggle** on `/rf/admin/users` strictly adhere to light and dark theme context.
+  - Container token: `bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/70 shadow-2xs`.
+  - Text tokens: `text-slate-600 dark:text-slate-300`, with high-contrast state labels (`text-emerald-600 dark:text-emerald-400` / `text-amber-600 dark:text-amber-400`).
+  - Switch track: `allowRegistration ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-700'`.
+- **Mobile Fluidity**:
+  - Top header action bars use `flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3` ensuring comfortable touch targets on mobile viewports without overflowing horizontal borders.
+
+### 4. Alert & Feedback Banner Theme Token Compliance
+- **The Problem**: Raw `text-emerald-300` or `text-red-300` without a dark mode prefix renders pastel-tinted text on white/light paper surfaces, causing severe contrast degradation and WCAG accessibility failures.
+- **The Solution**: All inline feedback and alert banners must use theme-dual tokens:
+  - **Success / Positive**:
+    - Surface: `bg-emerald-50 dark:bg-emerald-950/40`
+    - Text: `text-emerald-800 dark:text-emerald-300`
+    - Border: `border-emerald-200 dark:border-emerald-800/60`
+  - **Error / Danger**:
+    - Surface: `bg-red-50 dark:bg-red-950/40`
+    - Text: `text-red-800 dark:text-red-300`
+    - Border: `border-red-200 dark:border-red-800/60`
+  - **Warning / Notice**:
+    - Surface: `bg-amber-50 dark:bg-amber-950/40`
+    - Text: `text-amber-900 dark:text-amber-200`
+    - Border: `border-amber-200 dark:border-amber-800/60`
+  - **Dismiss Trigger (`X`)**:
+    - `p-1 opacity-70 hover:opacity-100 transition-opacity` ensures natural contrast matching the parent container's active text color in any theme.
+
+
+
+
+
 

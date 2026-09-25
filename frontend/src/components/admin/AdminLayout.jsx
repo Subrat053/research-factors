@@ -30,7 +30,8 @@ import {
   Activity,
   PenTool,
   Sun,
-  Moon
+  Moon,
+  Globe
 } from 'lucide-react';
 
 export function AdminLayout({ children, title, subtitle, actions }) {
@@ -133,7 +134,8 @@ export function AdminLayout({ children, title, subtitle, actions }) {
       label: 'System Governance',
       items: [
         { name: 'Roles & Permissions', path: '/admin/roles', icon: KeyRound, permission: 'role.manage' },
-        { name: 'System Settings', path: '/admin/settings', icon: Settings, permission: 'setting.manage' }
+        { name: 'System Settings', path: '/admin/settings', icon: Settings, permission: 'setting.manage' },
+        { name: 'SEO Governance', path: '/admin/seo', icon: Globe, permission: 'setting.manage' }
       ]
     },
     {

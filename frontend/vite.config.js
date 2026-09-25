@@ -6,7 +6,31 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    host: true
+    host: true,
+    proxy: {
+      '/sitemap.xml': {
+        target: 'http://localhost:5005',
+        changeOrigin: true
+      },
+      '/sitemaps': {
+        target: 'http://localhost:5005',
+        changeOrigin: true
+      },
+      '/robots.txt': {
+        target: 'http://localhost:5005',
+        changeOrigin: true
+      },
+      '^/rf/sitemap\\.xml': {
+        target: 'http://localhost:5005',
+        changeOrigin: true,
+        rewrite: () => '/sitemap.xml'
+      },
+      '^/rf/robots\\.txt': {
+        target: 'http://localhost:5005',
+        changeOrigin: true,
+        rewrite: () => '/robots.txt'
+      }
+    }
   },
   resolve: {
     alias: {

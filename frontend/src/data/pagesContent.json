@@ -3,147 +3,169 @@
     "slug": "about",
     "title": "About Research Factors",
     "subtitle": "Know More. Choose Better.",
-    "lastUpdated": "September 22, 2026",
+    "lastUpdated": "September 25, 2026",
     "intro": [
-      "Research Factors is a research-driven platform built to make complex choices easier to understand.",
-      "Every day, people compare products, services, companies, technologies, features, prices, and alternatives before making decisions. But finding useful information often means going through dozens of pages, conflicting opinions, promotional claims, and incomplete comparisons.",
-      "Research Factors was created to make that process simpler.",
-      "We bring research, comparisons, reviews, observations, and relevant information together in one place so readers can understand their options before making a decision."
+      "The internet gives us more information than ever. But having more information does not always make decisions easier.",
+      "Products change. Prices change. Companies make different claims. Reviews can be difficult to compare. Important details are often spread across multiple sources.",
+      "Research Factors exists to make that process easier.",
+      "We research, compare, and explain information so readers can better understand their options before making a decision."
     ],
-    "sections": [
-      {
-        "id": "what-we-do",
-        "heading": "What We Do",
-        "paragraphs": [
-          "Research Factors publishes research-based articles, reviews, comparisons, guides, and analysis across different subjects and categories.",
-          "Our content may explore:",
-          "Rather than simply telling readers what to buy, our goal is to provide information that helps them understand why one option may differ from another."
-        ],
-        "bullets": [
-          "Products and their features",
-          "Product-to-product comparisons",
-          "Services and providers",
-          "Companies and platforms",
-          "Technologies and tools",
-          "Consumer choices",
-          "Industry developments",
-          "Practical buying considerations",
-          "Advantages and limitations",
-          "Real-world use cases",
-          "Questions people commonly ask before choosing"
-        ]
-      },
-      {
-        "id": "research-before-recommendation",
-        "heading": "Research Before Recommendation",
-        "paragraphs": [
-          "The internet is full of opinions. Research Factors focuses on the information behind those opinions.",
-          "When developing content, we may examine publicly available information, product specifications, company information, published documentation, user experiences, market information, and other relevant sources.",
-          "Depending on the subject, our research may include multiple perspectives and different factors that can affect a decision.",
-          "Our content is intended to help readers conduct their own evaluation rather than blindly follow a single recommendation."
-        ]
-      },
-      {
-        "id": "comparisons-with-context",
-        "heading": "Comparisons That Put Context First",
-        "paragraphs": [
-          "A product or service cannot always be judged by one feature.",
-          "Price, performance, usability, availability, features, limitations, support, compatibility, intended use, and other factors can all matter.",
-          "That is why our comparisons aim to provide context instead of focusing only on a single headline specification.",
-          "The right choice for one person may not be the right choice for another. Research Factors helps readers understand those differences."
-        ]
-      },
-      {
-        "id": "reviews-with-research-perspective",
-        "heading": "Reviews With a Research Perspective",
-        "paragraphs": [
-          "Reviews on Research Factors are designed to provide useful information about the subject being examined.",
-          "Depending on the topic, a review may discuss:",
-          "We aim to distinguish factual information from opinions and observations wherever practical."
-        ],
-        "bullets": [
-          "Key features",
-          "Important specifications",
-          "Benefits",
-          "Limitations",
-          "Use cases",
-          "Potential drawbacks",
-          "Alternatives",
-          "Value considerations",
-          "Who may find the option suitable"
-        ]
-      },
-      {
-        "id": "community-perspectives",
-        "heading": "Community Perspectives Matter",
-        "paragraphs": [
-          "Research is not limited to published information. Real experiences can provide useful context that specifications alone cannot provide.",
-          "Research Factors may allow readers to submit their own thoughts, experiences, reviews, or observations.",
-          "Community contributions can help present different perspectives and may give readers additional context when evaluating a product, service, or topic.",
-          "Submitted content may be moderated and may be edited for formatting, clarity, relevance, or compliance with our policies."
-        ]
-      },
-      {
-        "id": "independent-decision-making",
-        "heading": "Independent Decision-Making",
-        "paragraphs": [
-          "Research Factors does not believe that every decision has one universal answer.",
-          "Different people have different priorities, budgets, requirements, expectations, and circumstances.",
-          "Our role is to organize useful information and present relevant differences clearly. The final decision belongs to the reader."
-        ]
-      },
-      {
-        "id": "transparency-matters",
-        "heading": "Transparency Matters",
-        "paragraphs": [
-          "Trust is important when publishing research and comparison content.",
-          "Where applicable, Research Factors may disclose affiliate relationships, sponsored arrangements, commercial relationships, or other circumstances that could be relevant to how content is interpreted.",
-          "Third-party products, companies, trademarks, and services mentioned on our website belong to their respective owners."
-        ]
-      },
-      {
-        "id": "our-approach",
-        "heading": "Our Approach",
-        "paragraphs": [
-          "Our approach can be summarized in four core principles:"
-        ],
-        "subCards": [
-          {
-            "title": "Research",
-            "description": "We look beyond surface-level claims and gather relevant information before developing content."
-          },
-          {
-            "title": "Compare",
-            "description": "We examine meaningful differences rather than relying on a single feature or specification."
-          },
-          {
-            "title": "Explain",
-            "description": "We aim to present complicated information in a clear and understandable way."
-          },
-          {
-            "title": "Empower",
-            "description": "We give readers information they can use to make decisions that fit their own needs."
-          }
-        ]
-      },
-      {
-        "id": "why-we-exist",
-        "heading": "Why Research Factors Exists",
-        "paragraphs": [
-          "Choosing something today can require significant research.",
-          "Whether you are comparing a product, evaluating a service, exploring a company, selecting a technology, or simply trying to understand a topic, the amount of available information can quickly become overwhelming.",
-          "Research Factors exists to reduce that friction. We want to turn scattered information into structured research that is easier to understand and use."
-        ]
-      },
-      {
-        "id": "our-vision",
-        "heading": "Our Vision",
-        "paragraphs": [
-          "Our vision is to build a trusted research platform where people can explore options, understand differences, examine evidence, learn from other experiences, and make more informed decisions.",
-          "We believe better decisions start with better information."
-        ]
-      }
-    ],
+    "whatWeDo": {
+      "title": "What We Do",
+      "description": "Research Factors is an independent research and information platform covering products, services, companies, industries, and topics that people are actively researching.",
+      "items": [
+        "Product research and comparisons",
+        "Reviews and evaluations",
+        "Buying and decision guides",
+        "Company and industry research",
+        "Market and trend analysis",
+        "Data-driven articles",
+        "Practical explainers",
+        "Topic-specific research"
+      ],
+      "summary": "We bring relevant information together, organize it clearly, and provide the context needed to understand it.",
+      "goal": "The goal isn't simply to tell you what to choose. The goal is to help you understand why an option may or may not be right for you."
+    },
+    "whyWeExist": {
+      "title": "Why Research Factors Exists",
+      "lead": "A search can give you hundreds of results in seconds. But finding a useful answer often takes much longer.",
+      "challenges": [
+        "Compare different products",
+        "Check specifications",
+        "Read multiple reviews",
+        "Verify company claims",
+        "Understand pricing",
+        "Look at alternatives",
+        "Find independent information",
+        "Figure out which factors actually matter"
+      ],
+      "mission": "Research Factors is built around that problem. We want to reduce the time between having a question and having enough useful information to make an informed decision."
+    },
+    "approach": {
+      "title": "How We Approach Research",
+      "subtitle": "We believe useful research should be understandable. Our approach focuses on four things:",
+      "steps": [
+        {
+          "id": "research",
+          "step": "01",
+          "title": "Research",
+          "description": "We gather information from relevant sources and look beyond a single claim or viewpoint where possible."
+        },
+        {
+          "id": "compare",
+          "step": "02",
+          "title": "Compare",
+          "description": "We put relevant options, features, data, and differences into context so they are easier to evaluate."
+        },
+        {
+          "id": "understand",
+          "step": "03",
+          "title": "Understand",
+          "description": "Information without context can be difficult to use. We explain what the information means and why it may matter."
+        },
+        {
+          "id": "decide",
+          "step": "04",
+          "title": "Decide",
+          "description": "The final decision belongs to you. Our role is to give you useful information and context so you can make that decision with greater confidence."
+        }
+      ]
+    },
+    "notOneSizeFitsAll": {
+      "title": "We Don't Believe in One-Size-Fits-All Answers",
+      "lead": "There is rarely one option that is right for everyone. The right product, service, company, or solution can depend on:",
+      "factors": [
+        "Your budget",
+        "Your requirements",
+        "Your priorities",
+        "Your location",
+        "How you intend to use it",
+        "What matters most to you"
+      ],
+      "conclusion": "That's why our content aims to explain both strengths and limitations rather than simply presenting something as universally better."
+    },
+    "contentTypes": {
+      "title": "Our Content",
+      "subtitle": "Research Factors publishes different types of research depending on what readers need.",
+      "types": [
+        {
+          "name": "Comparisons",
+          "description": "We examine multiple options using relevant criteria so their differences are easier to understand.",
+          "typeParam": "COMPARISON"
+        },
+        {
+          "name": "Reviews",
+          "description": "We look at the important characteristics, advantages, limitations, and use cases of a product, service, or solution.",
+          "typeParam": "REVIEW"
+        },
+        {
+          "name": "Research & Analysis",
+          "description": "We explore companies, industries, markets, trends, and topics using available information and data.",
+          "typeParam": "RESEARCH"
+        },
+        {
+          "name": "Guides",
+          "description": "We break down complicated subjects into practical information that readers can understand and use.",
+          "typeParam": "GUIDE"
+        },
+        {
+          "name": "Explainers",
+          "description": "We answer questions and explain concepts without assuming that the reader is already an expert.",
+          "typeParam": "EXPLAINER"
+        }
+      ]
+    },
+    "transparency": {
+      "title": "Transparency Matters",
+      "paragraphs": [
+        "We want readers to understand how our content is created.",
+        "Research Factors may work with companies and organizations through sponsorships, partnerships, advertising, affiliate relationships, or other commercial arrangements.",
+        "Where a commercial relationship is relevant to the content, we aim to make it clear.",
+        "Commercial relationships do not automatically determine our editorial conclusions."
+      ]
+    },
+    "brandRelationship": {
+      "title": "Our Relationship With Brands",
+      "paragraphs": [
+        "Brands and organizations are an important part of the markets we research.",
+        "We may provide opportunities for companies to introduce their products, services, or ideas to relevant readers through appropriate commercial and sponsorship programs.",
+        "At the same time, readers should be able to distinguish between information created to inform them and content created as part of a commercial relationship.",
+        "We believe both can exist on the same platform when the distinction is clear."
+      ]
+    },
+    "curiousReaders": {
+      "title": "Built for Curious Readers",
+      "lead": "Research Factors is for people who don't want to stop at the first search result. It is for readers who ask:",
+      "questions": [
+        "What are my options?",
+        "How are they different?",
+        "What should I consider?",
+        "What does the available information actually tell me?",
+        "What might I be missing?"
+      ],
+      "closing": "If you approach decisions with that kind of curiosity, Research Factors is built for you."
+    },
+    "continuousImprovement": {
+      "title": "Built to Keep Improving",
+      "paragraphs": [
+        "Research doesn't end when an article is published.",
+        "Information changes. Products evolve. Companies update their offerings. Markets move. New data becomes available.",
+        "We aim to update our content when meaningful information changes and correct material errors when they are identified.",
+        "We also welcome constructive feedback from readers who can help us improve the quality and usefulness of our work."
+      ]
+    },
+    "mission": {
+      "title": "Our Mission",
+      "statement": "Make research easier to understand and decisions easier to navigate.",
+      "lead": "We don't want to add more noise to an already crowded internet. We want to create information that is:",
+      "pillars": [
+        "Useful",
+        "Clear",
+        "Transparent",
+        "Research-driven"
+      ],
+      "closing": "Because a better decision often starts with a better understanding of the options."
+    },
     "contactInfo": {
       "email": "editorial@researchfactors.com",
       "website": "https://researchfactors.com",
@@ -664,6 +686,163 @@
           "Email: privacy@researchfactors.com",
           "Website: https://researchfactors.com",
           "Company: Research Factors Inc."
+        ]
+      }
+    ]
+  },
+  "editorial-guidelines": {
+    "slug": "editorial-guidelines",
+    "title": "Editorial Guidelines & Review Standards",
+    "subtitle": "Empirical Rigor, Independence, and Peer-Reviewed Fact-Checking",
+    "lastUpdated": "September 25, 2026",
+    "intro": [
+      "Research Factors is dedicated to publishing evidence-first, peer-reviewed digital research, comparative studies, and in-depth product evaluations.",
+      "Our mission is to help readers understand complex choices by replacing speculative hype, promotional claims, and subjective bias with structured empirical inquiry.",
+      "These Editorial Guidelines govern every article, review, benchmark, and commentary published across Research Factors. Every author, contributing researcher, and editor is bound by these principles without exception."
+    ],
+    "sections": [
+      {
+        "id": "core-philosophy",
+        "number": 1,
+        "heading": "Core Editorial Philosophy & Mission",
+        "paragraphs": [
+          "At Research Factors, our guiding principle is 'Know More. Choose Better.' We believe that meaningful decisions—whether selecting enterprise software, investing in critical hardware, adopting cloud technologies, or understanding consumer services—require transparent, reproducible data.",
+          "We draw a strict boundary between verifiable empirical facts and editorial interpretation. Wherever subjective conclusions are drawn, the underlying data, methodologies, and reasoning must be explicitly laid bare for the reader to evaluate."
+        ],
+        "bullets": [
+          "Empirical verification precedes any recommendation or synthesis.",
+          "Claims must be testable, reproducible, or anchored in reputable primary documentation.",
+          "We reject clickbait titles, sensationalized framing, and unsubstantiated superlatives."
+        ]
+      },
+      {
+        "id": "source-verification",
+        "number": 2,
+        "heading": "Source Verification & Multi-Tier Fact-Checking",
+        "paragraphs": [
+          "Factual accuracy is the cornerstone of our credibility. Every manuscript submitted to Research Factors undergoes rigorous pre-publication verification.",
+          "Our researchers prioritize primary sources over secondary reportage. When secondary sources must be cited, our editorial team audits the original research to verify that findings have not been distorted, taken out of context, or overstated."
+        ],
+        "subSections": [
+          {
+            "title": "Primary Sources Mandatory",
+            "content": "Peer-reviewed academic papers, audited financial filings (SEC, ESMA), patented engineering specifications, official public documentation, and verified direct bench tests."
+          },
+          {
+            "title": "Double-Sourcing Rule",
+            "content": "Any unverified, confidential, or disputed claims must be independently corroborated by at least two distinct, non-affiliated sources before inclusion."
+          }
+        ],
+        "bullets": [
+          "Zero reliance on anonymous online message board rumors or unverified social media claims.",
+          "Mandatory inclusion of direct citations and hyperlinks to original whitepapers and source repositories.",
+          "Explicit attribution for all quotes, figures, benchmark datasets, and comparative metrics."
+        ]
+      },
+      {
+        "id": "testing-methodology",
+        "number": 3,
+        "heading": "Product Evaluation, Benchmarking & Comparative Methodologies",
+        "paragraphs": [
+          "When evaluating products, tools, and services, Research Factors implements standardized, repeatable testing protocols tailored to each respective domain.",
+          "Our comparative matrices are designed to evaluate real-world trade-offs rather than simplistic winner-takes-all conclusions. We recognize that an optimal solution for one enterprise or individual may be unsuitable for another."
+        ],
+        "bullets": [
+          "Testing environments, hardware specifications, software versions, and runtime configurations are fully disclosed in every comparative study.",
+          "Products are evaluated across multiple balanced dimensions including performance, security, total cost of ownership, usability, data sovereignty, and vendor lock-in.",
+          "We strictly refuse vendor-provided review units that contain custom, non-production firmware or cherry-picked performance enhancements.",
+          "Where testing tools or benchmark suites are utilized, industry-standard and open-source tooling is preferred to ensure reproducibility."
+        ]
+      },
+      {
+        "id": "commercial-firewall",
+        "number": 4,
+        "heading": "Editorial Independence, Commercial Firewalls & Sponsorship",
+        "paragraphs": [
+          "Research Factors maintains an impenetrable firewall between our editorial research staff and our commercial, sponsorship, and business operations.",
+          "Editorial coverage, manuscript evaluations, scoring, and publication schedules are determined solely by our editorial board. Commercial partners, sponsors, and advertisers have zero input into our research conclusions."
+        ],
+        "subSections": [
+          {
+            "title": "Zero Pre-Publication Review",
+            "content": "No vendor, sponsor, advertiser, or agency is permitted to preview, edit, or influence any research article or comparative study prior to public release."
+          },
+          {
+            "title": "Unambiguous Sponsorship Disclosure",
+            "content": "All sponsored research, brand partnerships, or underwriting arrangements carry prominent, indelible visual badges ('SPONSORED') and transparent partnership statements."
+          }
+        ],
+        "bullets": [
+          "Editorial content is never created to satisfy commercial quotas or advertiser demands.",
+          "We do not accept paid inclusion in comparative guides or buyer rankings.",
+          "Affiliate relationships, if present, are secondary and never influence product evaluations or score determinations."
+        ]
+      },
+      {
+        "id": "byline-transparency",
+        "number": 5,
+        "heading": "Byline Transparency & Author Accreditation",
+        "paragraphs": [
+          "Accountability requires identity. Research Factors does not publish anonymous or uncredited staff articles on empirical subjects. Every article carries a verified byline with the author's real credentials, background, and research domain.",
+          "Authors must disclose any potential conflicts of interest, past consulting engagements, equity holdings, or advisory positions related to the companies or technologies covered."
+        ],
+        "bullets": [
+          "Verified author profiles include academic background, industry experience, and linked professional citations.",
+          "Contributed articles from guest researchers undergo the exact same peer-review screening as in-house publications.",
+          "Ghostwriting and third-party corporate placement under staff bylines are strictly prohibited."
+        ]
+      },
+      {
+        "id": "corrections-errata",
+        "number": 6,
+        "heading": "Corrections, Clarifications, and Retraction Policy",
+        "paragraphs": [
+          "Despite rigorous verification, errors can occasionally occur. When an error of fact is identified, Research Factors is committed to correcting it swiftly, transparently, and completely.",
+          "We do not quietly overwrite or whitewash factual mistakes. Substantive corrections are acknowledged directly on the published manuscript with a clear timestamped errata notice."
+        ],
+        "subSections": [
+          {
+            "title": "Factual Corrections",
+            "content": "Inaccuracies affecting data, names, figures, dates, or conclusions are appended with a prominent correction note detailing what was changed and why."
+          },
+          {
+            "title": "Retraction Protocol",
+            "content": "In the rare event that a manuscript is found to contain fundamentally flawed methodology or plagiarized material, it is formally retracted with a public statement of cause."
+          }
+        ],
+        "bullets": [
+          "Typographical or stylistic fixes that do not alter factual meaning are corrected directly without an errata flag.",
+          "Readers and subjects can submit formal correction requests directly to errata@researchfactors.com with supporting documentation.",
+          "All correction requests are reviewed within 48 business hours by an independent editor."
+        ]
+      },
+      {
+        "id": "ai-assistance",
+        "number": 7,
+        "heading": "Artificial Intelligence & Algorithmic Assistance Directives",
+        "paragraphs": [
+          "As an empirical research institution, Research Factors embraces modern computational tools while maintaining strict human accountability.",
+          "Generative artificial intelligence and machine-learning tools may be used as research assistants—for grammar review, syntax linting, or preliminary dataset formatting—but never as autonomous authors."
+        ],
+        "bullets": [
+          "Every sentence, benchmark figure, and analytical conclusion must be written, verified, and endorsed by a human researcher.",
+          "Authors are legally and ethically accountable for all content published under their byline, regardless of tools used.",
+          "AI-generated synthetic citations, hallucinations, or unverified automated summaries will result in immediate disqualification of the manuscript and review of author accreditation."
+        ]
+      },
+      {
+        "id": "community-discourse",
+        "number": 8,
+        "heading": "Peer Discussion & Community Moderation Standards",
+        "paragraphs": [
+          "Research Factors provides interactive peer discussion on research publications to foster academic discourse, critical scrutiny, and constructive inquiry.",
+          "We encourage readers and domain specialists to challenge our findings, present counter-benchmarks, and share empirical observations. However, all contributions must uphold high standards of civility and evidence."
+        ],
+        "bullets": [
+          "Critiques must address the data and reasoning, not the person. Ad hominem attacks, harassment, and abusive conduct are not tolerated.",
+          "Commercial self-promotion, affiliate links, unsolicited marketing, and spam are strictly prohibited.",
+          "Comments containing hate speech, misinformation, or defamation are removed immediately by our moderation queue.",
+          "Readers can flag problematic contributions for editorial review via the community report triage system."
         ]
       }
     ]
