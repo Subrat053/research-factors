@@ -261,6 +261,8 @@ Below is the exhaustive mapping of how typography is applied across all public a
   - Section Titles: Global `<h2>`
   - Subheadings: Global `<h3>`
   - Body copy: Standard 400 normal weight (no `font-light`)
+  - **Contact Page Layout Alignment**: Desktop 2-column grid (`lg:grid-cols-12 items-stretch`) with left direct communication channels and response commitment callout matching the exact vertical height and baseline of the right interactive message form; mobile stacked responsive layout (`space-y-6 lg:space-y-0`).
+  - **Editorial Bureau Map**: Full max-width responsive Google Maps embed displaying the centralized bureau location at Bhubaneswar, Odisha, India (`https://maps.google.com/maps?q=Bhubaneswar%2C%20Odisha`) with direct link button and structured `PostalAddress` schema.
 - **Legal Pages ([TermsPage.jsx](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/public/TermsPage.jsx), [PrivacyPolicyPage.jsx](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/public/PrivacyPolicyPage.jsx), [CookiePolicyPage.jsx](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/public/CookiePolicyPage.jsx))**:
   - All legal clause blocks converted from `font-light` (300) to standard `font-normal` (400) for strict legal legibility.
 
