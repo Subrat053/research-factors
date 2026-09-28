@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useConfirm } from '../../context/ModalContext.jsx';
 import { adminApi } from '../../services/admin.api.js';
+import { mediaApi, normalizeMediaUrl } from '../../services/media.api.js';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
 import {
   FolderTree,
@@ -19,7 +20,9 @@ import {
   Layers,
   GitMerge,
   Sparkles,
-  RotateCcw
+  RotateCcw,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 
 export default function CategoryManagementPage() {
@@ -140,6 +143,25 @@ export default function CategoryManagementPage() {
     keywords: false,
     canonical: false
   });
+
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const handleImageFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploadingImage(true);
+      const res = await mediaApi.upload(file, { altText: `${formData.name || 'Category'} Flaticon` });
+      if (res?.data?.publicUrl) {
+        setFormData((prev) => ({ ...prev, imageUrl: res.data.publicUrl }));
+        setAlertMsg({ type: 'success', text: 'Illustration uploaded successfully!' });
+      }
+    } catch (err) {
+      setAlertMsg({ type: 'error', text: err.message || 'Failed to upload category illustration' });
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
 
   const getGeneratedCategorySeo = (name, slug, desc) => {
     const cleanSlug = slug || (name ? name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '');
@@ -496,6 +518,59 @@ export default function CategoryManagementPage() {
                   placeholder="Brief editorial scope for this section..."
                   className="admin-input w-full p-3 rounded-xl text-xs"
                 />
+              </div>
+
+              {/* Card Illustration / Flaticon Upload */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Card Illustration / Flaticon (Optional)
+                </label>
+                <div className="flex items-center space-x-3">
+                  {formData.imageUrl ? (
+                    <div className="relative w-14 h-14 rounded-xl border border-slate-200 dark:border-slate-700 p-1.5 bg-slate-50 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                      <img
+                        src={normalizeMediaUrl(formData.imageUrl)}
+                        alt="Preview"
+                        className="w-full h-full object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, imageUrl: '' })}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center hover:bg-rose-600 transition-colors shadow-xs"
+                        aria-label="Remove illustration"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="w-14 h-14 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 flex flex-col items-center justify-center text-slate-400 hover:text-blue-500 cursor-pointer transition-colors shrink-0">
+                      {isUploadingImage ? (
+                        <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                      ) : (
+                        <Upload className="w-5 h-5" />
+                      )}
+                      <input
+                        type="file"
+                        accept="image/svg+xml,image/png,image/webp,image/jpeg"
+                        onChange={handleImageFileChange}
+                        disabled={isUploadingImage}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={formData.imageUrl}
+                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                      placeholder="Upload image or paste Flaticon SVG/PNG URL..."
+                      className="admin-input w-full px-3 py-2 rounded-xl text-xs font-mono"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Appears in the upper-right corner of the card. If omitted, the system automatically uses a smart semantic Flaticon.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2 pt-1">

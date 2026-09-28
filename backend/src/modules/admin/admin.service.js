@@ -1,6 +1,7 @@
 import { prisma } from '../../config/db.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { ArticleDTO } from '../articles/article.dto.js';
+import { AuditEnricherService } from './audit-enricher.service.js';
 
 export class AdminService {
   /**
@@ -415,16 +416,10 @@ export class AdminService {
       prisma.auditLog.count()
     ]);
 
+    const enrichedLogs = await AuditEnricherService.enrichLogs(logs);
+
     return {
-      logs: logs.map(l => ({
-        id: l.id,
-        action: l.action,
-        entityType: l.entityType,
-        entityId: l.entityId,
-        metadata: l.metadata,
-        createdAt: l.createdAt,
-        actor: l.actor ? `${l.actor.firstName} ${l.actor.lastName}`.trim() : 'System'
-      })),
+      logs: enrichedLogs,
       pagination: {
         total,
         page,

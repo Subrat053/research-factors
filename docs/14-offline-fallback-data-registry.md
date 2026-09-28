@@ -29,7 +29,7 @@ In adherence to project UI design standards and grid symmetry, all collections i
 | `siteStats` | **4** | Monthly Readers (1.2M+), Articles (500+), Brands (200+), Trust (96%) |
 
 > [!NOTE]
-> The **Explore Topics** section in `HomePage.jsx` displays **5 topic cards** (Technology, Business, Lifestyle, Science, Policy) as explicitly pinned by editorial design requirements (`keep it 5`), while the Hero **Trending Today** section displays **6 items** (`make it 6`).
+> The **Explore Topics** section in `HomePage.jsx` displays **5 topic cards** (Technology, Business, Lifestyle, Science, Policy) as explicitly pinned by editorial design requirements (`keep it 5`), and the Hero **Trending Today** section displays **5 items** ranked 1 to 5 dynamically from the database (`limit: 5`).
 
 ---
 
@@ -114,7 +114,7 @@ flowchart TD
 #### 3. `fallbackData.trendingArticles` (6 items)
 - **Service Interceptor**: `articlesApi.getTrending()` in [`articles.api.js`](file:///d:/Wizmonk/ResearchFactor/frontend/src/services/articles.api.js).
 - **Consuming Views**:
-  - `HomePage.jsx` (Hero Right Column): "Trending Today" numbered 1 through 6 with categories and read times.
+  - `HomePage.jsx` (Hero Right Column): "Trending Today" numbered 1 through 5 with categories and read times.
 
 #### 4. `fallbackData.comments` (4 items)
 - **Service Interceptor**: `commentsApi.getComments(articleId)` in [`comments.api.js`](file:///d:/Wizmonk/ResearchFactor/frontend/src/services/comments.api.js).
@@ -209,3 +209,19 @@ rm frontend/src/data/fallbackData.json
 ```
 
 No other files or components require refactoring because all React components already consume data strictly through `articlesApi` and `commentsApi`.
+
+---
+
+## 4. Database Synchronization & Category Expansion
+
+The fallback dataset is fully integrated into the backend PostgreSQL database via the automated seed pipeline:
+
+### Database Seeding Mechanism (`backend/prisma/seed.js`)
+- **Direct Dataset Ingestion**: Reads `frontend/src/data/fallbackData.json` during execution of `npm run prisma:seed`.
+- **Taxonomy Seeding**: Seeds all 6 core categories (`technology`, `business`, `science`, `economics`, `policy`, `lifestyle`) plus 2 new expansion categories:
+  1. **Automotive** (`automotive`): Next-generation mobility, EV battery architectures, autonomous perception pipelines.
+  2. **Fashion** (`fashion`): Material science in textiles, circular supply chains, smart wearable textiles.
+- **Author Synchronization**: Maps and provisions `User`, `UserRole` (`AUTHOR`), and `AuthorProfile` records with biographies and avatars for every contributing author.
+- **Article & Block Ingestion**: Ingests all 18 fallback articles with exact content blocks (`paragraph`, `heading`, `callout`, `table`, `quote`), taxonomy tags, and slug histories.
+- **Expansion Articles**: Includes dedicated empirical research articles for the Automotive and Fashion categories to ensure complete category readiness.
+

@@ -130,12 +130,16 @@ For paginated collections:
 - `POST /comments/:id/like`: Toggle like/upvote on comment.
 - `POST /comments/:id/report`: Submit moderation report for comment.
 - `DELETE /comments/:commentId`: Delete comment (author ownership verification or `comment.moderate` / Super Admin permission).
-- `POST /articles/:id/bookmark`: Toggle bookmark for authenticated reader.
-- `GET /account/bookmarks`: List reader's saved research library.
+- `POST /bookmarks/toggle`: Toggle bookmark for authenticated reader (`{ articleId }`).
+- `GET /bookmarks`: List reader's saved research library (`page`, `limit`). Returns serialized `articles` array via `ArticleDTO.toPublicSummary` and `pagination` object.
+- `GET /bookmarks/check/:articleId`: Check if a specific manuscript is currently saved by the authenticated reader.
 
-### Media Abstraction (`/api/v1/media`)
+### Media Abstraction & Administration (`/api/v1/media`, `/api/v1/admin/media`)
 - `POST /media/upload`: Multipart file upload. Processes through Sharp, stores via active `StorageProvider`, creates `Media` record.
 - `DELETE /media/:id`: Deletes media from storage and database (if not linked to published articles).
+- `GET /admin/media`: Permission-gated (`media.manage`) administrative media catalog with `provider`, `usageFilter` (`all`, `used`, `unused`), `mimeType`, and `search` query parameters. Enriched with `usageCount` and `usagesSummary` per asset.
+- `GET /admin/media/:id/usages`: Permission-gated (`media.manage`) deep usage scan returning all content items (Articles, Blocks, Categories, User Avatars, SEO Cards) and exact content fields (e.g. `coverImageUrl`, `content.url`, `imageUrl`) referencing the asset.
+- `DELETE /admin/media/:id`: Permission-gated (`media.delete_any`) administrative force deletion across both database and physical storage provider.
 
 ### Contact & Sponsorship Inquiries (`/api/v1/contact`, `/api/v1/admin/contact-messages`)
 - `POST /contact/sponsorship`: Public submission of brand sponsorship and research partnership inquiries (rate-limited, sanitized, persists to `contact_messages`).
@@ -146,4 +150,11 @@ For paginated collections:
 - `DELETE /admin/contact-messages/:id`: Permission-gated (`contact.manage`) deletion of inquiry (creates audit log).
 - `PATCH /admin/contact-messages/bulk`: Batch update status or read state across selected inquiries (`{ messageIds: string[], status?: 'unread' | 'pending' | 'resolved', isRead?: boolean }`, requires `contact.manage`).
 - `POST /admin/contact-messages/bulk-delete`: Batch permanently delete selected inquiries (`{ messageIds: string[] }`, requires `contact.manage`).
+
+### Comments Management & Reports Governance (`/api/v1/admin/comments`, `/api/v1/admin/reports`)
+- `GET /admin/comments`: Permission-gated (`comment.moderate`) global list of all comments across all articles with `status` (`ALL`, `VISIBLE`, `REPORTED`, `HIDDEN`, `DELETED`), `search`, `articleId`, and `sort` filters. Returns formatted comments with `statusCounts` for live status badges.
+- `GET /admin/comments/:id/reports`: Permission-gated (`comment.moderate`) granular inspection of all violation complaints submitted against a specific comment.
+- `POST /admin/comments/:id/moderate`: Permission-gated (`comment.moderate`) moderation actions (`APPROVE`, `RESTORE`, `HIDE`, `DELETE`, `SPAM`). Clears associated report tickets and creates an immutable `AuditLog` entry.
+- `GET /admin/reports`: Permission-gated (`comment.moderate`) triage list of reported comments with `reason` filter and pagination.
+- `POST /admin/reports/:id/resolve`: Permission-gated (`comment.moderate`) report resolution actions (`DISMISS`, `HIDE_COMMENT`, `DELETE_COMMENT`, `SUSPEND_AUTHOR`). Cleans up related tickets and records an `AuditLog` entry.
 

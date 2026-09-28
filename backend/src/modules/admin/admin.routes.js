@@ -6,6 +6,7 @@ import { RbacAdminController } from './rbac-admin.controller.js';
 import { SettingsAdminController } from './settings-admin.controller.js';
 import { TagAdminController } from './tag-admin.controller.js';
 import { ReportAdminController } from './report-admin.controller.js';
+import { CommentAdminController } from './comment-admin.controller.js';
 import { ContactAdminController } from './contact-admin.controller.js';
 import { MediaAdminController } from './media-admin.controller.js';
 import { SeoController } from '../seo/seo.controller.js';
@@ -248,15 +249,27 @@ adminRoutes.post(
 
 // ================= COMMENTS & REPORTS MODERATION =================
 adminRoutes.get(
+  '/comments',
+  requirePermission('comment.moderate'),
+  CommentAdminController.listComments
+);
+
+adminRoutes.get(
   '/comments/moderation-queue',
   requirePermission('comment.moderate'),
   AdminController.getModerationQueue
 );
 
+adminRoutes.get(
+  '/comments/:id/reports',
+  requirePermission('comment.moderate'),
+  CommentAdminController.getCommentReports
+);
+
 adminRoutes.post(
   '/comments/:id/moderate',
   requirePermission('comment.moderate'),
-  AdminController.moderateComment
+  CommentAdminController.moderateComment
 );
 
 adminRoutes.get(
@@ -307,6 +320,12 @@ adminRoutes.get(
   '/media',
   requirePermission('media.manage'),
   MediaAdminController.listMedia
+);
+
+adminRoutes.get(
+  '/media/:id/usages',
+  requirePermission('media.manage'),
+  MediaAdminController.getMediaUsages
 );
 
 adminRoutes.delete(

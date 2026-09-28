@@ -3,8 +3,21 @@ import { MediaAdminService } from './media-admin.service.js';
 export class MediaAdminController {
   static async listMedia(req, res, next) {
     try {
-      const { provider, mimeType, search, page, limit } = req.query;
-      const result = await MediaAdminService.listMedia({ provider, mimeType, search, page, limit });
+      const { provider, mimeType, search, usageFilter, page, limit } = req.query;
+      const result = await MediaAdminService.listMedia({ provider, mimeType, search, usageFilter, page, limit });
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getMediaUsages(req, res, next) {
+    try {
+      const { id } = req.params;
+      const result = await MediaAdminService.getMediaUsages(id);
       res.json({
         success: true,
         data: result
@@ -28,3 +41,4 @@ export class MediaAdminController {
     }
   }
 }
+

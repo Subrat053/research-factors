@@ -103,7 +103,7 @@
 @layer utilities {
   /* Glassmorphic floating card */
   .glass-card {
-    @apply bg-white/90 backdrop-blur-md border border-white/60 shadow-lg shadow-slate-900/5;
+    @apply bg-white/70 backdrop-blur-md border border-white/60 shadow-lg shadow-slate-900/5;
   }
 
   /* Editorial Drop Cap */

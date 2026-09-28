@@ -129,8 +129,13 @@ export class ReportAdminService {
         }
       }
 
-      // Delete this report once resolved
-      await tx.commentReport.delete({ where: { id: reportId } });
+      // Clean up reports: if comment was moderated or suspended, clear all reports for this comment
+      if (['HIDE_COMMENT', 'DELETE_COMMENT', 'SUSPEND_AUTHOR'].includes(action)) {
+        await tx.commentReport.deleteMany({ where: { commentId: report.commentId } });
+      } else {
+        // For DISMISS, delete this specific report
+        await tx.commentReport.delete({ where: { id: reportId } });
+      }
 
       // Record Audit Log
       await tx.auditLog.create({

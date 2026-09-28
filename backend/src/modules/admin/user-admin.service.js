@@ -4,6 +4,7 @@ import { prisma } from '../../config/db.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { emailService } from '../../email/EmailService.js';
 import { UserDTO } from '../users/user.dto.js';
+import { AuditEnricherService } from './audit-enricher.service.js';
 
 export class UserAdminService {
   /**
@@ -126,6 +127,8 @@ export class UserAdminService {
       })
     ]);
 
+    const enrichedAuditHistory = await AuditEnricherService.enrichLogs(auditLogs);
+
     return {
       user: UserDTO.toAdmin(user),
       recentArticles,
@@ -136,13 +139,7 @@ export class UserAdminService {
         article: c.article,
         createdAt: c.createdAt
       })),
-      auditHistory: auditLogs.map(l => ({
-        id: l.id,
-        action: l.action,
-        metadata: l.metadata,
-        createdAt: l.createdAt,
-        actor: l.actor ? `${l.actor.firstName} ${l.actor.lastName}`.trim() : 'System'
-      }))
+      auditHistory: enrichedAuditHistory
     };
   }
 

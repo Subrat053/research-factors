@@ -356,7 +356,7 @@ export default function SponsorshipPage() {
               <div className="lg:col-span-5">
                 <div className="relative rounded-2xl overflow-hidden border border-paper-border shadow-md bg-paper">
                   <img
-                    src={normalizeMediaUrl('/images/sponsorship_case_study.jpg')}
+                    src={normalizeMediaUrl('/images/sponsorship_case_study.png')}
                     alt="Research Factors Brand Collaboration Workspace"
                     className="w-full h-80 sm:h-96 lg:h-[420px] object-cover"
                   />

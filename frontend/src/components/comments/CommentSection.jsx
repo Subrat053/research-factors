@@ -104,7 +104,34 @@ export const CommentSection = ({ articleId }) => {
   };
 
   const handleReportComment = async (commentId, data) => {
-    await commentsApi.reportComment(commentId, data);
+    if (!user || data?.reason === 'PROMPT_AUTH') {
+      showAlert({
+        title: 'Sign In Required',
+        message: 'Please sign in to submit a community report.',
+        variant: 'info'
+      });
+      return;
+    }
+
+    try {
+      const res = await commentsApi.reportComment(commentId, data);
+      return res.data;
+    } catch (err) {
+      if (err.response?.status === 401) {
+        showAlert({
+          title: 'Sign In Required',
+          message: 'Please sign in to submit a community report.',
+          variant: 'info'
+        });
+      } else {
+        showAlert({
+          title: 'Report Notice',
+          message: err.response?.data?.error?.message || 'Failed to submit report',
+          variant: 'warning'
+        });
+      }
+      throw err;
+    }
   };
 
   const handleDeleteComment = async (commentId) => {

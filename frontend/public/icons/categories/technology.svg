@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="techGrad" x1="20" y1="20" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="techGlow" x1="40" y1="40" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#60A5FA" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#2563EB" stop-opacity="0.3"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Glow Badge -->
+  <rect x="24" y="24" width="72" height="72" rx="18" fill="url(#techGlow)"/>
+  <!-- Central CPU Core -->
+  <rect x="34" y="34" width="52" height="52" rx="12" fill="url(#techGrad)" stroke="#93C5FD" stroke-width="2"/>
+  <!-- Die Pattern -->
+  <rect x="46" y="46" width="28" height="28" rx="6" fill="#1E3A8A" stroke="#60A5FA" stroke-width="1.5"/>
+  <circle cx="60" cy="60" r="6" fill="#93C5FD"/>
+  <!-- Circuit Traces Top -->
+  <path d="M44 20v14M60 16v18M76 20v14" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="44" cy="18" r="2.5" fill="#60A5FA"/>
+  <circle cx="60" cy="14" r="2.5" fill="#60A5FA"/>
+  <circle cx="76" cy="18" r="2.5" fill="#60A5FA"/>
+  <!-- Circuit Traces Bottom -->
+  <path d="M44 86v14M60 86v18M76 86v14" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="44" cy="102" r="2.5" fill="#60A5FA"/>
+  <circle cx="60" cy="106" r="2.5" fill="#60A5FA"/>
+  <circle cx="76" cy="102" r="2.5" fill="#60A5FA"/>
+  <!-- Circuit Traces Left -->
+  <path d="M20 44h14M16 60h18M20 76h14" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="18" cy="44" r="2.5" fill="#60A5FA"/>
+  <circle cx="14" cy="60" r="2.5" fill="#60A5FA"/>
+  <circle cx="18" cy="76" r="2.5" fill="#60A5FA"/>
+  <!-- Circuit Traces Right -->
+  <path d="M86 44h14M86 60h18M86 76h14" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="102" cy="44" r="2.5" fill="#60A5FA"/>
+  <circle cx="106" cy="60" r="2.5" fill="#60A5FA"/>
+  <circle cx="102" cy="76" r="2.5" fill="#60A5FA"/>
+</svg>

@@ -30,7 +30,10 @@ export class CommentService {
       where: {
         articleId,
         parentId: null,
-        status: { in: ['VISIBLE', 'REPORTED'] }
+        OR: [
+          { status: { in: ['VISIBLE', 'REPORTED'] } },
+          { replies: { some: { status: { in: ['VISIBLE', 'REPORTED'] } } } }
+        ]
       },
       include: {
         user: {
@@ -69,39 +72,54 @@ export class CommentService {
       where: {
         articleId,
         parentId: null,
-        status: { in: ['VISIBLE', 'REPORTED'] }
+        OR: [
+          { status: { in: ['VISIBLE', 'REPORTED'] } },
+          { replies: { some: { status: { in: ['VISIBLE', 'REPORTED'] } } } }
+        ]
       }
     });
 
-    const formattedComments = topLevelComments.map(comment => ({
-      id: comment.id,
-      content: comment.content,
-      status: comment.status,
-      likeCount: comment.likeCount,
-      hasLiked: currentUserId ? comment.likes.length > 0 : false,
-      createdAt: comment.createdAt,
-      updatedAt: comment.updatedAt,
-      author: {
-        id: comment.user.id,
-        name: `${comment.user.firstName} ${comment.user.lastName}`.trim(),
-        avatarUrl: comment.user.avatarUrl
-      },
-      replies: comment.replies.map(reply => ({
-        id: reply.id,
-        parentId: reply.parentId,
-        content: reply.content,
-        status: reply.status,
-        likeCount: reply.likeCount,
-        hasLiked: currentUserId ? reply.likes.length > 0 : false,
-        createdAt: reply.createdAt,
-        updatedAt: reply.updatedAt,
-        author: {
-          id: reply.user.id,
-          name: `${reply.user.firstName} ${reply.user.lastName}`.trim(),
-          avatarUrl: reply.user.avatarUrl
-        }
-      }))
-    }));
+    const formattedComments = topLevelComments.map(comment => {
+      const isModerated = comment.status === 'HIDDEN' || comment.status === 'DELETED';
+      return {
+        id: comment.id,
+        content: isModerated
+          ? '<p><em>[This response was removed by a moderator for violating community standards]</em></p>'
+          : comment.content,
+        status: comment.status,
+        isModerated,
+        likeCount: isModerated ? 0 : comment.likeCount,
+        hasLiked: isModerated ? false : (currentUserId ? comment.likes.length > 0 : false),
+        createdAt: comment.createdAt,
+        updatedAt: comment.updatedAt,
+        author: isModerated
+          ? {
+              id: comment.user.id,
+              name: 'Participant',
+              avatarUrl: null
+            }
+          : {
+              id: comment.user.id,
+              name: `${comment.user.firstName} ${comment.user.lastName}`.trim(),
+              avatarUrl: comment.user.avatarUrl
+            },
+        replies: comment.replies.map(reply => ({
+          id: reply.id,
+          parentId: reply.parentId,
+          content: reply.content,
+          status: reply.status,
+          likeCount: reply.likeCount,
+          hasLiked: currentUserId ? reply.likes.length > 0 : false,
+          createdAt: reply.createdAt,
+          updatedAt: reply.updatedAt,
+          author: {
+            id: reply.user.id,
+            name: `${reply.user.firstName} ${reply.user.lastName}`.trim(),
+            avatarUrl: reply.user.avatarUrl
+          }
+        }))
+      };
+    });
 
     return {
       comments: formattedComments,
@@ -134,6 +152,10 @@ export class CommentService {
 
     if (!article) {
       throw new AppError('Article not found', 404, 'ARTICLE_NOT_FOUND');
+    }
+
+    if (article.status !== 'PUBLISHED') {
+      throw new AppError('Comments can only be posted to published articles', 400, 'ARTICLE_NOT_ACCEPTING_COMMENTS');
     }
 
     let depth = 0;
@@ -291,6 +313,19 @@ export class CommentService {
       throw new AppError('Comment not found', 404, 'COMMENT_NOT_FOUND');
     }
 
+    if (comment.userId === userId) {
+      throw new AppError('You cannot report your own comment', 400, 'SELF_REPORT_DISALLOWED');
+    }
+
+    const existingReport = await prisma.commentReport.findUnique({
+      where: {
+        userId_commentId: {
+          userId,
+          commentId
+        }
+      }
+    });
+
     // Upsert report to prevent duplicate reports from the same user
     await prisma.commentReport.upsert({
       where: {
@@ -327,6 +362,7 @@ export class CommentService {
 
     return {
       reported: true,
+      isUpdate: !!existingReport,
       reportCount,
       status: currentStatus
     };

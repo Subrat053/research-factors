@@ -20,7 +20,7 @@ import {
   Github
 } from 'lucide-react';
 import { userApi } from '../../services/user.api.js';
-import { mediaApi } from '../../services/media.api.js';
+import { mediaApi, normalizeMediaUrl } from '../../services/media.api.js';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 
@@ -48,7 +48,7 @@ const passwordSchema = z.object({
 
 export default function AdminProfilePage() {
   const queryClient = useQueryClient();
-  const { user: authUser, refetchUser } = useAuth();
+  const { user: authUser, refetchUser, hasRole, hasAnyPermission } = useAuth();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'security'
   const [feedback, setFeedback] = useState(null); // { type: 'success' | 'error', text: '' }
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -70,8 +70,22 @@ export default function AdminProfilePage() {
     }
   });
 
-  const profile = data?.data || authUser;
+  const profile = data?.data || data || authUser;
   const authorProfile = profile?.authorProfile;
+
+  // Dynamically determine if user has authoring privileges or staff roles
+  const canAuthor =
+    hasAnyPermission(['article.create', 'article.update_own', 'author.approve']) ||
+    hasRole('SUPER_ADMIN') ||
+    hasRole('ADMIN') ||
+    hasRole('EDITOR') ||
+    hasRole('AUTHOR') ||
+    Boolean(authorProfile?.isApproved) ||
+    Boolean(
+      profile?.roles?.some((r) =>
+        ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'].includes(typeof r === 'string' ? r : r.name)
+      )
+    );
 
   // Profile Form
   const {
@@ -114,21 +128,49 @@ export default function AdminProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate MIME format
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      setFeedback({
+        type: 'error',
+        text: 'Please select a valid image file (JPEG, PNG, WebP, AVIF, GIF).'
+      });
+      return;
+    }
+
+    // Validate maximum file size (8MB)
+    if (file.size > 8 * 1024 * 1024) {
+      setFeedback({ type: 'error', text: 'File size must not exceed 8MB.' });
+      return;
+    }
+
     setUploadingAvatar(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('caption', 'User Avatar');
-      const uploadRes = await mediaApi.uploadMedia(formData);
-      const url = uploadRes.data?.url;
-      if (url) {
-        setProfileValue('avatarUrl', url, { shouldDirty: true });
-        setFeedback({ type: 'success', text: 'Avatar uploaded. Click "Save Changes" to apply.' });
+      const uploadRes = await mediaApi.upload(file, {
+        caption: `${profile?.fullName || 'User'} Profile Avatar`,
+        altText: `${profile?.fullName || 'User'} Avatar`
+      });
+
+      // Backend returns { success: true, data: { publicUrl, storageKey, ... } }
+      const publicUrl = uploadRes.data?.publicUrl || uploadRes.data?.url || uploadRes.publicUrl;
+      if (publicUrl) {
+        setProfileValue('avatarUrl', publicUrl, { shouldDirty: true });
+        setFeedback({
+          type: 'success',
+          text: 'Avatar uploaded. Click "Save Profile Changes" below to apply.'
+        });
+      } else {
+        throw new Error('Upload completed, but no accessible image URL was returned.');
       }
     } catch (err) {
-      setFeedback({ type: 'error', text: err.response?.data?.error?.message || 'Avatar upload failed' });
+      const message =
+        err.message ||
+        err.response?.data?.error?.message ||
+        'Avatar upload failed. Please try again.';
+      setFeedback({ type: 'error', text: message });
     } finally {
       setUploadingAvatar(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -160,11 +202,11 @@ export default function AdminProfilePage() {
 
   return (
     <AdminLayout
-      title="Profile & Credentials"
+      title="Profile"
       subtitle="Manage your identity, researcher accreditation, and account security"
     >
       <Helmet>
-        <title>My Profile & Credentials — Research Factors</title>
+        <title>My Profile — Research Factors</title>
       </Helmet>
 
       {/* Auto-Dismissing Banner */}
@@ -232,7 +274,7 @@ export default function AdminProfilePage() {
               <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
                 {avatarWatch ? (
                   <img
-                    src={avatarWatch}
+                    src={normalizeMediaUrl(avatarWatch)}
                     alt="Avatar Preview"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -348,125 +390,121 @@ export default function AdminProfilePage() {
             </div>
           </div>
 
-          {/* Academic & Author Accreditation Section */}
-          <div className="admin-card p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Researcher Credentials & Byline</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Displayed on your public author profile and article header bylines.
-                </p>
-              </div>
-              {authorProfile?.isApproved ? (
+          {/* Academic & Author Accreditation Section (Dynamically rendered only for users with author privileges) */}
+          {canAuthor && (
+            <div className="admin-card p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Researcher Credentials & Byline</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Displayed on your public author profile and article header bylines.
+                  </p>
+                </div>
                 <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
                   <ShieldCheck className="w-3.5 h-3.5 mr-1 text-emerald-500 dark:text-emerald-400" />
                   Verified Author
                 </span>
-              ) : (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25">
-                  Accreditation Pending
-                </span>
-              )}
-            </div>
-
-            <div className="space-y-4 pt-2">
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                  Professional / Academic Headline
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Senior Research Fellow in Quantum Optics, Stanford University"
-                  {...registerProfile('headline')}
-                  className="admin-input"
-                />
-                {profileErrors.headline && (
-                  <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.headline.message}</p>
-                )}
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                  Full Researcher Biography & Focus
-                </label>
-                <textarea
-                  rows={5}
-                  placeholder="Detail your scientific investigation focus, prior publications, and laboratory affiliation..."
-                  {...registerProfile('biography')}
-                  className="admin-input leading-relaxed"
-                />
-                {profileErrors.biography && (
-                  <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.biography.message}</p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-4 pt-2">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center space-x-1">
-                    <Globe className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Personal / Lab Website</span>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                    Professional / Academic Headline
                   </label>
                   <input
-                    type="url"
-                    placeholder="https://yourlaboratory.edu"
-                    {...registerProfile('websiteUrl')}
+                    type="text"
+                    placeholder="e.g. Senior Research Fellow in Quantum Optics, Stanford University"
+                    {...registerProfile('headline')}
                     className="admin-input"
                   />
-                  {profileErrors.websiteUrl && (
-                    <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.websiteUrl.message}</p>
+                  {profileErrors.headline && (
+                    <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.headline.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center space-x-1">
-                    <Linkedin className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
-                    <span>LinkedIn Profile</span>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                    Full Researcher Biography & Focus
                   </label>
-                  <input
-                    type="url"
-                    placeholder="https://linkedin.com/in/username"
-                    {...registerProfile('linkedinUrl')}
-                    className="admin-input"
+                  <textarea
+                    rows={5}
+                    placeholder="Detail your scientific investigation focus, prior publications, and laboratory affiliation..."
+                    {...registerProfile('biography')}
+                    className="admin-input leading-relaxed"
                   />
-                  {profileErrors.linkedinUrl && (
-                    <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.linkedinUrl.message}</p>
+                  {profileErrors.biography && (
+                    <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.biography.message}</p>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center space-x-1">
-                    <Twitter className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
-                    <span>Twitter / X Profile</span>
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://x.com/username"
-                    {...registerProfile('twitterUrl')}
-                    className="admin-input"
-                  />
-                  {profileErrors.twitterUrl && (
-                    <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.twitterUrl.message}</p>
-                  )}
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center space-x-1">
+                      <Globe className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Personal / Lab Website</span>
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://yourlaboratory.edu"
+                      {...registerProfile('websiteUrl')}
+                      className="admin-input"
+                    />
+                    {profileErrors.websiteUrl && (
+                      <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.websiteUrl.message}</p>
+                    )}
+                  </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center space-x-1">
-                    <Github className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
-                    <span>GitHub Profile</span>
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://github.com/username"
-                    {...registerProfile('githubUrl')}
-                    className="admin-input"
-                  />
-                  {profileErrors.githubUrl && (
-                    <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.githubUrl.message}</p>
-                  )}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center space-x-1">
+                      <Linkedin className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
+                      <span>LinkedIn Profile</span>
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://linkedin.com/in/username"
+                      {...registerProfile('linkedinUrl')}
+                      className="admin-input"
+                    />
+                    {profileErrors.linkedinUrl && (
+                      <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.linkedinUrl.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center space-x-1">
+                      <Twitter className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
+                      <span>Twitter / X Profile</span>
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://x.com/username"
+                      {...registerProfile('twitterUrl')}
+                      className="admin-input"
+                    />
+                    {profileErrors.twitterUrl && (
+                      <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.twitterUrl.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 flex items-center space-x-1">
+                      <Github className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
+                      <span>GitHub Profile</span>
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://github.com/username"
+                      {...registerProfile('githubUrl')}
+                      className="admin-input"
+                    />
+                    {profileErrors.githubUrl && (
+                      <p className="text-[11px] text-red-500 dark:text-red-400 mt-1">{profileErrors.githubUrl.message}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="flex justify-end">
             <button

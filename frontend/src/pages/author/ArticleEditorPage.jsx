@@ -964,7 +964,7 @@ export default function ArticleEditorPage() {
       message: `Are you sure you want to unpublish '${article.title || 'this manuscript'}' and return it to the archive? It will no longer be visible to the public.`,
       confirmText: 'Unpublish',
       cancelText: 'Cancel',
-      variant: 'warning'
+      variant: 'danger'
     });
     if (!ok) return;
 
@@ -1069,7 +1069,7 @@ export default function ArticleEditorPage() {
             type="button"
             onClick={handleUnpublish}
             disabled={submitting}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-600 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
             title="Unpublish article back to archive"
           >
             {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Archive className="w-3.5 h-3.5" />}

@@ -322,7 +322,7 @@ export class ArticleService {
   /**
    * Fetches trending research based on engagement metrics
    */
-  static async getTrendingArticles(limit = 6) {
+  static async getTrendingArticles(limit = 5) {
     return prisma.article.findMany({
       where: { status: 'PUBLISHED' },
       take: limit,

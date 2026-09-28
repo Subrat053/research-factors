@@ -64,6 +64,16 @@ export const CommentItem = ({
     }
   };
 
+  if (comment.isModerated) {
+    return (
+      <div className={`py-4 ${isReply ? 'ml-8 pl-4 border-l-2 border-slate-100 dark:border-zinc-800' : 'border-b border-slate-100 dark:border-zinc-800'}`}>
+        <p className="text-xs italic text-slate-400 dark:text-zinc-500">
+          [This peer response was removed by a moderator for violating community standards]
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className={`group py-4 ${isReply ? 'ml-8 pl-4 border-l-2 border-slate-100 ' : 'border-b border-slate-100 '}`}>
       <div className="flex items-start justify-between gap-3">
@@ -97,14 +107,19 @@ export const CommentItem = ({
 
         {/* Action icons */}
         <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-          {user && !isAuthor && (
+          {!isAuthor && (
             <button
-              onClick={() => setShowReportModal(true)}
+              onClick={() => {
+                if (!user) {
+                  onReport(comment.id, { reason: 'PROMPT_AUTH' });
+                  return;
+                }
+                setShowReportModal(true);
+              }}
               className="p-1 text-slate-400 hover:text-red-500 rounded transition-colors"
               title="Report response"
             >
               <TriangleAlert className="w-3.5 h-3.5"/>
-              {/* <Flag className="w-3.5 h-3.5" /> */}
             </button>
           )}
           {canDelete && (

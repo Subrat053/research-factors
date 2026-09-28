@@ -69,6 +69,9 @@ export class BookmarkService {
               },
               tags: {
                 include: { tag: true }
+              },
+              _count: {
+                select: { comments: true }
               }
             }
           }
@@ -83,7 +86,7 @@ export class BookmarkService {
     const articles = bookmarks
       .filter(b => b.article && b.article.status === 'PUBLISHED')
       .map(b => ({
-        ...ArticleDTO.toCardDTO(b.article),
+        ...ArticleDTO.toPublicSummary(b.article),
         bookmarkedAt: b.createdAt
       }));
 

@@ -126,6 +126,12 @@ export const adminApi = {
     apiClient.delete(`/categories/${id}`),
 
   // Moderation & Reports
+  listComments: (params = {}) =>
+    apiClient.get('/admin/comments', { params }),
+
+  getCommentReports: (id) =>
+    apiClient.get(`/admin/comments/${id}/reports`),
+
   getModerationQueue: (params = {}) =>
     apiClient.get('/admin/comments/moderation-queue', { params }),
 
@@ -157,6 +163,9 @@ export const adminApi = {
   // Media Management
   listMedia: (params = {}) =>
     apiClient.get('/admin/media', { params }),
+
+  getMediaUsages: (id) =>
+    apiClient.get(`/admin/media/${id}/usages`),
 
   deleteMediaAsset: (id) =>
     apiClient.delete(`/admin/media/${id}`),

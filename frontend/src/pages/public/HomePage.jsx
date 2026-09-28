@@ -10,6 +10,7 @@ import { SeoHead } from '../../components/common/SeoHead.jsx';
 import { Header } from '../../components/layout/Header.jsx';
 import { Footer } from '../../components/layout/Footer.jsx';
 import { ArticleCard } from '../../components/article/ArticleCard.jsx';
+import { CategoryCard } from '../../components/category/CategoryCard.jsx';
 import { FeaturedArticlesCarousel } from '../../components/article/FeaturedArticlesCarousel.jsx';
 import { CardSkeleton } from '../../components/feedback/SkeletonLoader.jsx';
 import { EmptyState } from '../../components/feedback/EmptyState.jsx';
@@ -184,8 +185,8 @@ function StatCounter({ end, decimals = 0, suffix = '', duration = 2000 }) {
     return () => observer.disconnect();
   }, [end, duration]);
 
-  const displayValue = decimals > 0 
-    ? value.toFixed(decimals) 
+  const displayValue = decimals > 0
+    ? value.toFixed(decimals)
     : Math.floor(value).toLocaleString();
 
   return (
@@ -223,8 +224,8 @@ export default function HomePage() {
 
   // 3. Fetch Trending Articles (powers Hero Trending Today 1-5 list & Trending section)
   const { data: trendingData, isLoading: isTrendingLoading } = useQuery({
-    queryKey: ['trending'],
-    queryFn: () => articlesApi.getTrending()
+    queryKey: ['trending', 5],
+    queryFn: () => articlesApi.getTrending({ limit: 5 })
   });
 
   // 4. Fetch Categories
@@ -279,41 +280,36 @@ export default function HomePage() {
     return CATEGORY_ICON_MAP.default;
   };
 
-  // Curated fallback topics with matching uni-color icons and descriptions
+  // Curated fallback topics with matching descriptions
   const defaultTopicCards = [
     {
       name: 'Technology',
       slug: 'technology',
-      desc: 'Gadgets, Software, AI & Semiconductors',
-      icon: Cpu,
+      desc: 'Emerging architectures, semiconductor chokepoints, neural compute, and consumer hardware.',
       articleCount: 13
     },
     {
       name: 'Business',
       slug: 'business',
-      desc: 'Markets, Startups, Strategy & Finance',
-      icon: Briefcase,
+      desc: 'Capital allocation, venture ecosystems, enterprise software, and scalable operational models.',
       articleCount: 'Explore'
     },
     {
       name: 'Lifestyle',
       slug: 'lifestyle',
-      desc: 'Health, Travel, Food & Daily Choices',
-      icon: ShoppingBag,
+      desc: 'Circadian health, ergonomics, evidence-based nutrition, and sustainable consumer choices.',
       articleCount: 'Explore'
     },
     {
       name: 'Science',
       slug: 'science',
-      desc: 'Space, Nature, Discoveries & Research',
-      icon: FlaskConical,
+      desc: 'Empirical research, photobiology, material sciences, climate modeling, and space exploration.',
       articleCount: 1
     },
     {
       name: 'Policy',
       slug: 'policy',
-      desc: 'Governance, Law, Global Policy & Economics',
-      icon: BookOpen,
+      desc: 'AI governance, international export controls, regulatory frameworks, and multilateral digital treaties.',
       articleCount: 1
     }
   ];
@@ -329,8 +325,8 @@ export default function HomePage() {
         id: c.id,
         name: c.name,
         slug: c.slug,
+        imageUrl: c.imageUrl,
         desc: c.description || `Empirical analysis, benchmarks, and research in ${c.name}.`,
-        icon: getCategoryIcon(c.slug, c.name),
         articleCount: c._count?.articles ?? 0
       }));
     }
@@ -440,7 +436,7 @@ export default function HomePage() {
 
       <main className="flex-1">
         {/* 1. HERO SECTION (Reference Mock-up 3-Column Flow) */}
-        <section className="relative overflow-hidden pt-10 pb-16 lg:pt-16 lg:pb-24 border-b border-paper-border bg-white">
+        <section className="relative overflow-hidden pt-10 pb-16 lg:pt-14 lg:pb-20 border-b border-paper-border bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
               {/* Left Column: Headline, Copy & Qualitative Trust Points */}
@@ -511,12 +507,12 @@ export default function HomePage() {
               <div className="lg:col-span-4 relative flex items-center justify-center">
                 <div className="relative w-full max-w-md rounded-2xl overflow-hidden shadow-md border border-paper-border aspect-[4/5] sm:aspect-[3/4]">
                   <img
-                    src={normalizeMediaUrl('/images/hero_researcher.jpg')}
+                    src={normalizeMediaUrl('/images/hero_researcher.png')}
                     alt="Research Factors Editorial Analyst"
                     className="w-full h-full object-cover object-center"
                   />
                   {/* Floating Glass Badge 1: Top Right */}
-                  <div className="absolute top-4 right-4 glass-card rounded-xl p-3.5 shadow-md border border-white/70 max-w-[210px]">
+                  {/* <div className="absolute top-4 right-4 glass-card rounded-xl p-3.5 shadow-md border border-white/70 max-w-[210px]">
                     <div className="flex items-center space-x-2 mb-1">
                       <div className="w-7 h-7 rounded-md bg-rfblue-50 text-rfblue flex items-center justify-center shrink-0">
                         <Layers className="w-4 h-4 text-rfblue" />
@@ -524,17 +520,17 @@ export default function HomePage() {
                       <span className="text-xs sm:text-sm font-bold text-ink-darkest">In-depth Analysis</span>
                     </div>
                     <p className="text-xs text-ink-muted leading-tight">Compare. Understand. Decide.</p>
-                  </div>
+                  </div> */}
 
                   {/* Floating Glass Badge 2: Bottom Left */}
                   <div className="absolute bottom-4 left-4 glass-card rounded-xl p-3.5 shadow-md border border-white/70 max-w-[210px]">
                     <div className="flex items-center space-x-2 mb-1">
-                      <div className="w-7 h-7 rounded-md bg-rfblue-50 text-rfblue flex items-center justify-center shrink-0">
-                        <Award className="w-4 h-4 text-rfblue" />
+                      <div className="w-6 h-6 text-rfblue flex items-center justify-center shrink-0">
+                        <Award className="w-4 h-4 text-ink-darkest" />
                       </div>
                       <span className="text-xs sm:text-sm font-bold text-ink-darkest">Expert Insights</span>
                     </div>
-                    <p className="text-xs  leading-tight">From industry specialists</p>
+                    <p className="text-xs leading-tight">From industry specialists</p>
                   </div>
                 </div>
               </div>
@@ -560,10 +556,9 @@ export default function HomePage() {
                         <div className="h-12 bg-paper-border/50 rounded" />
                         <div className="h-12 bg-paper-border/50 rounded" />
                         <div className="h-12 bg-paper-border/50 rounded" />
-                        <div className="h-12 bg-paper-border/50 rounded" />
                       </div>
                     ) : trending.length > 0 ? (
-                      trending.slice(0, 6).map((item, index) => (
+                      trending.slice(0, 5).map((item, index) => (
                         <Link
                           key={item.id}
                           to={`/${item.category?.slug || 'research'}/${item.slug}`}
@@ -583,14 +578,13 @@ export default function HomePage() {
                         </Link>
                       ))
                     ) : (
-                      // Believable fallback when database has few articles (even 6 count)
+                      // Believable fallback when database has few articles (5 count)
                       [
                         { title: 'Best Laptops for Remote Work in 2026', cat: 'Technology' },
                         { title: 'AI Tools for Everyday Productivity', cat: 'Business' },
                         { title: 'Sustainable Travel & Ecotourism Trends', cat: 'Lifestyle' },
                         { title: 'Best CRM Architectures for Small Teams', cat: 'Business' },
-                        { title: 'The Future of Electric Vehicles & Infrastructure', cat: 'Science' },
-                        { title: 'Semiconductor Supply Dynamics & Foundries', cat: 'Economics' }
+                        { title: 'The Future of Electric Vehicles & Infrastructure', cat: 'Science' }
                       ].map((item, idx) => (
                         <div key={idx} className="flex items-start space-x-3 py-3">
                           <span className="w-6 h-6 rounded-full bg-paper border border-paper-border text-slate-700 font-bold text-xs sm:text-sm flex items-center justify-center shrink-0 mt-0.5">
@@ -640,83 +634,37 @@ export default function HomePage() {
             </div>
 
             {/* Dynamic Category Cards: Single Row Grid (<= 5) or Infinite Marquee Slider (> 5) */}
-            {displayTopics.length > 5 ? (
+            {displayTopics.length > 3 ? (
               <div className="relative w-full overflow-hidden py-1">
-                {/* Left and Right Edge Fade Gradients */}
-                <div className="pointer-events-none absolute inset-y-0 left-0 w-12 sm:w-24 bg-gradient-to-r from-paper-warm via-paper-warm/80 to-transparent z-10" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 w-12 sm:w-24 bg-gradient-to-l from-paper-warm via-paper-warm/80 to-transparent z-10" />
-
-                <div className="animate-marquee-smooth flex gap-5 flex-nowrap items-stretch">
-                  {displayTopics.concat(displayTopics).map((topic, idx) => {
-                    const IconComponent = topic.icon;
-                    return (
-                      <Link
-                        key={`${topic.slug}-${idx}`}
-                        to={`/categories/${topic.slug}`}
-                        className="group bg-white p-5 sm:p-6 rounded-xl border border-paper-border hover:border-rfblue/40 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between w-[260px] sm:w-[280px] shrink-0 h-[215px]"
-                      >
-                        <div>
-                          {/* Uni-Color Icon Container */}
-                          <div className="w-11 h-11 rounded-lg bg-rfblue-50 text-rfblue flex items-center justify-center mb-3 group-hover:bg-rfblue group-hover:text-white transition-colors">
-                            <IconComponent className="w-5 h-5" />
-                          </div>
-                          <h3 className="text-card-title group-hover:text-rfblue transition-colors line-clamp-1">
-                            {topic.name}
-                          </h3>
-                          <p className="mt-2 text-xs sm:text-sm text-ink-muted leading-relaxed line-clamp-2">
-                            {topic.desc}
-                          </p>
-                        </div>
-
-                        <div className="mt-4 pt-3 border-t border-paper-border/60 flex items-center justify-between">
-                          <span className="text-xs sm:text-sm font-semibold text-ink-muted">
-                            {topic.articleCount} {typeof topic.articleCount === 'number' ? 'articles' : ''}
-                          </span>
-                          <div className="w-7 h-7 rounded-full bg-paper flex items-center justify-center text-ink group-hover:bg-rfblue group-hover:text-white transition-colors">
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
+                <div className="animate-marquee-smooth flex gap-4 sm:gap-5 flex-nowrap items-stretch">
+                  {displayTopics.concat(displayTopics).map((topic, idx) => (
+                    <CategoryCard
+                      key={`${topic.slug}-${idx}`}
+                      topic={topic}
+                      className="w-[280px] sm:w-[320px] md:w-[340px] shrink-0 h-[200px] sm:h-[250px] p-5 sm:p-6"
+                    />
+                  ))}
                 </div>
               </div>
             ) : (
-              <div className={`flex gap-5 overflow-x-auto no-scrollbar snap-x pb-2 lg:pb-0 lg:grid ${
-                displayTopics.length <= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-5'
+              <div className={`grid gap-4 sm:gap-5 ${
+                displayTopics.length === 1
+                  ? 'grid-cols-1 max-w-md mx-auto'
+                  : displayTopics.length === 2
+                  ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto'
+                  : displayTopics.length === 3
+                  // ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                  // : displayTopics.length === 4
+                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+                  : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
               }`}>
-                {displayTopics.map((topic) => {
-                  const IconComponent = topic.icon;
-                  return (
-                    <Link
-                      key={topic.slug}
-                      to={`/categories/${topic.slug}`}
-                      className="group bg-white p-5 sm:p-6 rounded-xl border border-paper-border hover:border-rfblue/40 shadow-2xs hover:shadow-md transition-all duration-200 flex flex-col justify-between w-[260px] sm:w-[280px] lg:w-auto shrink-0 lg:shrink snap-start"
-                    >
-                      <div>
-                        {/* Uni-Color Icon Container */}
-                        <div className="w-11 h-11 rounded-lg bg-rfblue-50 text-rfblue flex items-center justify-center mb-3 group-hover:bg-rfblue group-hover:text-white transition-colors">
-                          <IconComponent className="w-5 h-5" />
-                        </div>
-                        <h3 className="text-card-title group-hover:text-rfblue transition-colors line-clamp-1">
-                          {topic.name}
-                        </h3>
-                        <p className="mt-2 text-xs sm:text-sm text-ink-muted leading-relaxed line-clamp-2">
-                          {topic.desc}
-                        </p>
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-paper-border/60 flex items-center justify-between">
-                        <span className="text-xs sm:text-sm font-semibold text-ink-muted">
-                          {topic.articleCount} {typeof topic.articleCount === 'number' ? 'articles' : ''}
-                        </span>
-                        <div className="w-7 h-7 rounded-full bg-paper flex items-center justify-center text-ink group-hover:bg-rfblue group-hover:text-white transition-colors">
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
+                {displayTopics.map((topic) => (
+                  <CategoryCard
+                    key={topic.slug}
+                    topic={topic}
+                    className="w-full h-full min-h-[235px] sm:min-h-[245px] p-5 sm:p-6"
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -756,11 +704,10 @@ export default function HomePage() {
           <div className="flex items-center space-x-2.5 overflow-x-auto pb-4 mb-8">
             <button
               onClick={() => setSelectedCategory(null)}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold tracking-wider transition-colors shrink-0 ${
-                selectedCategory === null
-                  ? 'bg-slate-900 text-white shadow-2xs'
-                  : 'bg-white border border-paper-border text-ink-muted hover:text-ink'
-              }`}
+              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold tracking-wider transition-colors shrink-0 ${selectedCategory === null
+                ? 'bg-slate-900 text-white shadow-2xs'
+                : 'bg-white border border-paper-border text-ink-muted hover:text-ink'
+                }`}
             >
               All Topics
             </button>
@@ -768,11 +715,10 @@ export default function HomePage() {
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.slug)}
-                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold tracking-wider transition-colors shrink-0 ${
-                  selectedCategory === cat.slug
-                    ? 'bg-slate-900 text-white shadow-2xs'
-                    : 'bg-white border border-paper-border text-ink-muted hover:text-ink'
-                }`}
+                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold tracking-wider transition-colors shrink-0 ${selectedCategory === cat.slug
+                  ? 'bg-slate-900 text-white shadow-2xs'
+                  : 'bg-white border border-paper-border text-ink-muted hover:text-ink'
+                  }`}
               >
                 {cat.name}
               </button>
@@ -885,7 +831,7 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                
+
               </div>
 
               {/* Center Column: 4 Animated Value Cards (1 & 3 Left, 2 & 4 Right) + Middle CTA Button */}
@@ -971,7 +917,7 @@ export default function HomePage() {
                 <div className="h-full flex flex-col justify-between bg-white rounded-xl border border-paper-border overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative aspect-[16/10] overflow-hidden bg-paper shrink-0">
                     <img
-                      src={normalizeMediaUrl('/images/sponsorship_case_study.jpg')}
+                      src={normalizeMediaUrl('/images/sponsorship.png')}
                       alt="Brand Featured Collaboration"
                       className="w-full h-full object-cover"
                     />
@@ -1183,11 +1129,10 @@ export default function HomePage() {
                           <button
                             key={i}
                             onClick={() => setTestimonialIndex(i)}
-                            className={`h-1.5 rounded-full transition-all duration-300 ${
-                              testimonialIndex === i
-                                ? 'w-5 bg-rfblue'
-                                : 'w-1.5 bg-slate-300 hover:bg-slate-400'
-                            }`}
+                            className={`h-1.5 rounded-full transition-all duration-300 ${testimonialIndex === i
+                              ? 'w-5 bg-rfblue'
+                              : 'w-1.5 bg-slate-300 hover:bg-slate-400'
+                              }`}
                             aria-label={`Go to testimonial ${i + 1}`}
                           />
                         ))}
@@ -1222,7 +1167,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        
+
 
         {/* 10. NEWSLETTER ("Stay Ahead with Quality Research") */}
         <section className="py-16 lg:py-20 bg-slate-900 text-white">

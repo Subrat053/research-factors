@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="policyGrad" x1="20" y1="20" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#5B21B6"/>
+    </linearGradient>
+    <linearGradient id="policyGlow" x1="30" y1="30" x2="90" y2="90" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#A78BFA" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Glow Badge -->
+  <rect x="22" y="22" width="76" height="76" rx="20" fill="url(#policyGlow)"/>
+  <!-- Open Treaty / Law Book -->
+  <path d="M60 42c-7-6-18-7-28-5v42c10-2 21-1 28 5 7-6 18-7 28-5V37c-10-2-21-1-28 5z" fill="url(#policyGrad)" stroke="#DDD6FE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Book Spine Center -->
+  <line x1="60" y1="42" x2="60" y2="84" stroke="#4C1D95" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Book Pages Line Texture -->
+  <path d="M38 52c6-1 12 0 16 3M38 62c6-1 12 0 16 3M66 55c5-3 10-4 16-3M66 65c5-3 10-4 16-3" stroke="#C4B5FD" stroke-width="2" stroke-linecap="round"/>
+  <!-- Governance Seal / Star Badge -->
+  <circle cx="60" cy="24" r="10" fill="#7C3AED" stroke="#EDE9FE" stroke-width="2"/>
+  <path d="M60 18l1.8 3.7 4.1.6-3 2.9.7 4-3.6-1.9-3.6 1.9.7-4-3-2.9 4.1-.6z" fill="#EDE9FE"/>
+</svg>

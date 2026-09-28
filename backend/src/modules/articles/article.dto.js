@@ -38,6 +38,10 @@ export class ArticleDTO {
     };
   }
 
+  static toCardDTO(article) {
+    return this.toPublicSummary(article);
+  }
+
   static toPublicDetail(article, related = []) {
     if (!article) return null;
 

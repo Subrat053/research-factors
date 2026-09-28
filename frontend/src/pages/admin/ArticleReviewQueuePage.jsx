@@ -73,10 +73,10 @@ export default function ArticleReviewQueuePage() {
       actions={
         <Link
           to="/admin/articles"
-          className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-slate-850 hover:bg-slate-800 hover:text-white border border-slate-750 transition-colors"
+          className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-850 hover:bg-blue-600 hover:text-white border border-slate-800 transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>All Manuscripts</span>
+          <span>All Articles</span>
         </Link>
       }
     >
@@ -106,7 +106,7 @@ export default function ArticleReviewQueuePage() {
           { key: 'PENDING_REVIEW', label: 'Pending Review' },
           { key: 'APPROVED', label: 'Approved / Scheduled' },
           { key: 'REJECTED', label: 'Changes Requested' },
-          { key: 'ALL', label: 'All Manuscripts' }
+          { key: 'ALL', label: 'All Articles' }
         ].map((st) => (
           <button
             key={st.key}

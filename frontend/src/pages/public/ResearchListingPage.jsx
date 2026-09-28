@@ -50,8 +50,13 @@ export default function ResearchListingPage() {
     } else {
       newParams.delete(key);
     }
-    newParams.set('page', '1'); // Reset to page 1 on filter changes
+    if (key !== 'page') {
+      newParams.set('page', '1'); // Reset to page 1 on filter changes, but NOT when navigating pages!
+    }
     setSearchParams(newParams);
+    if (key === 'page') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const isSearchState = Boolean(search || page > 1);
@@ -245,25 +250,42 @@ export default function ResearchListingPage() {
 
         {/* Pagination Controls */}
         {pagination.totalPages > 1 && (
-          <div className="mt-14 pt-8 border-t border-paper-border flex items-center justify-between">
+          <div className="mt-14 pt-8 border-t border-paper-border flex flex-col sm:flex-row items-center justify-between gap-4">
             <button
-              disabled={!pagination.hasPrevPage}
-              onClick={() => updateParam('page', (page - 1).toString())}
-              className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg border border-paper-border text-xs font-semibold text-ink-muted hover:bg-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              type="button"
+              disabled={page <= 1 || !pagination.hasPrevPage}
+              onClick={() => updateParam('page', Math.max(1, page - 1).toString())}
+              className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl border border-paper-border text-xs font-semibold text-ink-muted bg-white hover:bg-paper-warm disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
             >
               <ChevronLeft className="w-4 h-4" />
               <span>Previous Page</span>
             </button>
 
-            <span className="text-xs text-ink-muted">
-              Page <strong className="text-ink-darkest">{pagination.page}</strong> of{' '}
-              <strong className="text-ink-darkest">{pagination.totalPages}</strong>
-            </span>
+            {/* Page Number Pills */}
+            <div className="flex items-center space-x-1.5 overflow-x-auto max-w-full py-1">
+              {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => updateParam('page', p.toString())}
+                  className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${
+                    p === page
+                      ? 'bg-rfblue text-white shadow-2xs'
+                      : 'text-ink-muted hover:text-ink hover:bg-white border border-transparent hover:border-paper-border'
+                  }`}
+                  aria-label={`Go to page ${p}`}
+                  aria-current={p === page ? 'page' : undefined}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
 
             <button
-              disabled={!pagination.hasNextPage}
-              onClick={() => updateParam('page', (page + 1).toString())}
-              className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg border border-paper-border text-xs font-semibold text-ink-muted hover:bg-white disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              type="button"
+              disabled={page >= pagination.totalPages || !pagination.hasNextPage}
+              onClick={() => updateParam('page', Math.min(pagination.totalPages, page + 1).toString())}
+              className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl border border-paper-border text-xs font-semibold text-ink-muted bg-white hover:bg-paper-warm disabled:opacity-30 disabled:pointer-events-none transition-colors shadow-2xs"
             >
               <span>Next Page</span>
               <ChevronRight className="w-4 h-4" />

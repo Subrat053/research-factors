@@ -277,8 +277,10 @@ export function Header() {
               </div>
 
               <Link
-                to="/research?sort=popular"
-                className="py-1.5 hover:text-ink-darkest transition-colors"
+                to="/trending"
+                className={`py-1.5 transition-colors ${
+                  isActive('/trending') ? 'text-rfblue font-semibold' : 'hover:text-ink-darkest'
+                }`}
               >
                 Trending
               </Link>
@@ -398,7 +400,7 @@ export function Header() {
                         </Link>
 
                         <Link
-                          to="/bookmarks"
+                          to="/admin/bookmarks"
                           onClick={() => setIsUserMenuOpen(false)}
                           className="flex items-center px-4 py-2.5 text-xs sm:text-sm text-ink-muted hover:bg-paper transition-colors"
                         >
@@ -548,7 +550,7 @@ export function Header() {
                 </Link>
 
                 <Link
-                  to="/bookmarks"
+                  to="/admin/bookmarks"
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center px-3 py-2 rounded-xl text-xs sm:text-sm text-ink-muted hover:text-ink-darkest hover:bg-paper transition-colors"
                 >
@@ -675,9 +677,13 @@ export function Header() {
             </div>
 
             <Link
-              to="/research?sort=popular"
+              to="/trending"
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-ink-darkest hover:bg-paper transition-colors"
+              className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                isActive('/trending')
+                  ? 'text-rfblue font-semibold bg-rfblue-50/60'
+                  : 'text-ink-darkest hover:bg-paper'
+              }`}
             >
               <span>Trending Research</span>
             </Link>

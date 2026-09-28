@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTheme } from '../../context/ThemeContext.jsx';
 import { adminApi } from '../../services/admin.api.js';
-import { LOGO_ICON_URL } from '../../services/media.api.js';
+import { LOGO_URL, LOGO_WHITE_URL } from '../../services/media.api.js';
 import {
   LayoutDashboard,
   FileText,
@@ -31,11 +31,12 @@ import {
   PenTool,
   Sun,
   Moon,
-  Globe
+  Globe,
+  Bookmark
 } from 'lucide-react';
 
 export function AdminLayout({ children, title, subtitle, actions }) {
-  const { user, logout, hasPermission } = useAuth();
+  const { user, logout, hasPermission, hasAnyPermission } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -74,11 +75,6 @@ export function AdminLayout({ children, title, subtitle, actions }) {
   const canModerateArticles = hasPermission('article.approve') || hasPermission('article.update_any');
   const canCreateArticles = hasPermission('article.create') || hasPermission('article.update_own');
   const articlesLabel = canModerateArticles ? 'All Articles' : 'My Articles';
-  const portalSubtitle = canModerateArticles
-    ? 'Editorial Control'
-    : canCreateArticles
-    ? 'Author Studio'
-    : 'Research Portal';
 
   const handleLogout = async () => {
     await logout();
@@ -87,9 +83,44 @@ export function AdminLayout({ children, title, subtitle, actions }) {
 
   const navGroups = [
     {
+      items: [
+        {
+          name: 'Dashboard',
+          path: '/admin',
+          icon: LayoutDashboard,
+          exact: true,
+          permissionCheck: () => hasAnyPermission([
+            'article.create',
+            'article.update_own',
+            'article.approve',
+            'comment.moderate',
+            'user.read_list',
+            'author.approve',
+            'category.manage',
+            'tag.manage',
+            'media.manage',
+            'contact.manage',
+            'audit.read',
+            'role.manage',
+            'setting.manage'
+          ])
+        },
+        { name: 'Profile', path: '/admin/profile', icon: UserCheck },
+        { name: 'Saved Research', path: '/admin/bookmarks', icon: Bookmark }
+      ]
+    },
+    {
+      label: 'Users Management',
+      items: [
+        { name: 'User', path: '/admin/users', icon: Users, permission: 'user.read_list' },
+        { name: 'Authors', path: '/admin/authors', icon: UserCheck, permission: 'author.approve' },
+        { name: 'Roles & Permissions', path: '/admin/roles', icon: KeyRound, permission: 'role.manage' },
+      ]
+    },
+    {
       label: 'Core Editorial',
       items: [
-        { name: 'Dashboard', path: '/admin', icon: LayoutDashboard, exact: true },
+        // { name: 'Dashboard', path: '/admin', icon: LayoutDashboard, exact: true },
         { name: 'Write Article', path: '/admin/editor', icon: PenTool, permission: 'article.create' },
         {
           name: articlesLabel,
@@ -98,25 +129,25 @@ export function AdminLayout({ children, title, subtitle, actions }) {
           exact: true,
           permissionCheck: () => canModerateArticles || canCreateArticles
         },
-        { name: 'Review Queue', path: '/admin/articles/review-queue', icon: Clock, permission: 'article.approve' }
+        { name: 'Manage Articles', path: '/admin/articles/review-queue', icon: Clock, permission: 'article.approve' }
       ]
     },
     {
       label: 'Taxonomy & Assets',
       items: [
-        { name: 'Authors', path: '/admin/authors', icon: UserCheck, permission: 'author.approve' },
+        // { name: 'Authors', path: '/admin/authors', icon: UserCheck, permission: 'author.approve' },
         { name: 'Categories', path: '/admin/categories', icon: FolderTree, permission: 'category.manage' },
         { name: 'Tags & Merge', path: '/admin/tags', icon: Tags, permission: 'tag.manage' },
         {
           name: 'Media Assets',
           path: '/admin/media',
           icon: Image,
-          permissionCheck: () => hasPermission('media.manage') || hasPermission('media.upload')
+          permissionCheck: () => hasPermission('media.manage')
         }
       ]
     },
     {
-      label: 'Community & Moderation',
+      label: 'Moderation',
       items: [
         { name: 'Comments', path: '/admin/comments', icon: MessageSquare, permission: 'comment.moderate' },
         { name: 'Reports Triage', path: '/admin/reports', icon: Flag, permission: 'comment.moderate' },
@@ -124,26 +155,14 @@ export function AdminLayout({ children, title, subtitle, actions }) {
       ]
     },
     {
-      label: 'Governance & Security',
+      label: 'System & Security',
       items: [
-        { name: 'User', path: '/admin/users', icon: Users, permission: 'user.read_list' },
-        { name: 'Audit Trail', path: '/admin/audit-logs', icon: ScrollText, permission: 'audit.read' }
-      ]
-    },
-    {
-      label: 'System Governance',
-      items: [
-        { name: 'Roles & Permissions', path: '/admin/roles', icon: KeyRound, permission: 'role.manage' },
+        // { name: 'Roles & Permissions', path: '/admin/roles', icon: KeyRound, permission: 'role.manage' },
         { name: 'System Settings', path: '/admin/settings', icon: Settings, permission: 'setting.manage' },
-        { name: 'SEO Governance', path: '/admin/seo', icon: Globe, permission: 'setting.manage' }
+        { name: 'SEO Governance', path: '/admin/seo', icon: Globe, permission: 'setting.manage' },
+        { name: 'Audit Logs', path: '/admin/audit-logs', icon: ScrollText, permission: 'audit.read' },
       ]
     },
-    {
-      label: 'Account & Identity',
-      items: [
-        { name: 'Profile & Credentials', path: '/admin/profile', icon: UserCheck }
-      ]
-    }
   ];
 
   // Dynamic RBAC: Filter navigation groups & items strictly by user's active permissions
@@ -184,25 +203,18 @@ export function AdminLayout({ children, title, subtitle, actions }) {
         }`}
       >
         {/* Brand Header */}
-        <div className="h-16 px-6 flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80">
-          <Link to="/" className="flex items-center space-x-3 group">
+        <div className="h-16 px-5 sm:px-6 flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80">
+          <Link to="/" className="flex items-center group py-1 shrink-0" aria-label="Research Factors Home">
             <img
-              src={LOGO_ICON_URL}
+              src={isDark ? LOGO_WHITE_URL : LOGO_URL}
               alt="Research Factors"
-              className="w-8 h-8 object-contain rounded-lg shadow-sm group-hover:scale-105 transition-transform"
+              className="h-8 sm:h-9 w-auto max-w-[170px] sm:max-w-[195px] object-contain transition-opacity duration-200 group-hover:opacity-90 shrink-0"
             />
-            <div>
-              <span className="font-bold text-slate-900 dark:text-white tracking-tight text-base block leading-none">
-                Research Factors
-              </span>
-              <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500 dark:text-slate-400 block mt-1">
-                {portalSubtitle}
-              </span>
-            </div>
           </Link>
           <button
             onClick={() => setMobileOpen(false)}
-            className="p-1 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white lg:hidden"
+            className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden cursor-pointer transition-colors"
+            aria-label="Close sidebar navigation"
           >
             <X className="w-5 h-5" />
           </button>
@@ -274,7 +286,7 @@ export function AdminLayout({ children, title, subtitle, actions }) {
           >
             <span className="flex items-center space-x-2">
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>Public Magazine</span>
+              <span>Go to Homepage</span>
             </span>
             <ChevronRight className="w-3 h-3 text-slate-400 dark:text-slate-500" />
           </Link>
@@ -309,12 +321,20 @@ export function AdminLayout({ children, title, subtitle, actions }) {
             <button
               onClick={() => setMobileOpen(true)}
               className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white lg:hidden cursor-pointer"
+              aria-label="Open navigation menu"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
-              <span className="hidden sm:inline">Administration</span>
-              <span className="hidden sm:inline">/</span>
+            <Link to="/" className="flex items-center lg:hidden mr-1 shrink-0" aria-label="Research Factors Home">
+              <img
+                src={isDark ? LOGO_WHITE_URL : LOGO_URL}
+                alt="Research Factors"
+                className="h-6 sm:h-7 w-auto max-w-[130px] sm:max-w-[150px] object-contain"
+              />
+            </Link>
+            <div className="hidden sm:flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
+              <span className="hidden md:inline">Administration</span>
+              <span className="hidden md:inline">/</span>
               <span className="font-semibold text-slate-900 dark:text-slate-100">{title || 'Overview'}</span>
             </div>
           </div>

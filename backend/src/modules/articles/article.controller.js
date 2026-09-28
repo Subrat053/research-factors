@@ -69,7 +69,8 @@ export class ArticleController {
 
   static async getTrending(req, res, next) {
     try {
-      const articles = await ArticleService.getTrendingArticles(6);
+      const { limit = 5 } = req.query;
+      const articles = await ArticleService.getTrendingArticles(Number(limit) || 5);
       res.json({
         success: true,
         data: articles.map(a => ArticleDTO.toPublicSummary(a))

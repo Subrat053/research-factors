@@ -90,6 +90,7 @@ export class AdminController {
       res.status(200).json({
         success: true,
         data: result.logs,
+        logs: result.logs,
         pagination: result.pagination
       });
     } catch (error) {

@@ -18,6 +18,7 @@ function EditorRedirect() {
 // 1. Public Pages (Lazy Loaded)
 const HomePage = lazy(() => import('./pages/public/HomePage.jsx'));
 const ResearchListingPage = lazy(() => import('./pages/public/ResearchListingPage.jsx'));
+const TrendingPage = lazy(() => import('./pages/public/TrendingPage.jsx'));
 const ArticleDetailPage = lazy(() => import('./pages/public/ArticleDetailPage.jsx'));
 const CategoryPage = lazy(() => import('./pages/public/CategoryPage.jsx'));
 const BookmarksPage = lazy(() => import('./pages/public/BookmarksPage.jsx'));
@@ -95,6 +96,7 @@ export default function App() {
                     {/* Public Magazine Routes */}
                     <Route path="/" element={<HomePage />} />
                     <Route path="/research" element={<ResearchListingPage />} />
+                    <Route path="/trending" element={<TrendingPage />} />
                     <Route path="/categories/:categorySlug" element={<CategoryPage />} />
                     <Route path="/sponsorship" element={<SponsorshipPage />} />
                     <Route path="/about" element={<AboutPage />} />
@@ -110,14 +112,8 @@ export default function App() {
                     {/* Backward-Compatible Article Routes */}
                     <Route path="/research/:slug" element={<ArticleDetailPage />} />
                     <Route path="/articles/:slug" element={<ArticleDetailPage />} />
-                    <Route
-                      path="/bookmarks"
-                      element={
-                        <ProtectedRoute>
-                          <BookmarksPage />
-                        </ProtectedRoute>
-                      }
-                    />
+                    {/* Saved Research Library (Moved to User Panel) */}
+                    <Route path="/bookmarks" element={<Navigate to="/admin/bookmarks" replace />} />
 
                     {/* Authentication Routes */}
                     <Route path="/login" element={<LoginPage />} />
@@ -189,7 +185,7 @@ export default function App() {
                       }
                     />
                     <Route
-                      path="/admin/articles/review"
+                      path="/admin/articles/review-queue"
                       element={
                         <ProtectedRoute requiredPermission="article.approve">
                           <ArticleReviewQueuePage />
@@ -197,7 +193,7 @@ export default function App() {
                       }
                     />
                     <Route
-                      path="/admin/moderation"
+                      path="/admin/comments"
                       element={
                         <ProtectedRoute requiredPermission="comment.moderate">
                           <ModerationQueuePage />
@@ -205,7 +201,7 @@ export default function App() {
                       }
                     />
                     <Route
-                      path="/admin/moderation/reports"
+                      path="/admin/reports"
                       element={
                         <ProtectedRoute requiredPermission="comment.moderate">
                           <ReportTriagePage />
@@ -297,6 +293,14 @@ export default function App() {
                       element={
                         <ProtectedRoute>
                           <AdminProfilePage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/bookmarks"
+                      element={
+                        <ProtectedRoute>
+                          <BookmarksPage />
                         </ProtectedRoute>
                       }
                     />

@@ -109,8 +109,13 @@ export default function CategoryPage() {
     } else {
       newParams.delete(key);
     }
-    newParams.set('page', '1'); // Reset to page 1 on filter changes
+    if (key !== 'page') {
+      newParams.set('page', '1'); // Reset to page 1 on filter changes, but NOT when navigating pages!
+    }
     setSearchParams(newParams);
+    if (key === 'page') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const clearFilters = () => {

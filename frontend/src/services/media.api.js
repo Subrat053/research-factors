@@ -24,6 +24,24 @@ export const mediaApi = {
   },
 
   /**
+   * Uploads an image asset supporting either raw FormData or File + metadata.
+   * Guarantees platform-independent upload across local disk, Cloudflare R2, Cloudinary, and S3.
+   * @param {File|FormData} fileOrFormData
+   * @param {Object} metadata
+   * @returns {Promise<Object>}
+   */
+  uploadMedia: function (fileOrFormData, metadata = {}) {
+    if (typeof FormData !== 'undefined' && fileOrFormData instanceof FormData) {
+      return apiClient.post('/media/upload', fileOrFormData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+    }
+    return this.upload(fileOrFormData, metadata);
+  },
+
+  /**
    * Deletes a media asset by ID
    * @param {string} id - Media asset UUID
    */
@@ -31,9 +49,9 @@ export const mediaApi = {
 };
 
 // Static platform branding assets respecting Vite subfolder/root base path
-export const LOGO_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$/, '')}/logo.png`;
-export const LOGO_WHITE_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$/, '')}/logo-white.png`;
-export const LOGO_ICON_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$/, '')}/logo-icon.png`;
+export const LOGO_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$/, '')}/logo.png?v=3`;
+export const LOGO_WHITE_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$/, '')}/logo-white.png?v=3`;
+export const LOGO_ICON_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$/, '')}/logo-icon.png?v=3`;
 
 /**
  * Normalizes media asset URLs to handle dynamic port shifts and relative paths

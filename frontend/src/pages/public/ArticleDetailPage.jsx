@@ -517,43 +517,46 @@ export default function ArticleDetailPage() {
                   </div>
                 )}
 
-                {/* 4. Related Articles Card */}
-                {relatedArticles.length > 0 && (
-                  <div className="bg-white dark:bg-paper-card rounded-2xl border border-paper-border p-5 shadow-xs space-y-3">
-                    <div className="flex items-center justify-between pb-3 border-b border-paper-border">
-                      <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink-darkest flex items-center">
-                        Related Articles
-                      </h3>
+                {/* 4 & 5. Sticky Lower Sidebar Cluster (Related Articles + Sponsorship Opportunity Banner) */}
+                <div className="sticky top-24 space-y-6">
+                  {/* Related Articles Card */}
+                  {relatedArticles.length > 0 && (
+                    <div className="bg-white dark:bg-paper-card rounded-2xl border border-paper-border p-5 shadow-xs space-y-3">
+                      <div className="flex items-center justify-between pb-3 border-b border-paper-border">
+                        <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink-darkest flex items-center">
+                          Related Articles
+                        </h3>
+                      </div>
+                      <div className="space-y-2">
+                        {relatedArticles.map(item => (
+                          <ArticleCard key={item.id} article={item} variant="related-horizontal" />
+                        ))}
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      {relatedArticles.map(item => (
-                        <ArticleCard key={item.id} article={item} variant="related-horizontal" />
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {/* 5. Sticky Sponsorship Opportunity Banner (Available on all article pages, sticky until footer) */}
-                <div className="sticky top-24 relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#060D1A] via-[#0F172A] to-[#1E3A8A] text-white p-6 shadow-md border border-slate-800">
-                  <div className="absolute top-0 right-0 -mr-6 -mt-6 w-24 h-24 bg-rfblue/20 rounded-full blur-2xl pointer-events-none" />
-                  <div className="relative z-10 space-y-3">
-                    <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white border border-white/15">
-                      <span>Sponsorship Opportunity</span>
-                    </div>
-                    <h3 className="font-serif text-lg font-bold text-white leading-snug">
-                      Want your organization to be part of the research?
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                      Reach readers who are already researching, comparing, and making informed choices. Sponsorship gives your brand a relevant space to showcase your products or services alongside research your audience is actively exploring.
-                    </p>
-                    <div className="pt-2">
-                      <Link
-                        to="/sponsorship"
-                        className="inline-flex items-center justify-center space-x-2 w-full px-4 py-2.5 rounded-full text-xs font-semibold text-white bg-rfblue hover:bg-rfblue-600 transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer group"
-                      >
-                        <span>Become a Sponsor</span>
-                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                      </Link>
+                  {/* Sponsorship Opportunity Banner */}
+                  <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#060D1A] via-[#0F172A] to-[#1E3A8A] text-white p-6 shadow-md border border-slate-800">
+                    <div className="absolute top-0 right-0 -mr-6 -mt-6 w-24 h-24 bg-rfblue/20 rounded-full blur-2xl pointer-events-none" />
+                    <div className="relative z-10 space-y-3">
+                      <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white border border-white/15">
+                        <span>Sponsorship Opportunity</span>
+                      </div>
+                      <h3 className="font-serif text-lg font-bold text-white leading-snug">
+                        Want your organization to be part of the research?
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                        Reach readers who are already researching, comparing, and making informed choices. Sponsorship gives your brand a relevant space to showcase your products or services alongside research your audience is actively exploring.
+                      </p>
+                      <div className="pt-2">
+                        <Link
+                          to="/sponsorship"
+                          className="inline-flex items-center justify-center space-x-2 w-full px-4 py-2.5 rounded-full text-xs font-semibold text-white bg-rfblue hover:bg-rfblue-600 transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer group"
+                        >
+                          <span>Become a Sponsor</span>
+                          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>

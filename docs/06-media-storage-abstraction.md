@@ -190,7 +190,57 @@ export const mediaApi = {
 
 ---
 
-## 8. Future Roadmap for Media & Storage System
+## 8. Administrative Media Library & Content Usage System
+
+The administrative interface (`/rf/admin/media`) provides comprehensive visibility and lifecycle management for all uploaded digital assets:
+
+### Multi-View Display System
+Administrators can toggle seamlessly between three presentation formats (persisted locally in browser state):
+1. **Grid View**: Visual card matrix displaying high-resolution thumbnails, storage provider pills, dimensions/size, uploader, usage count badges, and quick actions.
+2. **List View**: Horizontal rows optimizing scanning speed for large catalogs, featuring thumbnail previews, metadata pills, inline content usage summary pills, and action controls.
+3. **Tabular View (Table)**: Compact editorial data table (`<table>`) detailing asset preview, storage provider, resolution, size, direct content usage button/badge, uploader, and administration actions.
+
+### Content Usage & Reference Tracking (`GET /api/v1/admin/media/:id/usages`)
+Every media asset is cross-referenced in real-time across all publication models to determine exactly where it is utilized:
+- **Articles**: Checked against `coverImageUrl` (Article Cover) and `sponsorLogoUrl` (Sponsor Logo).
+- **Article Blocks**: Scanned across `article_blocks` content JSON (e.g. `blockType: 'image'` at specific manuscript positions).
+- **Categories**: Checked against `Category.imageUrl` (Category Header / Illustration).
+- **User Profiles**: Checked against `User.avatarUrl` (Profile Avatar).
+- **SEO Metadata**: Checked against `customOgImage`, `customTwitterImage`, and `generatedOgImage` (Social Share Cards).
+
+### Interactive Asset Usage Inspector Modal
+Clicking on any usage badge or "Usages" action triggers an inspector dialog displaying:
+- Complete file metadata and 1-click URL copy.
+- Active publication status badge (`Active in Publication` vs. `Orphaned Digital Asset (Unused)`).
+- Granular list of referencing entities, specifying the exact content field (e.g. `coverImageUrl`, `content.url` in Block #3, `imageUrl`), with direct click-through links to view the public page or edit the item in the admin.
+
+---
+
+## 9. Profile Avatar & User Asset Upload Architecture
+
+### Unified Pipeline for User Photos
+Profile photos uploaded on `/admin/profile` pass through the identical production-ready storage architecture:
+1. **Client-Side Validation & Dispatch**:
+   - `handleAvatarFileChange` validates MIME types (`image/jpeg`, `image/png`, `image/webp`, `image/avif`, `image/gif`) and ensures file size <= 8MB.
+   - Invokes `mediaApi.upload(file, metadata)` or `mediaApi.uploadMedia(fileOrFormData)`.
+2. **Server-Side Ingestion & Privacy Sanitization**:
+   - Express receives the file via `multer.memoryStorage()`.
+   - Sharp strips all EXIF metadata (camera serial numbers, GPS geolocation, device information).
+   - Sharp auto-orients based on original orientation before stripping.
+   - Converts to WebP format (`quality: 82`) and stores via active `StorageFactory.getProvider()`.
+3. **Database Association & Provider Independence**:
+   - Persists a `Media` record storing `provider` (`local`, `cloudinary`, `r2`), `storageKey`, and `publicUrl`.
+   - Returns `{ success: true, data: { publicUrl, storageKey, ... } }`.
+   - The user profile saves `avatarUrl: publicUrl` in PostgreSQL.
+4. **Multi-Provider Dynamic Fetching & CDN Support (`normalizeMediaUrl`)**:
+   - For local development: Automatically prepends the backend host (`http://localhost:5005/uploads/...`).
+   - For production cloud deployments (Cloudflare R2, AWS S3, Cloudinary): Retains full absolute CDN URLs with zero hardcoding or code modification.
+5. **Universal Reader Access (RBAC)**:
+   - The atomic permission `media.upload` is assigned to all authenticated account tiers (including default `USER` role), enabling readers as well as editorial staff to upload avatars without encountering 403 Forbidden errors.
+
+---
+
+## 10. Future Roadmap for Media & Storage System
 
 1. **Integrated Media Library Asset Picker**:
    - Add a modal dialog in the editor allowing authors to browse, search, and reuse previously uploaded figures and illustrations from `GET /admin/media` without re-uploading duplicate assets.
@@ -200,3 +250,5 @@ export const mediaApi = {
    - Generate multi-resolution srcset variants (400w, 800w, 1200w, 2048w) and compact BlurHash strings stored in `metadata.blurHash` for instant progressive image loading.
 4. **Interactive SVG Diagram Sanitization & Ingestion**:
    - Add a dedicated DOMPurify/sanitize pipeline allowing safe vector SVG ingestion for scientific architecture diagrams.
+
+

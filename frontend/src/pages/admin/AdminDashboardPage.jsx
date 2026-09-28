@@ -347,7 +347,7 @@ export default function AdminDashboardPage() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                      Profile & Credentials
+                      Profile 
                     </p>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">Headline, bio, social links, avatar</p>
                   </div>

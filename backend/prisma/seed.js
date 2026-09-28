@@ -1,6 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const prisma = new PrismaClient();
 
 async function main() {
@@ -83,10 +88,10 @@ async function main() {
   console.log(`✅ Seeded ${Object.keys(permissions).length} atomic permissions.`);
 
   // 3. Map Permissions to Roles
-  const userPerms = ['comment.create', 'comment.delete_own', 'comment.like', 'comment.report', 'bookmark.manage'];
+  const userPerms = ['comment.create', 'comment.delete_own', 'comment.like', 'comment.report', 'bookmark.manage', 'media.upload'];
   const authorPerms = [
     ...userPerms,
-    'article.create', 'article.update_own', 'article.delete_own', 'article.submit', 'media.upload', 'media.delete_own'
+    'article.create', 'article.update_own', 'article.delete_own', 'article.submit', 'media.delete_own'
   ];
   const editorPerms = [
     ...authorPerms,
@@ -139,28 +144,50 @@ async function main() {
       firstName: 'Alexander',
       lastName: 'Wright',
       bio: 'Chief Editor & Platform Administrator for Research Factors.',
-      role: roles.SUPER_ADMIN
+      role: roles.SUPER_ADMIN,
+      authorProfile: {
+        headline: 'Chief Editor & Platform Administrator',
+        biography: 'Alexander Wright directs platform editorial standards and peer review oversight at Research Factors.',
+        websiteUrl: 'https://researchfactors.org/editorial',
+        isApproved: true
+      }
     },
     {
       email: 'superadmin@researchfactors.com',
       firstName: 'Victoria',
       lastName: 'Sterling',
       bio: 'Principal System Custodian & Infrastructure Lead.',
-      role: roles.SUPER_ADMIN
+      role: roles.SUPER_ADMIN,
+      authorProfile: {
+        headline: 'Principal System Custodian & Infrastructure Lead',
+        biography: 'Victoria Sterling oversees system architecture, data governance, and core platform resilience.',
+        websiteUrl: 'https://researchfactors.org',
+        isApproved: true
+      }
     },
     {
       email: 'staffadmin@researchfactors.com',
       firstName: 'Liam',
       lastName: 'Vance',
       bio: 'Editorial Operations Manager & Staff Administrator.',
-      role: roles.ADMIN
+      role: roles.ADMIN,
+      authorProfile: {
+        headline: 'Editorial Operations Manager & Staff Administrator',
+        biography: 'Liam Vance coordinates researcher accreditation, manuscript pipelines, and editorial workflows.',
+        isApproved: true
+      }
     },
     {
       email: 'editor@researchfactors.com',
       firstName: 'Elena',
       lastName: 'Rostova',
       bio: 'Senior Technology & Physics Review Editor.',
-      role: roles.EDITOR
+      role: roles.EDITOR,
+      authorProfile: {
+        headline: 'Senior Technology & Physics Review Editor',
+        biography: 'Elena Rostova oversees empirical technology manuscripts and solid-state physics investigations.',
+        isApproved: true
+      }
     },
     {
       email: 'author@researchfactors.com',
@@ -241,22 +268,50 @@ async function main() {
     {
       name: 'Technology',
       slug: 'technology',
-      description: 'Emerging architectures, semiconductor engineering, quantum hardware, and artificial intelligence systems.'
+      description: 'Emerging architectures, semiconductor engineering, quantum hardware, and artificial intelligence systems.',
+      imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      name: 'Business',
+      slug: 'business',
+      description: 'Capital allocation, enterprise software unit economics, industrial supply chains, and market structures.',
+      imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80'
     },
     {
       name: 'Science',
       slug: 'science',
-      description: 'Fundamental physics, cryogenic materials, molecular biology, and empirical natural sciences.'
+      description: 'Fundamental physics, cryogenic materials, molecular biology, and empirical natural sciences.',
+      imageUrl: 'https://images.unsplash.com/photo-1507668077129-56e32842fceb?auto=format&fit=crop&w=1200&q=80'
     },
     {
       name: 'Economics',
       slug: 'economics',
-      description: 'Market structures, semiconductor supply chain analysis, capital efficiency, and technological macroeconomics.'
+      description: 'Market structures, semiconductor supply chain analysis, capital efficiency, and technological macroeconomics.',
+      imageUrl: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=80'
     },
     {
       name: 'Policy',
       slug: 'policy',
-      description: 'AI governance, international chip trade export controls, and algorithmic transparency regulations.'
+      description: 'AI governance, international chip trade export controls, and algorithmic transparency regulations.',
+      imageUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      name: 'Lifestyle',
+      slug: 'lifestyle',
+      description: 'Clinical chronobiology, evidence-based ergonomics, sensory physiology, and preventative health science.',
+      imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      name: 'Automotive',
+      slug: 'automotive',
+      description: 'Next-generation mobility, electric vehicle powertrain engineering, autonomous vehicle perception pipelines, and battery chemistry.',
+      imageUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80'
+    },
+    {
+      name: 'Fashion',
+      slug: 'fashion',
+      description: 'Textile material science, circular manufacturing supply chains, smart wearable textiles, and sustainable fashion engineering.',
+      imageUrl: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1200&q=80'
     }
   ];
 
@@ -270,12 +325,16 @@ async function main() {
   }
   console.log('✅ Categories seeded:', Object.keys(categories).join(', '));
 
-  // 6. Seed Tags
+  // 6. Seed Default Tags
   const tagDefs = [
     { name: 'Quantum Computing', slug: 'quantum-computing' },
     { name: 'Artificial Intelligence', slug: 'artificial-intelligence' },
     { name: 'Semiconductor Architecture', slug: 'semiconductor-architecture' },
-    { name: 'Energy Systems', slug: 'energy-systems' }
+    { name: 'Energy Systems', slug: 'energy-systems' },
+    { name: 'Electric Vehicles', slug: 'electric-vehicles' },
+    { name: 'Automotive Engineering', slug: 'automotive-engineering' },
+    { name: 'Sustainable Textiles', slug: 'sustainable-textiles' },
+    { name: 'Circular Economy', slug: 'circular-economy' }
   ];
 
   const tags = {};
@@ -288,208 +347,401 @@ async function main() {
   }
   console.log('✅ Tags seeded:', Object.keys(tags).join(', '));
 
-  // 7. Seed Rich Published Articles
-  const author = createdUsers['author@researchfactors.com'];
-  const editor = createdUsers['editor@researchfactors.com'];
+  // 7. Seed Articles from Fallback Data (18 Canonical Offline Articles)
+  const defaultAuthor = createdUsers['author@researchfactors.com'];
+  const defaultEditor = createdUsers['editor@researchfactors.com'];
 
-  const article1 = await prisma.article.upsert({
-    where: { slug: 'empirical-benchmarks-hybrid-quantum-classical-processors' },
+  const fallbackDataPath = path.resolve(__dirname, '../../frontend/src/data/fallbackData.json');
+  let fallbackArticles = [];
+
+  if (fs.existsSync(fallbackDataPath)) {
+    try {
+      const parsedData = JSON.parse(fs.readFileSync(fallbackDataPath, 'utf8'));
+      fallbackArticles = parsedData.articles || [];
+      console.log(`📖 Loaded ${fallbackArticles.length} fallback articles from frontend/src/data/fallbackData.json.`);
+    } catch (err) {
+      console.warn('⚠️ Could not load fallbackData.json:', err.message);
+    }
+  }
+
+  // Helper to resolve or create author for each article
+  const authorCache = {};
+  async function resolveArticleAuthor(authorData) {
+    if (!authorData || (!authorData.fullName && !authorData.firstName)) {
+      return defaultAuthor;
+    }
+    const fullName = authorData.fullName || `${authorData.firstName || ''} ${authorData.lastName || ''}`.trim();
+    if (authorCache[fullName]) return authorCache[fullName];
+
+    const emailHandle = fullName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '.')
+      .replace(/\.+/g, '.')
+      .replace(/^\.|\.$/g, '');
+    const email = `${emailHandle || 'author'}@researchfactors.com`;
+
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: {
+        avatarUrl: authorData.avatarUrl || null,
+        bio: authorData.authorProfile?.bio || authorData.bio || null
+      },
+      create: {
+        email,
+        passwordHash,
+        firstName: authorData.firstName || fullName.split(' ')[0] || 'Contributing',
+        lastName: authorData.lastName || fullName.split(' ').slice(1).join(' ') || 'Fellow',
+        bio: authorData.authorProfile?.bio || authorData.bio || 'Research Fellow at Research Factors.',
+        avatarUrl: authorData.avatarUrl || null,
+        isEmailVerified: true,
+        status: 'ACTIVE'
+      }
+    });
+
+    // Ensure AUTHOR role linked
+    await prisma.userRole.upsert({
+      where: {
+        userId_roleId: {
+          userId: user.id,
+          roleId: roles.AUTHOR.id
+        }
+      },
+      update: {},
+      create: {
+        userId: user.id,
+        roleId: roles.AUTHOR.id
+      }
+    });
+
+    // Ensure AuthorProfile exists
+    await prisma.authorProfile.upsert({
+      where: { userId: user.id },
+      update: {
+        headline: authorData.authorProfile?.headline || authorData.headline || 'Research Analyst',
+        biography: authorData.authorProfile?.bio || authorData.bio || null,
+        isApproved: true
+      },
+      create: {
+        userId: user.id,
+        headline: authorData.authorProfile?.headline || authorData.headline || 'Research Analyst',
+        biography: authorData.authorProfile?.bio || authorData.bio || null,
+        isApproved: true
+      }
+    });
+
+    authorCache[fullName] = user;
+    return user;
+  }
+
+  // Seed all 18 fallback articles into the database
+  const validArticleTypes = ['RESEARCH', 'REVIEW', 'COMPARISON', 'GUIDE', 'ANALYSIS', 'OPINION'];
+  let seededFallbackCount = 0;
+  for (const a of fallbackArticles) {
+    const authorUser = await resolveArticleAuthor(a.author);
+    const catSlug = a.category?.slug?.toLowerCase();
+    const categoryRecord = categories[catSlug] || categories['technology'];
+
+    let mappedType = (a.type || 'RESEARCH').toUpperCase();
+    if (!validArticleTypes.includes(mappedType)) {
+      mappedType = mappedType === 'INVESTIGATION' ? 'ANALYSIS' : 'RESEARCH';
+    }
+
+    const articleRecord = await prisma.article.upsert({
+      where: { slug: a.slug },
+      update: {
+        title: a.title,
+        subtitle: a.subtitle || null,
+        excerpt: a.excerpt || null,
+        type: mappedType,
+        status: 'PUBLISHED',
+        readingTimeMin: a.readingTimeMin || 5,
+        viewCount: a.viewCount || 250,
+        isFeatured: Boolean(a.isFeatured),
+        publishedAt: a.publishedAt ? new Date(a.publishedAt) : new Date(),
+        coverImageUrl: a.coverImageUrl || null,
+        coverImageAlt: a.coverImageAlt || a.title,
+        authorId: authorUser.id,
+        categoryId: categoryRecord.id
+      },
+      create: {
+        title: a.title,
+        slug: a.slug,
+        subtitle: a.subtitle || null,
+        excerpt: a.excerpt || null,
+        type: mappedType,
+        status: 'PUBLISHED',
+        readingTimeMin: a.readingTimeMin || 5,
+        viewCount: a.viewCount || 250,
+        isFeatured: Boolean(a.isFeatured),
+        publishedAt: a.publishedAt ? new Date(a.publishedAt) : new Date(),
+        coverImageUrl: a.coverImageUrl || null,
+        coverImageAlt: a.coverImageAlt || a.title,
+        authorId: authorUser.id,
+        categoryId: categoryRecord.id,
+        createdById: authorUser.id,
+        publishedById: defaultEditor.id
+      }
+    });
+
+    // Seed Blocks
+    if (Array.isArray(a.blocks) && a.blocks.length > 0) {
+      await prisma.articleBlock.deleteMany({ where: { articleId: articleRecord.id } });
+      await prisma.articleBlock.createMany({
+        data: a.blocks.map((block, idx) => ({
+          articleId: articleRecord.id,
+          blockType: block.blockType || 'paragraph',
+          position: idx,
+          content: block.content || {},
+          metadata: block.metadata || null
+        }))
+      });
+    }
+
+    // Seed Tags
+    if (Array.isArray(a.tags) && a.tags.length > 0) {
+      await prisma.articleTag.deleteMany({ where: { articleId: articleRecord.id } });
+      for (const t of a.tags) {
+        const tagRecord = await prisma.tag.upsert({
+          where: { slug: t.slug },
+          update: { name: t.name },
+          create: { name: t.name, slug: t.slug }
+        });
+        await prisma.articleTag.create({
+          data: {
+            articleId: articleRecord.id,
+            tagId: tagRecord.id
+          }
+        });
+      }
+    }
+
+    // Record slug history
+    await prisma.articleSlugHistory.upsert({
+      where: { slug: a.slug },
+      update: {},
+      create: {
+        slug: a.slug,
+        articleId: articleRecord.id
+      }
+    });
+
+    seededFallbackCount++;
+  }
+  console.log(`✅ Seeded ${seededFallbackCount} fallback articles into the database with blocks and tags.`);
+
+  // 8. Seed Rich Empirical Articles for Automotive & Fashion
+  const autoArticle = await prisma.article.upsert({
+    where: { slug: 'solid-state-battery-dendrite-kinetics-ev-platforms' },
     update: {},
     create: {
-      title: 'Empirical Benchmarks of Hybrid Quantum-Classical Processing Units',
-      slug: 'empirical-benchmarks-hybrid-quantum-classical-processors',
-      subtitle: 'Evaluating thermal dissipation, error mitigation, and 99.4% two-qubit gate fidelity across continuous 72-hour stress testing.',
-      excerpt: 'A comprehensive empirical study analyzing real-world coherence times, cryogenic dissipation limits, and algorithmic speedup in commercial hybrid processing nodes.',
+      title: 'Solid-State Ceramic Electrolytes: Dendrite Growth and Fast-Charging Kinetics in 800V EV Architectures',
+      slug: 'solid-state-battery-dendrite-kinetics-ev-platforms',
+      subtitle: 'Evaluating sulfide-based LLZO solid electrolytes, critical current densities, and thermal runaway thresholds under 4C charge rates.',
+      excerpt: 'An empirical benchmark analyzing localized mechanical stress, lithium filament propagation, and capacity retention across 1,200 continuous rapid-charge thermal cycles.',
       type: 'RESEARCH',
       status: 'PUBLISHED',
-      readingTimeMin: 7,
-      viewCount: 1420,
-      publishedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-      authorId: author.id,
-      categoryId: categories['technology'].id,
-      createdById: author.id,
-      publishedById: editor.id,
-      coverImageUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=1600&q=80',
-      coverImageAlt: 'Quantum computing cryogenic dilutor chamber array'
+      readingTimeMin: 11,
+      viewCount: 1680,
+      publishedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      authorId: defaultAuthor.id,
+      categoryId: categories['automotive'].id,
+      createdById: defaultAuthor.id,
+      publishedById: defaultEditor.id,
+      coverImageUrl: 'https://images.unsplash.com/photo-1558441719-aa34bbe5f347?auto=format&fit=crop&w=1600&q=80',
+      coverImageAlt: 'Automotive battery pouch cell pack architecture'
     }
   });
 
-  // Add Blocks for Article 1
-  await prisma.articleBlock.deleteMany({ where: { articleId: article1.id } });
+  await prisma.articleBlock.deleteMany({ where: { articleId: autoArticle.id } });
   await prisma.articleBlock.createMany({
     data: [
       {
-        articleId: article1.id,
+        articleId: autoArticle.id,
         blockType: 'paragraph',
         position: 0,
         content: {
-          text: 'The transition from noisy intermediate-scale quantum (NISQ) devices to fault-tolerant hybrid computing requires rigorous empirical benchmarks under sustained operational conditions. While theoretical estimations predict exponential speedups for specialized combinatorial optimization, real-world hardware suffers from thermal leakage, crosstalk, and decoherence induced by control line attenuation.'
+          text: 'The commercial viability of mass-market 800V electric vehicle architectures hinges on overcoming the thermal and mechanical limitations of liquid-electrolyte lithium-ion cells. Solid-state lithium-metal batteries promise volumetric energy densities exceeding 450 Wh/kg, but suffer from localized mechanical failure under rapid charge cycling.'
         }
       },
       {
-        articleId: article1.id,
+        articleId: autoArticle.id,
         blockType: 'heading',
         position: 1,
         content: {
           level: 2,
-          text: '1. Cryogenic Thermal Loading & Gate Fidelity'
+          text: '1. Critical Current Density & Dendrite Infiltration'
         }
       },
       {
-        articleId: article1.id,
+        articleId: autoArticle.id,
         blockType: 'paragraph',
         position: 2,
         content: {
-          text: 'During our continuous 72-hour benchmark of the 128-qubit superconducting transmon architecture, baseline base-temperature fluctuated within a narrow band between 11.2 mK and 12.8 mK. We observed that randomized benchmarking decay curves maintained consistent error rates below 0.6% across active qubit pairs.'
+          text: 'In our 1,200-cycle continuous benchmark of sulfide-type glass-ceramic electrolytes at 30°C, cell impedance remained stable up to 3.8 mA/cm². Beyond this threshold, intergranular stress concentrations triggered lithium filament propagation along grain boundaries, demonstrating the necessity of active stack pressure management.'
         }
       },
       {
-        articleId: article1.id,
+        articleId: autoArticle.id,
         blockType: 'callout',
         position: 3,
         content: {
           variant: 'info',
-          title: 'Benchmark Finding',
-          text: 'The hybrid transmon array achieved a two-qubit gate fidelity of 99.42% (±0.04%) with active dynamic decoupling, sustaining stability over 4.2 million continuous circuit executions.'
+          title: 'Empirical Benchmark Finding',
+          text: 'Maintaining a constant uniaxial stack pressure of 5.2 MPa suppressed 99.1% of intergranular dendrite nucleation, enabling 4C fast-charging to 80% state-of-charge within 11.4 minutes without micro-shorting.'
         }
       },
       {
-        articleId: article1.id,
+        articleId: autoArticle.id,
         blockType: 'heading',
         position: 4,
         content: {
           level: 2,
-          text: '2. Classical Acceleration vs. Quantum Coprocessing'
+          text: '2. Comparative Pack-Level Performance'
         }
       },
       {
-        articleId: article1.id,
-        blockType: 'comparison',
+        articleId: autoArticle.id,
+        blockType: 'table',
         position: 5,
         content: {
-          headers: ['Metric', 'HPC Cluster (Classical)', 'Hybrid QPU Coprocessor'],
+          headers: ['Chemistry Architecture', 'Gravimetric Density (Wh/kg)', '4C Cycle Life', 'Thermal Runaway Onset (°C)'],
           rows: [
             {
-              label: 'Execution Time (Hamiltonian Sim)',
-              values: ['4 hours 12 mins', '2.8 seconds']
+              label: 'Conventional NMC811 (Liquid)',
+              values: ['265 Wh/kg', '450 cycles', '210°C']
             },
             {
-              label: 'Power Draw (Total Subsystem)',
-              values: ['48 kW (liquid-cooled rack)', '14 kW (including dilution cryostat)']
+              label: 'Silicon-Graphite Anode (Liquid)',
+              values: ['310 Wh/kg', '620 cycles', '225°C']
             },
             {
-              label: 'Error Propagation Rate',
-              values: ['Machine epsilon (1e-16)', '0.58% unmitigated / 0.02% mitigated']
+              label: 'LLZO Ceramic Solid-State (Li-Metal)',
+              values: ['460 Wh/kg', '1,200+ cycles', '380°C']
             }
           ]
         }
       },
       {
-        articleId: article1.id,
+        articleId: autoArticle.id,
         blockType: 'quote',
         position: 6,
         content: {
-          quote: 'We are no longer debating whether quantum acceleration exists in silicon—we are quantifying its exact boundary conditions in enterprise workloads.',
+          text: 'Electrolyte substitution alone is insufficient; automotive solid-state requires integrating dynamic pneumatic pressure regulation directly into module mechanical casings.',
           author: 'Dr. Marcus Chen',
-          source: 'Research Factors Proceedings, Vol. 1'
-        }
-      },
-      {
-        articleId: article1.id,
-        blockType: 'paragraph',
-        position: 7,
-        content: {
-          text: 'In conclusion, the bottleneck for industrial deployment is no longer qubit count, but rather the low-latency interconnect between classical PCIe coprocessor interfaces and cryogenic microwave pulse generators.'
+          citation: 'Journal of Automotive Power & Materials Engineering'
         }
       }
     ]
   });
 
-  // Link Tag
   await prisma.articleTag.upsert({
-    where: {
-      articleId_tagId: {
-        articleId: article1.id,
-        tagId: tags['quantum-computing'].id
-      }
-    },
+    where: { articleId_tagId: { articleId: autoArticle.id, tagId: tags['electric-vehicles'].id } },
     update: {},
-    create: {
-      articleId: article1.id,
-      tagId: tags['quantum-computing'].id
-    }
+    create: { articleId: autoArticle.id, tagId: tags['electric-vehicles'].id }
+  });
+  await prisma.articleTag.upsert({
+    where: { articleId_tagId: { articleId: autoArticle.id, tagId: tags['automotive-engineering'].id } },
+    update: {},
+    create: { articleId: autoArticle.id, tagId: tags['automotive-engineering'].id }
   });
 
-  // Article 2
-  const article2 = await prisma.article.upsert({
-    where: { slug: 'thermal-dissipation-limits-gate-all-around-silicon' },
+  const fashionArticle = await prisma.article.upsert({
+    where: { slug: 'microfiber-shedding-kinetics-circular-polyester-textiles' },
     update: {},
     create: {
-      title: 'Thermal Dissipation Limits in 2-Nanometer GAAFET Silicon',
-      slug: 'thermal-dissipation-limits-gate-all-around-silicon',
-      subtitle: 'Analyzing sub-threshold leakage, phonon scattering, and backside power delivery in next-generation nanosheet transistors.',
-      excerpt: 'As transistor gate pitches scale below 45nm, thermal resistance in vertically stacked nanosheets presents unprecedented localized hot spots.',
-      type: 'ANALYSIS',
+      title: 'Microfiber Shedding Kinetics and Tensile Fatigue in Recycled Circular Polyester Textiles',
+      slug: 'microfiber-shedding-kinetics-circular-polyester-textiles',
+      subtitle: 'Quantifying filament fracture mechanics, microplastic dispersion rates, and closed-loop chemical depolymerization yields.',
+      excerpt: 'An empirical materials study analyzing fiber shear degradation, laundering hydrodynamic shedding, and tensile hysteresis in post-consumer circular apparel.',
+      type: 'RESEARCH',
       status: 'PUBLISHED',
-      readingTimeMin: 5,
-      viewCount: 890,
-      publishedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-      authorId: author.id,
-      categoryId: categories['technology'].id,
-      createdById: author.id,
-      publishedById: editor.id,
-      coverImageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80',
-      coverImageAlt: 'Silicon wafer with microscopic transistor circuits'
+      readingTimeMin: 9,
+      viewCount: 1340,
+      publishedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+      authorId: defaultAuthor.id,
+      categoryId: categories['fashion'].id,
+      createdById: defaultAuthor.id,
+      publishedById: defaultEditor.id,
+      coverImageUrl: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=1600&q=80',
+      coverImageAlt: 'Sustainable textile filament weaving loom'
     }
   });
 
-  await prisma.articleBlock.deleteMany({ where: { articleId: article2.id } });
+  await prisma.articleBlock.deleteMany({ where: { articleId: fashionArticle.id } });
   await prisma.articleBlock.createMany({
     data: [
       {
-        articleId: article2.id,
+        articleId: fashionArticle.id,
         blockType: 'paragraph',
         position: 0,
         content: {
-          text: 'The sunset of FinFET architectures has ushered in Gate-All-Around (GAAFET) nanosheet transistors as the standard for 2nm and 1.4nm process nodes. While GAAFET restores electro-static channel control and mitigates short-channel effects, it introduces severe heat trapping inside internal nanosheet channels.'
+          text: 'The transition toward circular fashion manufacturing relies heavily on mechanical and chemical recycling of polyethylene terephthalate (PET) fibers. However, multiple extrusion cycles alter polymer crystallinity and tensile hysteresis, significantly accelerating microplastic filament fragmentation during commercial laundering.'
         }
       },
       {
-        articleId: article2.id,
+        articleId: fashionArticle.id,
         blockType: 'heading',
         position: 1,
         content: {
           level: 2,
-          text: 'Backside Power Delivery Network (BSPDN) Impact'
+          text: '1. Hydrodynamic Shedding Rates Across 50 Wash Cycles'
         }
       },
       {
-        articleId: article2.id,
+        articleId: fashionArticle.id,
         blockType: 'paragraph',
         position: 2,
         content: {
-          text: 'By segregating power rails to the reverse side of the silicon wafer using through-silicon vias (TSVs), interconnect RC delay decreases by up to 22%. However, the thermal conductivity of the thinned silicon substrate drops dramatically, requiring micro-channel diamond heat spreaders.'
+          text: 'Using high-resolution spectroscopic filtration, we measured microfilament mass loss across 50 standard ISO 6330 wash cycles. Virgin polyester exhibited an average mass release of 18.4 mg/kg of fabric, whereas mechanically recycled rPET reached 64.2 mg/kg due to surface fibril detachment along micro-voids.'
+        }
+      },
+      {
+        articleId: fashionArticle.id,
+        blockType: 'callout',
+        position: 3,
+        content: {
+          variant: 'info',
+          title: 'Material Science Finding',
+          text: 'Enzymatic glycolysis depolymerization preserved 98.6% of intrinsic viscosity in regenerated monomers, producing filament yarn with shedding rates indistinguishable from virgin grade polymer.'
+        }
+      },
+      {
+        articleId: fashionArticle.id,
+        blockType: 'table',
+        position: 4,
+        content: {
+          headers: ['Polymer Recycling Method', 'Tensile Tenacity (cN/dtex)', 'Intrinsic Viscosity (dL/g)', 'Microfiber Loss (mg/kg)'],
+          rows: [
+            {
+              label: 'Virgin Synthetic Polyester',
+              values: ['4.8 cN/dtex', '0.64 dL/g', '18.4 mg/kg']
+            },
+            {
+              label: 'Mechanical Flake Extrusion (rPET)',
+              values: ['3.2 cN/dtex', '0.52 dL/g', '64.2 mg/kg']
+            },
+            {
+              label: 'Closed-Loop Enzymatic Glycolysis',
+              values: ['4.7 cN/dtex', '0.63 dL/g', '19.1 mg/kg']
+            }
+          ]
         }
       }
     ]
   });
 
-  // Link Tag
   await prisma.articleTag.upsert({
-    where: {
-      articleId_tagId: {
-        articleId: article2.id,
-        tagId: tags['semiconductor-architecture'].id
-      }
-    },
+    where: { articleId_tagId: { articleId: fashionArticle.id, tagId: tags['sustainable-textiles'].id } },
     update: {},
-    create: {
-      articleId: article2.id,
-      tagId: tags['semiconductor-architecture'].id
-    }
+    create: { articleId: fashionArticle.id, tagId: tags['sustainable-textiles'].id }
+  });
+  await prisma.articleTag.upsert({
+    where: { articleId_tagId: { articleId: fashionArticle.id, tagId: tags['circular-economy'].id } },
+    update: {},
+    create: { articleId: fashionArticle.id, tagId: tags['circular-economy'].id }
   });
 
-  console.log('✅ Seeded published articles with rich content blocks.');
+  console.log('✅ Seeded dedicated research articles for Automotive and Fashion categories.');
 
   // 9. Seed Default System Settings (PRD Section 100)
   const defaultSettings = [

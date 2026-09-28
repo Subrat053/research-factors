@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="lifeGrad" x1="20" y1="20" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E11D48"/>
+      <stop offset="100%" stop-color="#BE123C"/>
+    </linearGradient>
+    <linearGradient id="lifeGlow" x1="30" y1="30" x2="90" y2="90" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FB7185" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#F43F5E" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Glow Badge -->
+  <rect x="22" y="22" width="76" height="76" rx="20" fill="url(#lifeGlow)"/>
+  <!-- Circadian Sun Arc -->
+  <path d="M42 56a20 20 0 0 1 36 0" stroke="#FB7185" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="60" cy="56" r="10" fill="#FDA4AF"/>
+  <path d="M60 38v-4M46 42l-3-3M74 42l3-3" stroke="#FB7185" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Vitality Heart / Wellness Leaf Curve -->
+  <path d="M60 88c-18-12-28-24-28-36a14 14 0 0 1 24-9.8L60 46l4-3.8A14 14 0 0 1 88 52c0 12-10 24-28 36z" fill="url(#lifeGrad)" stroke="#FECDD3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Leaf Vein / Pulse Line -->
+  <path d="M48 64h6l4-6 4 10 4-4h6" stroke="#FFE4E6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

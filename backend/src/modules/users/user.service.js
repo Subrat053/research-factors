@@ -30,7 +30,12 @@ export class UserService {
   static async updateProfile(userId, data) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { authorProfile: true }
+      include: {
+        authorProfile: true,
+        roles: {
+          include: { role: true }
+        }
+      }
     });
 
     if (!user) {
@@ -49,6 +54,12 @@ export class UserService {
       linkedinUrl,
       githubUrl
     } = data;
+
+    // Determine if user has privileged or authoring roles
+    const userRoleNames = user.roles?.map((r) => r.role?.name || r.name) || [];
+    const isStaffOrAuthor = userRoleNames.some((role) =>
+      ['SUPER_ADMIN', 'ADMIN', 'EDITOR', 'AUTHOR'].includes(role)
+    );
 
     // Separate User fields and AuthorProfile fields
     const userUpdate = {};
@@ -83,11 +94,17 @@ export class UserService {
         if (linkedinUrl !== undefined) authorData.linkedinUrl = linkedinUrl || null;
         if (githubUrl !== undefined) authorData.githubUrl = githubUrl || null;
 
+        // Auto-approve accreditation if user is staff or already holds the author role
+        if (isStaffOrAuthor || user.authorProfile?.isApproved) {
+          authorData.isApproved = true;
+        }
+
         await tx.authorProfile.upsert({
           where: { userId },
           create: {
             userId,
-            ...authorData
+            ...authorData,
+            isApproved: isStaffOrAuthor || Boolean(user.authorProfile?.isApproved)
           },
           update: authorData
         });

@@ -231,8 +231,57 @@ When public registration is paused (`allowRegistration: false`):
 
 ---
 
+## 7. Dynamic Author Accreditation & Profile Credentials Gating
+
+### 1. Dynamic Role & Permission-Based Visibility
+On `/admin/profile`, author accreditation and public byline credentials are fully dynamic:
+- **Authorized Authors & Institutional Staff**:
+  - Accounts with authoring/editorial roles (`SUPER_ADMIN`, `ADMIN`, `EDITOR`, `AUTHOR`) or permissions (`article.create`, `article.update_own`, `author.approve`) or an approved author profile see the **"Researcher Credentials & Byline"** section.
+  - The accreditation badge displays **"Verified Author"** with an emerald shield badge (`ShieldCheck`), confirming institutional accreditation.
+  - When updating researcher credentials (headline, biography, laboratory website, social links), the backend automatically ensures `authorProfile.isApproved = true` for privileged roles.
+- **Non-Author Accounts (Standard Readers / `USER`)**:
+  - The entire **"Researcher Credentials & Byline"** section is **completely hidden** from the user's profile view.
+  - Non-authors only see their relevant identity cards: **Personal Information** (First Name, Last Name, Email, Avatar, Personal Bio) and **Security** (Password Management).
+  - Eliminates extraneous author fields and prevents non-author users from being mistakenly labeled as "Accreditation Pending".
+
+---
+
+## 8. Universal Human-Readable Audit Enrichment & Security Trail
+
+### 1. Architectural Philosophy
+Audit records must be intelligible and directly actionable for administrative personnel without requiring engineering assistance or raw database UUID lookups. The platform employs a dynamic, read-time batch enrichment engine (`AuditEnricherService`) that enriches all historical and new audit logs across all system domains (`User`, `Article`, `Comment`, `Category`, `Tag`, `ContactMessage`, `Media`, `Role`, `SystemSetting`).
+
+### 2. Batch Enrichment Engine (`AuditEnricherService`)
+- **Zero N+1 Query Degradation**: Gathers all primary `entityId`s, metadata bulk arrays (`targetIds`, `articleIds`, `messageIds`), and relational references (`articleId`, `authorId`, `userId`) across the queried page (up to 50 logs).
+- **Parallel Domain Fetching**: Executes batched `findMany` queries with `in: [...]` in a single `Promise.all` across Prisma entity models.
+- **Dynamic Semantic Translation**:
+  - Maps raw action keys (e.g. `user.bulk_suspended`, `article.published`, `comment.hidden`, `category.merged`) to human-readable labels (`"Bulk Suspended Users"`, `"Published Article"`, `"Quarantined Comment"`, `"Merged Category"`).
+  - Assigns semantic badge variants (`danger`, `warning`, `success`, `purple`, `info`, `neutral`).
+  - Synthesizes clear, plain-English narrative statements (e.g., *"Alexander Wright performed Bulk Suspended Users on 12 User Accounts. Reason: 'Spam prevention'"*).
+  - Extracts structured state transitions and diffs (`previousStatus` -> `newStatus`, `previousRoles` -> `newRoles`, `reason`, `mergedInto`).
+  - Resolves target objects with friendly display names, contextual subtitles, direct panel links, and child `items` arrays for bulk events.
+
+### 3. Executive Audit Inspector UI (`/admin/audit-logs`)
+- **Table Overview**:
+  - **Timestamp**: Formatted relative elapsed time (`2h ago`) with exact time tooltip.
+  - **Staff Actor**: Avatar initial, actor full name, and actor email.
+  - **Action & Narrative**: Semantic action badge with an explanatory narrative subtitle.
+  - **Entity**: Domain icon (`User`, `FileText`, `MessageSquare`, `FolderTree`, `Tag`, `Mail`, `Image`, `ShieldCheck`, `Settings`) with entity badge.
+  - **Target Resource**: Friendly title/name with direct navigation link (e.g., jump to user directory or manuscript view). Bulk operations display count badges (`"12 User Accounts"`).
+  - **Inspect Action**: Triggers the comprehensive modal inspector.
+- **Inspector Modal**:
+  - **Narrative Banner**: High-priority plain-English summary of the event.
+  - **Executive Cards**: Actor card and Target Resource card with a direct `"Open Target Resource ↗"` button.
+  - **State Transitions Diff**: Visual badge comparison (`FROM -> TO`) for status and role changes.
+  - **Bulk Affected Items Roster**: Renders an embedded table listing each affected entity's Name, Email/Identifier, Status badge, and direct jump link.
+  - **Collapsible Raw Payload Drawer**: Houses the formatted JSON metadata with a one-click `"Copy"` clipboard trigger for technical forensics.
+
+---
+
 ### Future Roadmap
 1. **Dynamic Custom Role Builder**: Allow Super Admins to define custom staff roles with granular, multi-select checkboxes for arbitrary combinations of permissions.
-2. **Audit Logging for Editorial Actions**: Stream editorial approvals, rejections, and featured promotions into the tamper-proof `AuditLog` table.
+2. **Audit Log CSV/JSON Export**: Provide single-click export of filtered audit logs for SOC2 and institutional compliance reporting.
 3. **Session Timeout & Inactivity Guards**: Enforce automated session invalidation for administrative consoles after 30 minutes of inactivity.
 4. **Author Co-authorship & Collaborative Editing**: Extend manuscript ownership from a single `authorId` to a `many-to-many` co-author association.
+
+

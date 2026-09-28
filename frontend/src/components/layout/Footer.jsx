@@ -64,9 +64,9 @@ export function Footer() {
     <footer className="bg-[#060D1A] text-slate-300 pt-16 sm:pt-20 pb-12 border-t border-slate-800/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* TIER 1: BRAND MASTHEAD & 5-COLUMN DIRECTORY */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8 pb-12">
-          {/* Column 1: Brand & Ethos (3 cols on desktop) */}
-          <div className="sm:col-span-2 lg:col-span-3 space-y-4">
+        <div className="grid grid-cols-2 lg:grid-cols-12 gap-x-6 gap-y-10 sm:gap-x-8 lg:gap-8 pb-12">
+          {/* Column 1: Brand & Ethos (Row 1: Full width across 2 cols on mobile, 3 cols on desktop) */}
+          <div className="col-span-2 lg:col-span-3 space-y-4">
             <Link to="/" className="inline-block py-1">
               <img
                 src={LOGO_WHITE_URL}
@@ -88,8 +88,8 @@ export function Footer() {
 
           </div>
 
-          {/* Column 2: EXPLORE (2 cols on desktop) */}
-          <div className="lg:col-span-2">
+          {/* Column 2: EXPLORE (Row 2, Col 1 on mobile; 2 cols on desktop) */}
+          <div className="col-span-1 lg:col-span-2">
             <div className="mb-4">
               <h4 className="text-xs font-bold uppercase tracking-widest text-slate-100 inline-block pb-1.5 border-b-2 border-blue-500">
                 Explore
@@ -130,7 +130,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  to="/research?sort=popular"
+                  to="/trending"
                   className="border-l-2 border-transparent hover:border-blue-500 active:border-blue-400 pl-0 hover:pl-2.5 text-slate-300 hover:text-white active:text-blue-200 transition-all duration-200 block py-0.5"
                 >
                   Trending
@@ -147,8 +147,8 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Column 3: CATEGORIES (2 cols on desktop) */}
-          <div className="lg:col-span-2">
+          {/* Column 3: CATEGORIES (Row 2, Col 2 on mobile; 2 cols on desktop) */}
+          <div className="col-span-1 lg:col-span-2">
             <div className="mb-4">
               <h4 className="text-xs font-bold uppercase tracking-widest text-slate-100 inline-block pb-1.5 border-b-2 border-blue-500">
                 Categories
@@ -169,8 +169,8 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Column 4: COMPANY (2 cols on desktop) */}
-          <div className="lg:col-span-2">
+          {/* Column 4: COMPANY (Row 3, Col 1 on mobile; 2 cols on desktop) */}
+          <div className="col-span-1 lg:col-span-2">
             <div className="mb-4">
               <h4 className="text-xs font-bold uppercase tracking-widest text-slate-100 inline-block pb-1.5 border-b-2 border-blue-500">
                 Company
@@ -238,8 +238,8 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Column 5: STAY UPDATED (3 cols on desktop) */}
-          <div className="sm:col-span-2 lg:col-span-3 space-y-4">
+          {/* Column 5: STAY UPDATED (Row 3, Col 2 on mobile; 3 cols on desktop) */}
+          <div className="col-span-1 lg:col-span-3 space-y-4">
             <div>
               <h4 className="text-xs font-bold uppercase tracking-widest text-slate-100 inline-block pb-1.5 border-b-2 border-blue-500">
                 Stay Updated
@@ -265,8 +265,8 @@ export function Footer() {
                   required
                   value={newsletterEmail}
                   onChange={(e) => setNewsletterEmail(e.target.value)}
-                  placeholder="Enter your email address"
-                  className="bg-transparent text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none flex-1 px-3 py-1.5 min-w-0"
+                  placeholder="Enter email"
+                  className="bg-transparent text-xs sm:text-sm text-white placeholder:text-slate-500 focus:outline-none flex-1 px-2 sm:px-3 py-1.5 min-w-0"
                 />
                 <button
                   type="submit"
@@ -280,7 +280,7 @@ export function Footer() {
             )}
 
             {/* Social Channels Row */}
-            <div className="flex items-center gap-2.5 pt-2">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 pt-2">
               <a
                 href="https://facebook.com"
                 target="_blank"
@@ -328,7 +328,7 @@ export function Footer() {
         {/* TIER 2: TRUST VERIFICATION CARDS & EDITORIAL CREED */}
         <div className="pt-10 pb-8 border-t border-slate-800/80 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           {/* 3 Trust Verification Signals (8 columns on desktop) */}
-          <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+          <div className="hidden sm:grid lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
             <div className="flex items-center gap-3.5 p-3.5 sm:p-4 transition-colors">
               <div className="w-10 h-10 rounded-lg bg-blue-950/80 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
                 <ShieldCheck className="w-5 h-5 text-blue-400" />
@@ -373,7 +373,7 @@ export function Footer() {
           </div>
 
           {/* Editorial Quote Creed (4 columns on desktop) */}
-          <div className="lg:col-span-4 flex flex-col justify-center border-l-0 lg:border-l lg:border-slate-800/80 lg:pl-8 py-1">
+          <div className="lg:col-span-4 flex flex-col items-center lg:items-start justify-center border-l-0 lg:border-l lg:border-slate-800/80 lg:pl-8 py-1">
             <Quote className="w-5 h-5 text-blue-400 rotate-180 mb-2 opacity-80" />
             <blockquote className="font-serif italic text-sm sm:text-base text-slate-200 leading-snug mb-1">
               “Better information leads to better decisions.”
@@ -386,10 +386,10 @@ export function Footer() {
 
         {/* TIER 3: SUB-FOOTER BASELINE */}
         <div className="pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-          <p className="text-center sm:text-left text-[11px] sm:text-sm text-slate-400">
+          <p className="text-center sm:text-left text-sm text-slate-400">
             © {new Date().getFullYear()} Research Factors. All rights reserved.
           </p>
-          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4 text-[11px] sm:text-sm text-slate-400">
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4 text-sm text-slate-400">
             <a
               href="/sitemap.xml"
               target="_blank"

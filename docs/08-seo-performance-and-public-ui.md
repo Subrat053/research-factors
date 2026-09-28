@@ -298,14 +298,14 @@ The homepage transforms Research Factors from a simple blog into an authoritativ
    - **Center**: High-res editorial researcher photography (`/images/hero_researcher.jpg`) with floating glassmorphism cards ("In-depth Analysis", "Expert Insights").
    - **Right**: "Trending Today" ranked list (1-5) populated dynamically from `GET /api/v1/articles/trending`.
 3. **Explore Topics ("Dive Into What Interests You")**:
-   - **Dynamic Database-Driven Cards**: Actively resolves categories from `GET /api/v1/categories`, filtering active entries (`isActive !== false`) and computing live article counts. Gracefully falls back to curated core defaults if offline or loading.
-   - **Strict Single-Row Architecture ($\le 5$ Categories)**: Displays as a clean, balanced single row (`lg:grid-cols-5` or `lg:grid-cols-4` on desktop, horizontal swipe snap on mobile/tablet) avoiding multi-line wrapping and preserving compact vertical rhythm.
-   - **Infinite Smooth Marquee Slider ($> 5$ Categories)**: When backend categories exceed 5, the section automatically transforms into an infinitely smooth marquee ticker powered by continuous CSS keyframe transforms (`@keyframes marquee-scroll`) with duplicated cards for a seamless loop.
-   - **Hover-to-Pause Interaction**: Hovering anywhere over the marquee slider instantaneously freezes the animation (`animation-play-state: paused`), ensuring cards can be read and clicked without motion interruption.
-   - **Editorial Edge Fade Masks**: Elegant left and right gradient masks (`bg-gradient-to-r` and `bg-gradient-to-l` from `paper-warm`) soften the track edges.
+   - **Modular `CategoryCard` Architecture**: Redesigned editorial category card component featuring:
+     - **Upper-Right Flaticon / Artwork**: Positioned at upper-right with a targeted corner-only fade mask (`linear-gradient(to top right, transparent 0%, rgba(0,0,0,0.4) 16%, #000 36%)`) specifically where the image meets text prose, keeping the top and right sides 100% crisp without an all-around gradient overlay.
+     - **Dynamic Ambient Glow**: Soft background lighting (`.bg-category-glow`) powered by a deterministic color hashing engine across a 12-palette editorial wheel, ensuring every current and future category automatically receives a unique glow.
+     - **Primary Asset Priority & Semantic Fallback**: Renders admin-uploaded images (`c.imageUrl`) first, falling back to a comprehensive domain keyword dictionary with vector Flaticon SVGs in `/public/icons/categories/` (technology, business, policy, science, economics, lifestyle, automotive, default).
+     - **Elevated Editorial Typography**: Top-aligned, large bold heading (`text-xl sm:text-2xl font-bold tracking-tight text-ink-darkest`) with a 3-line clamped description and a responsive action footer (article count badge + micro-animated circular arrow button).
+   - **Strict Single-Row Grid ($\le 5$ Categories)**: Responsive layout (`grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5`) avoiding multi-line wrapping and preserving compact vertical rhythm.
+   - **Infinite Smooth Marquee Slider ($> 5$ Categories)**: When backend categories exceed 5, the section automatically transforms into an infinitely smooth marquee ticker powered by continuous CSS keyframe transforms (`@keyframes marquee-scroll`) with duplicated cards for a seamless loop and hover-to-pause interaction (`animation-play-state: paused`).
    - **Dynamic Canonical Routing**: Clicking any category card in either mode navigates directly to its canonical URL at `/categories/:categorySlug`.
-   - **Smart Editorial Icon Mapping**: Category slugs and keywords are dynamically resolved to tailored Lucide icons (`technology` → `Cpu`, `science` → `FlaskConical`, `policy` → `BookOpen`, `economics` → `TrendingUp`, `business` → `Briefcase`, `lifestyle` → `ShoppingBag`, with `Layers` as universal fallback).
-   - **Article Card Category Badges**: Every category badge across all article cards (`featured`, `standard`, and `compact` variants) is an interactive link to `/categories/:categorySlug` with `stopPropagation` to allow instantaneous category exploration without opening the article detail page.
 4. **Featured Research Hero Article**:
    - Prominent editorial research article block with badge and author credentials.
 5. **Latest Research & Insights**:

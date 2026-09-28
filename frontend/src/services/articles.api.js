@@ -96,10 +96,13 @@ export const articlesApi = {
       () => fallbackData.articles.find((a) => a.isFeatured) || fallbackData.articles[0]
     ),
 
-  getTrending: () =>
+  getTrending: (params) =>
     withFallback(
-      () => apiClient.get('/articles/trending'),
-      () => fallbackData.trendingArticles
+      () => apiClient.get('/articles/trending', { params }),
+      () => {
+        const list = fallbackData.trendingArticles || fallbackData.articles || [];
+        return params?.limit ? list.slice(0, Number(params.limit)) : list;
+      }
     ),
 
   getArticleBySlug: (slug) =>
@@ -107,7 +110,7 @@ export const articlesApi = {
       () => apiClient.get(`/articles/${slug}`),
       () => {
         const found = fallbackData.articles.find((a) => a.slug === slug);
-        return found || fallbackData.articles[0];
+        return found || null;
       }
     ),
 
@@ -123,7 +126,7 @@ export const articlesApi = {
       () => {
         return (
           fallbackData.categories.find((c) => c.slug === slug) ||
-          fallbackData.categories[0]
+          null
         );
       }
     ),
