@@ -32,7 +32,9 @@ import {
   Sun,
   Moon,
   Globe,
-  Bookmark
+  Bookmark,
+  Handshake,
+  Briefcase
 } from 'lucide-react';
 
 export function AdminLayout({ children, title, subtitle, actions }) {
@@ -60,7 +62,7 @@ export function AdminLayout({ children, title, subtitle, actions }) {
   };
 
   const primaryRole = user?.roles?.[0]?.replace(/_/g, ' ') || 'Staff';
-  const isSuperAdmin = user?.isSuperAdmin || user?.roles?.includes('SUPER_ADMIN');
+  const isSuperAdmin = Boolean(user?.isSuperAdmin || user?.roles?.includes('SUPER_ADMIN'));
 
   // Dynamic backend health & port query: exclusively displayed for Super Admin
   const { data: healthData, isError: isHealthError } = useQuery({
@@ -155,6 +157,23 @@ export function AdminLayout({ children, title, subtitle, actions }) {
       ]
     },
     {
+      label: 'Sponsorship',
+      items: [
+        {
+          name: 'Packages & Plans',
+          path: '/admin/sponsorship/packages',
+          icon: Handshake,
+          permission: 'setting.manage'
+        },
+        {
+          name: 'Inquiries',
+          path: '/admin/sponsorship/inquiries',
+          icon: Briefcase,
+          permissionCheck: () => hasAnyPermission(['contact.manage', 'setting.manage'])
+        }
+      ]
+    },
+    {
       label: 'System & Security',
       items: [
         // { name: 'Roles & Permissions', path: '/admin/roles', icon: KeyRound, permission: 'role.manage' },
@@ -183,6 +202,10 @@ export function AdminLayout({ children, title, subtitle, actions }) {
 
   const isActive = (item) => {
     if (item.exact) return location.pathname === item.path;
+    if (item.path.includes('?')) {
+      const [path, query] = item.path.split('?');
+      return location.pathname === path && location.search.includes(query);
+    }
     return location.pathname.startsWith(item.path);
   };
 

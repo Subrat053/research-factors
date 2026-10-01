@@ -21,6 +21,7 @@ const ResearchListingPage = lazy(() => import('./pages/public/ResearchListingPag
 const TrendingPage = lazy(() => import('./pages/public/TrendingPage.jsx'));
 const ArticleDetailPage = lazy(() => import('./pages/public/ArticleDetailPage.jsx'));
 const CategoryPage = lazy(() => import('./pages/public/CategoryPage.jsx'));
+const CategoriesListingPage = lazy(() => import('./pages/public/CategoriesListingPage.jsx'));
 const BookmarksPage = lazy(() => import('./pages/public/BookmarksPage.jsx'));
 const SponsorshipPage = lazy(() => import('./pages/public/SponsorshipPage.jsx'));
 const AboutPage = lazy(() => import('./pages/public/AboutPage.jsx'));
@@ -29,6 +30,7 @@ const PrivacyPolicyPage = lazy(() => import('./pages/public/PrivacyPolicyPage.js
 const TermsPage = lazy(() => import('./pages/public/TermsPage.jsx'));
 const CookiePolicyPage = lazy(() => import('./pages/public/CookiePolicyPage.jsx'));
 const EditorialGuidelinesPage = lazy(() => import('./pages/public/EditorialGuidelinesPage.jsx'));
+const TagPage = lazy(() => import('./pages/public/TagPage.jsx'));
 
 // 2. Authentication Pages (Lazy Loaded)
 const LoginPage = lazy(() => import('./pages/auth/LoginPage.jsx'));
@@ -55,6 +57,8 @@ const ContactMessagesPage = lazy(() => import('./pages/admin/ContactMessagesPage
 const AuditLogsPage = lazy(() => import('./pages/admin/AuditLogsPage.jsx'));
 const RolesPermissionsPage = lazy(() => import('./pages/admin/RolesPermissionsPage.jsx'));
 const SystemSettingsPage = lazy(() => import('./pages/admin/SystemSettingsPage.jsx'));
+const SponsorshipPackagesPage = lazy(() => import('./pages/admin/SponsorshipPackagesPage.jsx'));
+const SponsorshipInquiriesPage = lazy(() => import('./pages/admin/SponsorshipInquiriesPage.jsx'));
 const SeoAuditPage = lazy(() => import('./pages/admin/SeoAuditPage.jsx'));
 const AdminProfilePage = lazy(() => import('./pages/admin/AdminProfilePage.jsx'));
 
@@ -97,7 +101,10 @@ export default function App() {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/research" element={<ResearchListingPage />} />
                     <Route path="/trending" element={<TrendingPage />} />
+                    <Route path="/categories" element={<CategoriesListingPage />} />
                     <Route path="/categories/:categorySlug" element={<CategoryPage />} />
+                    <Route path="/tag/:tagSlug" element={<TagPage />} />
+                    <Route path="/tags/:tagSlug" element={<TagPage />} />
                     <Route path="/sponsorship" element={<SponsorshipPage />} />
                     <Route path="/about" element={<AboutPage />} />
                     <Route path="/contact" element={<ContactPage />} />
@@ -279,6 +286,40 @@ export default function App() {
                           <SystemSettingsPage />
                         </ProtectedRoute>
                       }
+                    />
+                    <Route
+                      path="/admin/sponsorship/packages"
+                      element={
+                        <ProtectedRoute requiredPermission="setting.manage">
+                          <SponsorshipPackagesPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/sponsorship/plans"
+                      element={<Navigate to="/admin/sponsorship/packages" replace />}
+                    />
+                    <Route
+                      path="/admin/sponsorship"
+                      element={<Navigate to="/admin/sponsorship/packages" replace />}
+                    />
+                    <Route
+                      path="/admin/sponsorship/inquiries"
+                      element={
+                        <ProtectedRoute
+                          requiredAnyPermission={['contact.manage', 'setting.manage']}
+                        >
+                          <SponsorshipInquiriesPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/sponsorship-inquiries"
+                      element={<Navigate to="/admin/sponsorship/inquiries" replace />}
+                    />
+                    <Route
+                      path="/admin/sponsorship/leads"
+                      element={<Navigate to="/admin/sponsorship/inquiries" replace />}
                     />
                     <Route
                       path="/admin/seo"

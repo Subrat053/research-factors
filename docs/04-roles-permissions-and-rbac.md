@@ -229,6 +229,10 @@ When public registration is paused (`allowRegistration: false`):
 4. **Site Header (`Header.jsx`)**: Automatically hides the "Join Platform" call-to-action button.
 5. **Administrative Exemption**: The administrative User Directory (`/admin/users`) remains fully operational, enabling curated, invite-only onboarding during publication embargoes or private beta phases.
 
+### 4. Direct Provisioning Modal Experience
+- **Desktop Horizontal Architecture**: The Create User Account modal utilizes a two-column responsive layout (`max-w-4xl` / `grid-cols-2` on `md:` screens) pairing Identity & Credentials on the left with Role Allocation & Verification settings on the right.
+- **Zero-Scroll Viewport Optimization**: Structured to fit entirely within standard laptop and desktop viewports (~600–730px height) without requiring vertical scrolling, while maintaining full-width stacked responsiveness on mobile viewports.
+
 ---
 
 ## 7. Dynamic Author Accreditation & Profile Credentials Gating
@@ -278,10 +282,22 @@ Audit records must be intelligible and directly actionable for administrative pe
 
 ---
 
+## 9. Post-Authentication Routing & Panel Onboarding Architecture
+
+### 1. Panel Routing Logic (`resolvePostAuthRedirect`)
+Upon successful authentication via `/login` or account registration via `/register`:
+- **Explicit Deep Links**: If the query string contains a specific `?redirect=<path>` (e.g., from an authentication interceptor guarding an article editor or preview URL), the application navigates directly to that target path—unless the path is `'/'`, a login page, or a register page.
+- **Editorial & Administrative Accounts**: Users possessing the `SUPER_ADMIN` role or any administrative/editorial/author permissions (`article.create`, `article.update_own`, `article.approve`, `comment.moderate`, `user.read_list`, `category.manage`, `tag.manage`, `media.manage`, etc.) are routed directly to the Management Panel (`/admin`).
+- **Standard Community Accounts (`USER`)**: Registered readers without editorial privileges are routed directly to their Account Profile & Personal Settings panel (`/admin/profile`).
+- **Already-Authenticated State Protection**: Authenticated users visiting `/login` or `/register` are automatically directed to their respective panel via a reactive `useEffect` guard, preventing duplicate credential entries.
+
+---
+
 ### Future Roadmap
 1. **Dynamic Custom Role Builder**: Allow Super Admins to define custom staff roles with granular, multi-select checkboxes for arbitrary combinations of permissions.
 2. **Audit Log CSV/JSON Export**: Provide single-click export of filtered audit logs for SOC2 and institutional compliance reporting.
 3. **Session Timeout & Inactivity Guards**: Enforce automated session invalidation for administrative consoles after 30 minutes of inactivity.
 4. **Author Co-authorship & Collaborative Editing**: Extend manuscript ownership from a single `authorId` to a `many-to-many` co-author association.
+
 
 

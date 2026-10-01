@@ -1,6 +1,19 @@
 import { ContactService } from './contact.service.js';
+import { SettingsAdminService } from '../admin/settings-admin.service.js';
 
 export class ContactController {
+  static async getSponsorshipPackages(req, res, next) {
+    try {
+      const publicSettings = await SettingsAdminService.getPublicSettings();
+      res.json({
+        success: true,
+        data: publicSettings.sponsorship_packages
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async createSponsorshipInquiry(req, res, next) {
     try {
       const result = await ContactService.submitSponsorshipInquiry(req.body);

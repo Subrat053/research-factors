@@ -1,8 +1,10 @@
 import React from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { articlesApi } from '../../services/articles.api.js';
+import { recommendationsApi } from '../../services/recommendations.api.js';
 import { seoApi } from '../../services/seo.api.js';
+import { resolveCategoryArt } from '../../utils/categoryTheme.js';
 import { SeoHead } from '../../components/common/SeoHead.jsx';
 import { Header } from '../../components/layout/Header.jsx';
 import { Footer } from '../../components/layout/Footer.jsx';
@@ -13,6 +15,7 @@ import { Search, ChevronLeft, ChevronRight, SlidersHorizontal, X, Hash, Bookmark
 
 export default function ResearchListingPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const page = parseInt(searchParams.get('page') || '1', 10);
   const category = searchParams.get('category') || '';
@@ -20,6 +23,13 @@ export default function ResearchListingPage() {
   const type = searchParams.get('type') || '';
   const sort = searchParams.get('sort') || 'latest';
   const search = searchParams.get('search') || '';
+
+  // Canonical redirect for legacy /research?tag=:tagSlug to dedicated /tag/:tagSlug
+  React.useEffect(() => {
+    if (tag) {
+      navigate(`/tag/${tag}`, { replace: true });
+    }
+  }, [tag, navigate]);
 
   const { data: articlesData, isLoading } = useQuery({
     queryKey: ['articles', { page, category, tag, type, sort, search }],
@@ -29,6 +39,13 @@ export default function ResearchListingPage() {
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
     queryFn: () => articlesApi.getCategories()
+  });
+
+  // Fetch visitor saved interests to power personal recommendation filters
+  const { data: interestsData } = useQuery({
+    queryKey: ['visitor-interests'],
+    queryFn: () => recommendationsApi.getVisitorInterests(),
+    staleTime: 1000 * 60 * 5
   });
 
   // Fetch Resolved Archive SEO
@@ -42,6 +59,12 @@ export default function ResearchListingPage() {
   const articles = articlesData?.data?.items || [];
   const pagination = articlesData?.data?.pagination || { page: 1, totalPages: 1 };
   const categories = categoriesData?.data || [];
+  const rawSavedInterests = interestsData?.data || [];
+  const savedInterests = rawSavedInterests.filter((item) => {
+    const cat = item.category;
+    if (!cat || cat.isActive === false) return false;
+    return categories.some((c) => (c.id === cat.id || c.slug === cat.slug) && c.isActive !== false);
+  });
 
   const updateParam = (key, value) => {
     const newParams = new URLSearchParams(searchParams);

@@ -46,7 +46,11 @@ export class SeoController {
 
       // 1. Fetch published articles
       const articles = await prisma.article.findMany({
-        where: { status: 'PUBLISHED' },
+        where: {
+          status: 'PUBLISHED',
+          category: { isActive: true },
+          author: { status: 'ACTIVE' }
+        },
         select: {
           id: true,
           slug: true,

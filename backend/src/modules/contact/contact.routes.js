@@ -6,6 +6,10 @@ import { sponsorshipInquirySchema, generalContactSchema } from './contact.valida
 
 export const contactRoutes = Router();
 
+// Public route for retrieving active sponsorship packages
+contactRoutes.get('/sponsorship-packages', ContactController.getSponsorshipPackages);
+contactRoutes.get('/sponsorship/packages', ContactController.getSponsorshipPackages);
+
 // Public brand sponsorship inquiry route
 contactRoutes.post(
   '/sponsorship',

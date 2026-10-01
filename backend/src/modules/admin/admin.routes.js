@@ -287,31 +287,31 @@ adminRoutes.post(
 // ================= CONTACT INQUIRIES =================
 adminRoutes.get(
   '/contact-messages',
-  requirePermission('contact.manage'),
+  requireAnyPermission('contact.manage', 'setting.manage'),
   ContactAdminController.listMessages
 );
 
 adminRoutes.patch(
   '/contact-messages/bulk',
-  requirePermission('contact.manage'),
+  requireAnyPermission('contact.manage', 'setting.manage'),
   ContactAdminController.bulkUpdateMessages
 );
 
 adminRoutes.post(
   '/contact-messages/bulk-delete',
-  requirePermission('contact.manage'),
+  requireAnyPermission('contact.manage', 'setting.manage'),
   ContactAdminController.bulkDeleteMessages
 );
 
 adminRoutes.patch(
   '/contact-messages/:id',
-  requirePermission('contact.manage'),
+  requireAnyPermission('contact.manage', 'setting.manage'),
   ContactAdminController.updateMessage
 );
 
 adminRoutes.delete(
   '/contact-messages/:id',
-  requirePermission('contact.manage'),
+  requireAnyPermission('contact.manage', 'setting.manage'),
   ContactAdminController.deleteMessage
 );
 
@@ -376,7 +376,7 @@ adminRoutes.post(
 
 adminRoutes.get(
   '/settings/system-health',
-  requireAnyPermission('system.settings', 'setting.manage', 'audit.read'),
+  requireSuperAdmin,
   SettingsAdminController.getSystemHealth
 );
 

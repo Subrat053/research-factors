@@ -89,6 +89,7 @@ import { seoRoutes } from './modules/seo/seo.routes.js';
 import { userRoutes } from './modules/users/user.routes.js';
 import { tagRoutes } from './modules/tags/tag.routes.js';
 import { contactRoutes } from './modules/contact/contact.routes.js';
+import { recommendationRoutes } from './modules/recommendations/recommendation.routes.js';
 import { crawlerPrerenderMiddleware } from './middleware/crawlerPrerender.js';
 
 // Social Crawler Head Pre-rendering
@@ -107,6 +108,7 @@ app.use('/api/v1/contact', contactRoutes);
 app.use('/api/v1', commentRoutes);
 app.use('/api/v1/bookmarks', bookmarkRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/recommendations', recommendationRoutes);
 
 
 

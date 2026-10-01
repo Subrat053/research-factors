@@ -395,7 +395,7 @@ export default function AdminProfilePage() {
             <div className="admin-card p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Researcher Credentials & Byline</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Researcher Information</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     Displayed on your public author profile and article header bylines.
                   </p>

@@ -216,20 +216,82 @@
 }
 
 /* Rich Prose for Public & Preview Renderers */
+.rich-prose {
+  font-size: 1rem;
+  line-height: 1.625;
+  color: #334155;
+}
+
+@media (min-width: 640px) {
+  .rich-prose {
+    font-size: 1.125rem;
+    line-height: 1.75;
+  }
+}
+
+.dark .rich-prose {
+  color: #cbd5e1;
+}
+
+.rich-prose p {
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  margin-bottom: 1.25rem;
+}
+
+.rich-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.rich-prose h4,
+.rich-prose h5 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #09090b;
+  margin-bottom: 0.35rem;
+}
+
+.dark .rich-prose h4,
+.dark .rich-prose h5 {
+  color: #f8fafc;
+}
+
+/* Ensure sub-cards, nested containers, or rich blocks adopt uniform typography */
+.rich-prose .space-y-4 p,
+.rich-prose .p-4 p,
+.rich-prose [class*="p-"] p {
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
 .rich-prose ul {
   list-style-type: disc;
   padding-left: 1.5rem;
-  margin: 0.75rem 0;
+  margin: 1rem 0;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .rich-prose ol {
   list-style-type: decimal;
   padding-left: 1.5rem;
-  margin: 0.75rem 0;
+  margin: 1rem 0;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .rich-prose li {
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.5rem;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.rich-prose li p {
+  display: inline;
+  margin-bottom: 0;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 .rich-prose blockquote {
@@ -332,6 +394,20 @@
 
 .animate-marquee-smooth:hover {
   animation-play-state: paused;
+}
+
+/* Hide scrollbar across all modern browsers while preserving scrollability */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none !important; /* IE and Edge */
+    scrollbar-width: none !important;    /* Firefox */
+  }
 }
 
 

@@ -30,6 +30,16 @@ export class SearchService {
 
     const where = {
       status: 'PUBLISHED',
+      category: category
+        ? {
+            isActive: true,
+            OR: [
+              { slug: category },
+              { name: { contains: category, mode: 'insensitive' } }
+            ]
+          }
+        : { isActive: true },
+      author: { status: 'ACTIVE' },
       OR: [
         { title: { contains: term, mode: 'insensitive' } },
         { subtitle: { contains: term, mode: 'insensitive' } },
@@ -41,15 +51,6 @@ export class SearchService {
 
     if (type) {
       where.type = type;
-    }
-
-    if (category) {
-      where.category = {
-        OR: [
-          { slug: category },
-          { name: { contains: category, mode: 'insensitive' } }
-        ]
-      };
     }
 
     const articles = await prisma.article.findMany({
@@ -92,7 +93,11 @@ export class SearchService {
 
     // Query published articles ordered by view count and publication date
     const articles = await prisma.article.findMany({
-      where: { status: 'PUBLISHED' },
+      where: {
+        status: 'PUBLISHED',
+        category: { isActive: true },
+        author: { status: 'ACTIVE' }
+      },
       take: limit * 2,
       orderBy: [
         { viewCount: 'desc' },
@@ -136,20 +141,21 @@ export class SearchService {
     }
 
     const where = {
-      status: 'PUBLISHED'
+      status: 'PUBLISHED',
+      category: category
+        ? {
+            isActive: true,
+            OR: [
+              { slug: category },
+              { name: { contains: category, mode: 'insensitive' } }
+            ]
+          }
+        : { isActive: true },
+      author: { status: 'ACTIVE' }
     };
 
     if (type) {
       where.type = type;
-    }
-
-    if (category) {
-      where.category = {
-        OR: [
-          { slug: category },
-          { name: { contains: category, mode: 'insensitive' } }
-        ]
-      };
     }
 
     let articles = await prisma.article.findMany({
@@ -173,7 +179,9 @@ export class SearchService {
       const backfill = await prisma.article.findMany({
         where: {
           status: 'PUBLISHED',
-          id: { notIn: existingIds }
+          id: { notIn: existingIds },
+          category: { isActive: true },
+          author: { status: 'ACTIVE' }
         },
         take: limit - articles.length,
         orderBy: [

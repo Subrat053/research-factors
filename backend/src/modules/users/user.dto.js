@@ -32,7 +32,8 @@ export class UserDTO {
       ? user.roles.map(ur => (typeof ur === 'string' ? ur : ur.role?.name || ur.name || ''))
       : [];
 
-    
+    const isSuperAdmin = roles.includes('SUPER_ADMIN') || Boolean(user.isSuperAdmin);
+
     return {
       id: user.id,
       email: user.email,
@@ -44,6 +45,7 @@ export class UserDTO {
       status: user.status,
       isEmailVerified: user.isEmailVerified,
       roles,
+      isSuperAdmin,
       permissions: Array.from(permissions),
       createdAt: user.createdAt,
       authorProfile: user.authorProfile || null

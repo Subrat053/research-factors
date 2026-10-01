@@ -14,11 +14,54 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required')
 });
 
+// Helper to resolve the post-login destination (panel or explicit redirect)
+function resolvePostAuthRedirect(user, searchParams) {
+  const explicitRedirect = searchParams.get('redirect');
+  // Honor explicit deep links, but treat root '/' or auth pages as absent redirect
+  if (
+    explicitRedirect &&
+    explicitRedirect !== '/' &&
+    !explicitRedirect.startsWith('/login') &&
+    !explicitRedirect.startsWith('/register')
+  ) {
+    return explicitRedirect;
+  }
+
+  const isSuperAdmin = user?.roles?.includes('SUPER_ADMIN');
+  const hasStaffOrAuthorPermission = user?.permissions?.some((p) =>
+    [
+      'article.create',
+      'article.update_own',
+      'article.approve',
+      'comment.moderate',
+      'user.read_list',
+      'author.approve',
+      'category.manage',
+      'tag.manage',
+      'media.manage',
+      'contact.manage',
+      'audit.read',
+      'role.manage',
+      'setting.manage'
+    ].includes(p)
+  );
+
+  return isSuperAdmin || hasStaffOrAuthorPermission ? '/admin' : '/admin/profile';
+}
+
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { user, isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [serverError, setServerError] = useState(null);
+
+  // If already authenticated, redirect straight to panel
+  React.useEffect(() => {
+    if (isAuthenticated && user) {
+      const destination = resolvePostAuthRedirect(user, new URLSearchParams(location.search));
+      navigate(destination, { replace: true });
+    }
+  }, [isAuthenticated, user, location.search, navigate]);
 
   const { data: publicSettingsData } = useQuery({
     queryKey: ['public-settings'],
@@ -26,8 +69,6 @@ export default function LoginPage() {
     staleTime: 60 * 1000
   });
   const allowRegistration = publicSettingsData?.data?.allowRegistration ?? true;
-
-  const redirectUrl = new URLSearchParams(location.search).get('redirect') || '/';
 
   const {
     register,
@@ -40,8 +81,9 @@ export default function LoginPage() {
   const onSubmit = async (data) => {
     setServerError(null);
     try {
-      await login(data);
-      navigate(redirectUrl, { replace: true });
+      const loggedInUser = await login(data);
+      const destination = resolvePostAuthRedirect(loggedInUser, new URLSearchParams(location.search));
+      navigate(destination, { replace: true });
     } catch (err) {
       setServerError(err.message || 'Unable to sign in. Please verify your credentials.');
     }

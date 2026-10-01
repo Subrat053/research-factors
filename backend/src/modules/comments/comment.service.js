@@ -24,6 +24,24 @@ export class CommentService {
    * Fetches published comments for an article with 1-level nested replies
    */
   static async getCommentsByArticle(articleId, { page = 1, limit = 50, currentUserId = null }) {
+    const article = await prisma.article.findUnique({
+      where: { id: articleId },
+      select: {
+        status: true,
+        category: { select: { isActive: true } },
+        author: { select: { status: true } }
+      }
+    });
+
+    if (
+      !article ||
+      article.status !== 'PUBLISHED' ||
+      (article.category && !article.category.isActive) ||
+      (article.author && article.author.status !== 'ACTIVE')
+    ) {
+      throw new AppError('Article not found', 404, 'ARTICLE_NOT_FOUND');
+    }
+
     const skip = (page - 1) * limit;
 
     const topLevelComments = await prisma.comment.findMany({
@@ -147,10 +165,21 @@ export class CommentService {
 
     const article = await prisma.article.findUnique({
       where: { id: articleId },
-      select: { id: true, authorId: true, title: true, status: true }
+      select: {
+        id: true,
+        authorId: true,
+        title: true,
+        status: true,
+        category: { select: { isActive: true } },
+        author: { select: { status: true } }
+      }
     });
 
-    if (!article) {
+    if (
+      !article ||
+      (article.category && !article.category.isActive) ||
+      (article.author && article.author.status !== 'ACTIVE')
+    ) {
       throw new AppError('Article not found', 404, 'ARTICLE_NOT_FOUND');
     }
 

@@ -61,6 +61,15 @@ export class AuthController {
   }
 
   static async me(req, res) {
+    if (!req.user) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          user: null
+        }
+      });
+    }
+
     res.status(200).json({
       success: true,
       data: {

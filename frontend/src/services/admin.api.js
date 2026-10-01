@@ -178,6 +178,9 @@ export const adminApi = {
   getSettings: () =>
     apiClient.get('/admin/settings'),
 
+  getPublicSettings: () =>
+    apiClient.get('/admin/settings/public'),
+
   updateSettings: (data) =>
     apiClient.put('/admin/settings', data),
 

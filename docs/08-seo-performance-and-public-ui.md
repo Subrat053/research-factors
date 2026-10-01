@@ -135,8 +135,9 @@ Every public route generates a linked `@graph` structure conforming to Schema.or
 To maximize topical authority, semantic hierarchy, and search engine discoverability, article URLs are dynamically scoped by their primary category:
 - **Canonical Article URL**: `/:categorySlug/:slug` (e.g. `http://localhost:5173/rf/technology/new-article-for-testing` or `https://researchfactors.com/rf/quantum-physics/empirical-quantum-processors`)
 - **Homepage**: `/`
-- **Research Archive**: `/research` (supports query params `?sort=...&type=...&tag=...`)
+- **Research Archive**: `/research` (supports query params `?sort=...&type=...&search=...`)
 - **Category Subject Portal**: `/categories/:categorySlug`
+- **Tag Subject Portals**: `/tag/:tagSlug` and `/tags/:tagSlug` (dedicated topical archive pages with canonical URLs and breadcrumb hierarchy)
 - **Author Bio & Works**: `/authors/:id`
 - **Admin SEO Governance**: `/admin/seo`
 
@@ -227,6 +228,11 @@ Every publication includes the **Editorial SEO & Social Studio** (`ArticleSeoStu
    - **Social Share Card**: Real-time rendering of Facebook / LinkedIn / X (Twitter) large summary cards.
 4. **SEO Health & Audit Tab**:
    - Live score percentage (0–100%) checking title length, description length, keyword placement, cover image & alt text, and section heading hierarchy.
+   - **Semantic Heading Hierarchy Standard**:
+     - **Primary Article Title**: Rendered strictly as a single `<h1>` element per page (`ArticleDetailPage.jsx`) for primary keyword weight in search indexing.
+     - **Major Section Headings**: Rendered as `<h2>` elements (`level: 2`, labeled as `H2 Section` in editor) to organize core chapters, methodologies, and analysis.
+     - **Subsections**: Rendered as `<h3>` elements (`level: 3`, labeled as `H3 Subsection` in editor) nested under sections.
+     - Visual styles retain comfortable, editorial typography sizes (`text-2xl sm:text-3xl` for H2, `text-xl sm:text-2xl` for H3) with zero visual compromise.
 5. **Regenerate SEO from Manuscript**:
    - Button calling `POST /api/v1/admin/seo/regenerate/ARTICLE/:id` to refresh generated fallbacks without wiping manual overrides.
 
@@ -504,7 +510,7 @@ All backoffice modules adhere to the dual-theme token standards:
 4. `CategoryManagementPage`: Category directory, creation form, and edit/delete drawers.
 5. `TagManagementPage`: Tag inventory table, frequency metrics, and tag merge modal.
 6. `MediaLibraryPage`: Media grid, upload dropzone, filter chips, and image metadata inspector drawer.
-7. `UserManagementPage`: User table, role badges, status modal, role modification modal, and user creation form.
+7. `UserManagementPage`: User table, role badges, status modal, role modification modal, user creation form, and interactive User Profile & Details Inspection Modal (featuring live activity metrics, author accreditation portfolio, recent articles, recent comments, and administrative audit trail).
 8. `AuthorManagementPage`: Accreditation queue cards, author directory, feedback modal, and bio editor modal.
 9. `RolesPermissionsPage`: Role selection sidebar, granular permission matrix checkboxes, and custom role builder.
 10. `ModerationQueuePage`: Comment moderation queue, moderation reason flags, and bulk action toolbar.
@@ -599,13 +605,230 @@ The dedicated Editorial Guidelines page (`/editorial-guidelines`) provides a str
 
 ---
 
-## 17. Future Roadmap
+## 17. Dynamic Sponsorship Packages & Commercial Pricing Architecture (`/rf/sponsorship`)
 
-1. **Sponsorship Self-Serve Dashboard**: Enable sponsor brands to track anonymous content impressions, average reading time, and click-through metrics for their sponsored research.
-2. **Dynamic Schema.org for Comparisons**: Add Product and Dataset Schema.org structured data to side-by-side comparison tables.
-3. **Automated Newsletter Dispatch**: Connect the frontend newsletter subscription form to an email queue service for automated weekly digest delivery.
-4. **Tag Aliasing & Synonym Auto-Redirects**: Extend tag management to support tag redirects when legacy tags are merged into new canonical topics.
+Research Factors provides an administrative interface for configuring commercial sponsorship tiers, deliverables, pricing, and promotional badges without altering the public presentation or inquiry workflows:
+
+### 1. Unified Operational Principles
+- **Centralized System Setting (`sponsorship_packages`)**:
+  - Packages are stored in PostgreSQL via the `SystemSetting` model under key `sponsorship_packages` with `isPublic: true`.
+  - Automatically audited in `audit_logs` whenever updated by an authorized administrator (`action: 'system.settings_update'`).
+  - Canonical defaults (`DEFAULT_SPONSORSHIP_PACKAGES`) ensure high-availability offline resilience if unconfigured.
+- **Dedicated Admin Studio (`/admin/sponsorship/packages`)**:
+  - Located under the dedicated **Sponsorship** section in the Admin Navigation sidebar (`AdminLayout.jsx`) with link **"Packages & Plans"** (`/admin/sponsorship/packages` with backward-compatible aliases for `/admin/sponsorship/plans` and `/admin/settings?tab=sponsorship`).
+  - Governed strictly by centralized RBAC permission `setting.manage`.
+  - **Real-Time Slug Auto-Generation**:
+    - During plan creation, typing the plan name automatically derives and formats a clean URL identifier (slug) in real time (e.g., `Executive Research Desk` → `executive-research-desk`).
+    - Administrators can freely override the slug manually, with a "Sync from name" quick action to re-link automatic derivation.
+  - Administrators can:
+    - Edit tier details: Name, Slug / Identifier, Kicker badge, Display Price, Period / Scope, Description, CTA text.
+    - Manage deliverable bullet points: add, edit, reorder (move up/down), and delete individual items.
+    - Set/unset the **"Most Popular"** badge (which dynamically styles the tier card with a brand highlight border).
+    - Toggle **Active / Hidden** status to temporarily disable tiers without deleting them.
+    - Reorder packages across the layout using interactive directional controls.
+    - Restore canonical Research Factors templates using **"Reset Defaults"**.
+- **Dedicated Sponsorship Inquiries Studio (`/admin/sponsorship/inquiries`)**:
+  - Located under the **Sponsorship** section in the Admin Navigation sidebar (`AdminLayout.jsx`) with link **"Inquiries"** (`/admin/sponsorship/inquiries` with backward-compatible aliases `/admin/sponsorship-inquiries` and `/admin/sponsorship/leads`).
+  - Governed by RBAC permissions (`contact.manage` or `setting.manage`).
+  - Exclusively filters and isolates commercial sponsorship submissions (`type: 'sponsorship'`), keeping general reader contact messages cleanly separated in `Contact Inquiries`.
+  - Inquiries detail view renders structured campaign metadata:
+    - **Company / Brand Name**
+    - **Requested Sponsorship Tier** (matches active or custom packages)
+    - **Budget & Timeline Parameters**
+    - **Company Website Link** (with external link preview)
+    - **Inquirer Objectives & Campaign Brief**
+  - Features real-time status management (`Unread`, `Pending`, `Resolved`), one-click email reply links, bulk batch operations, and safe record deletion.
+- **Public Real-Time Synchronization (`SponsorshipPage.jsx`)**:
+  - Consumes active tiers dynamically via `contactApi.getSponsorshipPackages()` (`/api/v1/contact/sponsorship-packages`) or `/api/v1/admin/settings/public`.
+  - Cached via TanStack Query (`staleTime: 10 mins`) with zero Cumulative Layout Shift (CLS) through skeleton placeholders.
+  - Automatically populates the `#inquiry-form` `<select>` dropdown's `<optgroup label="Sponsorship Packages">`.
+  - Maintains existing card styling, animations, CTA smooth scrolling, and auto-focusing on the Name input field.
+
+---
+
+## 18. Personalization Layer, Behavioral Tracker & Context-Aware Recommendation Engine
+
+### Architecture & Decoupled Design
+- **Isolated Engine Module (`backend/src/modules/recommendations/`)**: Operates independently without altering existing article, category, SEO, or trending endpoints.
+- **Anonymous-First Identity (`frontend/src/utils/visitor.js`)**: Tracks anonymous visitors via persistent `rf_visitor_id` (UUID v4) and auto-renewing `rf_session_id` (30-minute idle timeout) with no cookie dependencies or login requirements.
+- **Database Schema Models (`backend/prisma/schema.prisma`)**:
+  - `UserEvent` (`user_events`): Asynchronous logging of reading milestones (`ARTICLE_VIEW`, `ARTICLE_SCROLL_50`, `ARTICLE_COMPLETED`, `CATEGORY_CLICK`, `INTEREST_SELECTED`, `RECOMMENDATION_CLICK`, `SEARCH`).
+  - `UserInterestProfile` (`user_interest_profiles`): Maintains aggregated visitor interest scores per category with exponential decay (30-day half-life) and interaction counts.
+- **Multi-Factor Probabilistic Scoring Pipeline (`scoring.service.js`)**:
+  - **Calibrated Multi-Factor Weights**:
+    - User Interest Affinity (`0.30`): Visitor explicit interest profile weights and reading history.
+    - Semantic Tag Convergence (`0.25`): Granular topic similarity based on an industry-standard blended **Jaccard Similarity Index** ($0.6 \times \text{Jaccard} + 0.4 \times \text{Overlap}$) evaluating tag IDs, names, and normalized slugs.
+    - Contextual Category Proximity (`0.20`): Macro-level taxonomy alignment with the current article.
+    - Cross-Format Complementarity (`0.15`): Editorial format pairings (e.g. `RESEARCH` -> `ANALYSIS`, `REVIEW` -> `COMPARISON` / `GUIDE`).
+    - Recency & Velocity (`0.10`): Exponential decay with 14-day half-life plus logarithmic view count boost.
+  - **Explainability & Reason Hierarchy**:
+    - Prioritizes granular tag matching (e.g., `Shares topics: #CRM #B2B`), explicit interest match (`Aligned with your interest in Business`), format journeys (`Complements this review with a direct comparison`), and deep category coverage.
+  - Dynamically calculates probabilistic match percentages (e.g. `94% Match`) calibrated between 72% and 99%.
+  - Enforces category and format diversity constraints via `DiversityService` (max 2/category, max 2/article type).
+
+### Structured Multi-Intent Research Journeys & Unified Recommendations
+- **Unified Recommended Research**: Top-scored candidate articles ranked by the recommendation engine are serialized in `recommendations: [...]` and rendered directly as a cohesive 3-column grid without fragmented single-item subheadings.
+- **Categorized Multi-Intent Clusters** (retained for targeted sidebars and deep discovery):
+  1. **Complete Your Research**: Cross-format journeys suggesting complementary formats (e.g., if reading a Review, suggesting head-to-head Comparisons and actionable Guides).
+  2. **Deep Topic Dive**: Explores deeper facets within the active category or matching tags.
+  3. **Trending in Your Interests**: High-velocity articles gaining momentum across reader focus areas.
+  4. **Discover Something New**: Anti-echo chamber serendipity exploring high-quality editorial pieces outside current top categories.
+
+### UI & Aesthetics
+- **Interest Explorer Popup (`InterestExplorerPopup.jsx`)**:
+  - Floating drawer on desktop (`bottom-6 right-6`), smooth bottom sheet on mobile.
+  - Hardware-accelerated entrance with cubic-bezier transition curves (`transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]`).
+  - Flaticon illustrations for every category dynamically rendered via `resolveCategoryArt(category)`.
+  - Strict minimum **14px** text hierarchy (`text-sm font-semibold`, `text-base font-bold`).
+  - Context-aware category clustering prioritizing the current article's topic.
+  - 7-day cooldown on dismissal or submission.
+- **Personalized Recommendation Rails (`PersonalizedRecommendationRail.jsx`)**:
+  - Full-width editorial recommendation rail displaying a unified 3-column grid (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6`) under **Recommended Articles**.
+  - **Dynamic Subcategory-Aware Hierarchical Logic**:
+    - **Tier 1 (Subcategory Priority)**: When viewing an article belonging to a subcategory (e.g. `Cricket`), candidate articles from the exact same subcategory are prioritized first (`categoryScore: 1.0`, "More in-depth coverage in {Subcategory}").
+    - **Tier 2 (Domain Family Fallback)**: If the subcategory has fewer than 6 articles, the rail dynamically backfills from sibling subcategories sharing the same parent domain (`categoryScore: 0.75`, "Related {Parent} research in {Sibling}") or the direct parent domain (`categoryScore: 0.65`, "Broader domain context from {Parent}").
+    - **Tier 3 (Cross-Domain Discovery)**: Unrelated domains are only introduced if the entire domain family cannot fill the rail.
+    - **100% Dynamic Architecture**: Works automatically for any parent-child vertical in the database without hardcoded category names or slugs.
+  - Contextual dynamic subtitle adapting to current article category and reader preferences.
+  - Rich card presentation: Aspect-calibrated cover image with smooth zoom transition and fallback, category name, article title, 2-line excerpt, editorial format badge (`RESEARCH`, `GUIDE`, `REVIEW`), reading time, and "Read" link with hover micro-transitions.
+  - Anonymous interaction telemetry tracking `RECOMMENDATION_CLICK` events with source article ID and intent metadata.
+  - Rendered beneath article prose and comments on `ArticleDetailPage.jsx`.
+
+### Admin Governance (`SystemSettingsPage.jsx`)
+- Dedicated **Personalization & AI** settings tab:
+  - Toggle discovery popup ON/OFF.
+  - Dwell time trigger threshold (seconds).
+  - Scroll depth threshold (%).
+  - Dismissal cooldown period (days).
+  - Algorithm scoring weights for interest affinity, category match, tag overlap, complementarity, and recency.
+
+---
+
+## 20. Dedicated SEO-Friendly Tag Archive Pages & URL Architecture (`/tag/:tagSlug`)
+
+### Overview & Motivation
+Previously, clicking on a tag pill directed visitors to query parameters (`/research?tag=business`), which:
+1. Treated high-value topics as generic search filters rather than authoritative topic collections.
+2. Compromised SEO by lacking dedicated canonical tag URLs, clean OpenGraph previews, and semantic heading structures.
+
+### Architecture & Implementation
+- **Dedicated Public Tag Page (`frontend/src/pages/public/TagPage.jsx`)**:
+  - Registered under primary route `/tag/:tagSlug` and alias route `/tags/:tagSlug`.
+  - Seamlessly pre-empts the generic `/:categorySlug/:slug` route matcher by registering explicit `/tag/:tagSlug` and `/tags/:tagSlug` routes first.
+- **Topical Hierarchy & Breadcrumbs**:
+  - Structured path: `Home (/)` → `Research (/research)` → `#{tagName} (/tag/:tagSlug)`.
+  - Prominent semantic heading `<h1>#{tagName}</h1>` with publication counter and topic description.
+- **Interactive Multi-Filter Controls**:
+  - Filter by editorial format: `All`, `Research`, `Review`, `Comparison`, `Guide`, `Analysis`.
+  - Sort by: `Latest` vs `Most Popular`.
+  - In-tag keyword search filter with instant reset controls.
+- **Related & Sibling Tags Discovery Strip**:
+  - Automatically queries and renders active sibling tags to foster horizontal research exploration across disciplines.
+- **Backward-Compatible Canonicalization**:
+  - Navigating to legacy query URLs (`/research?tag=:tagSlug`) automatically triggers a client-side replace redirect (`navigate('/tag/' + tag, { replace: true })`).
+---
+
+---
+
+## 22. Dynamic Hierarchical Taxonomy & Bespoke Category Vector Engine
+
+### Hierarchical Subcategory Architecture
+To support multi-tiered knowledge domains, Research Factors leverages a dynamic parent-child taxonomy architecture via Prisma's self-referencing `@relation("CategoryHierarchy")`:
+- **Parent Domains (`parentId: null`)**: High-level macro verticals (e.g., `Sports`, `Technology`, `Economics`).
+- **Subcategories (`parentId: parent.id`)**: Specialized sub-disciplines (e.g., `Gaming` / esports under `Sports`, `Cricket` under `Sports`, `Artificial Intelligence` under `Technology`).
+- **API Response Hydration**: All category query endpoints eagerly hydrate the parent entity (`parent: { id, name, slug }`) and article count, allowing breadcrumbs and SEO engines to construct hierarchical breadcrumb trails (`Home` → `Sports` → `Gaming` → `Article Title`).
+
+### Dynamic Bespoke Category Vector Art Engine (`categoryTheme.js`)
+Instead of relying strictly on static image assets or failing when a new category is introduced dynamically:
+1. **Dynamic SVG Generator (`generateDynamicCategorySvg(category)`)**:
+   - Generates deterministic, crisp SVG badges based on string hashing of the category slug/name.
+   - Computes complementary radial gradients, background patterns, and stylized emblem typography.
+   - Encodes the SVG into a data URI (`data:image/svg+xml;utf8,...`), ensuring instantaneous rendering with zero network latency and no external asset dependencies.
+2. **Four-Tiered Resolution Pipeline (`resolveCategoryArt(category)`)**:
+   - **Tier 1 (Explicit Custom Image)**: Uses `category.imageUrl` if configured via media library.
+   - **Tier 2 (Parent Category Image Inheritance)**: If a subcategory lacks custom artwork, it inherits its parent's `parent.imageUrl`.
+   - **Tier 3 (Domain Keywords Recognition)**: Intelligently maps domain keywords (`gaming`, `esports`, `cricket`, `football`, `sports`) to relevant high-resolution editorial badges.
+   - **Tier 4 (Dynamic Deterministic SVG Fallback)**: Automatically constructs a tailored vector emblem using `generateDynamicCategorySvg()`.
+
+### Mobile Games Global Benchmark Article Ingestion
+The comprehensive global benchmark article *Top Widely Played Mobile Games in 2026: Comprehensive Comparison of Global Hits* was ingested under the `Sports` → `Gaming` hierarchy with 17 structured blocks:
+- **Parent Category**: `Sports` (`slug: sports`, `isActive: true`, `showInFooter: true`).
+- **Subcategory**: `Gaming` (`slug: gaming`, `parentId: sports.id`, `isActive: true`, `showInFooter: true`).
+- **Article Entity**: `slug: top-widely-played-mobile-games-in-2026-comprehensive-comparison-of-global-hits`, `type: COMPARISON`, `readingTimeMin: 8`.
+- **Structured Content Blocks**:
+  1. Introduction & methodology overview.
+  2. 5 detailed analytical H2 sections (Gameplay Mechanics, Technical Infrastructure, Global Market Footprint, User Engagement & Community Support, Future Trends in Mobile Gaming 2026).
+  3. Structured 7-column comparative quantitative table with responsive horizontal scrolling (`comparison` / `table` block).
+  4. Benchmark key takeaway callout (`callout` block with `tip` variant).
+  5. 5-question complete FAQ accordion container (`paragraph` block with sanitized semantic HTML).
+  6. Final analytical conclusion block.
+- **Topic Tags Attached**: `best-mobile-games`, `most-popular-mobile-games`, `mobile-game-revenue`, `mobile-games-2026`, `mobile-gaming-trends`, `online-mobile-games`, `popular-mobile-games`.
+
+---
+
+---
+
+## 23. Automotive & Sports Taxonomy Expansion and Automated FAQPage Schema Graph
+
+### Vertical Taxonomy Ingestion
+The taxonomy was expanded with two major research domains:
+1. **`Automotive` (`slug: automotive`, `parentId: null`)**:
+   - New parent vertical covering vehicle sales benchmarks, powertrain transition studies, ADAS safety technology, and alternative fuel economics.
+   - 3 dynamic peer-reviewed articles seeded with complete structured blocks and high-resolution media.
+2. **`Cricket` (`slug: cricket`, `parentId: sports.id`)**:
+   - Subcategory under `Sports` domain covering sports business, tournament economics, player analytics, and tax law jurisprudence.
+   - Seeded with comprehensive investigation into IPL franchise tax appeals.
+
+### Automated Schema.org `FAQPage` Graph Generation
+On `ArticleDetailPage.jsx`, when an article includes an `faq` block (`blockType: 'faq'`), the system automatically extracts question and answer items into an official Google-compliant Schema.org `FAQPage` JSON-LD graph:
+```json
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Article",
+      "headline": "...",
+      ...
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why are IPL teams appealing recent tax rulings?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Tax appeals can arise when a franchise disputes..."
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+This unlocks expandable question-and-answer rich snippets directly within Google Search results, driving higher click-through rates (CTR) and organic traffic.
+
+### Dynamic Articles Summary
+| Slug | Category | Reading Time | Blocks | Key Features |
+| :--- | :--- | :--- | :--- | :--- |
+| `ipl-teams-tax-appeals-in-2026-legal-challenges-and-financial-implications` | Cricket (Sports) | 8 min | 17 | 5-question FAQ accordion, legal taxonomy |
+| `top-car-sales-in-india-march-2026-comprehensive-comparison-of-leading-models` | Automotive | 10 min | 20 | 10-car sales comparison table, bulleted market factors list, FAQ |
+| `2026-mahindra-scorpio-n-facelift-complete-guide-to-premium-upgrades-and-features` | Automotive | 10 min | 15 | ADAS tech breakdown, 5-question FAQ |
+| `why-choosing-a-cng-car-is-a-smart-move-benefits-costs-and-environmental-impact` | Automotive | 9 min | 19 | Dual-fuel cost modeling, environmental evaluation, 5-question FAQ |
+
+---
+
+## 24. Future Roadmap
+
+1. **Tag Aliasing & Synonym Auto-Redirects**: Extend tag management in the admin portal to support tag redirects when legacy tags are merged into new canonical topics.
+2. **Sponsorship Self-Serve Dashboard**: Enable sponsor brands to track anonymous content impressions, average reading time, and click-through metrics for their sponsored research.
+3. **Dynamic Schema.org for Comparisons**: Add Product and Dataset Schema.org structured data to side-by-side comparison tables.
+4. **Automated Newsletter Dispatch**: Connect the frontend newsletter subscription form to an email queue service for automated weekly digest delivery.
 5. **System-Synchronized Color Scheme Option**: Add an "Auto / System" theme option in addition to explicit Light and Dark toggles to follow `prefers-color-scheme`.
+6. **Cross-Device Profile Sync**: Enable signed-in users to optionally sync reading profiles and interest maps across devices.
+
+
+
 
 
 

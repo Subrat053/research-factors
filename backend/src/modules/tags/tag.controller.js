@@ -25,7 +25,17 @@ export class TagController {
         orderBy: { name: 'asc' },
         include: {
           _count: {
-            select: { articles: { where: { article: { status: 'PUBLISHED' } } } }
+            select: {
+              articles: {
+                where: {
+                  article: {
+                    status: 'PUBLISHED',
+                    category: { isActive: true },
+                    author: { status: 'ACTIVE' }
+                  }
+                }
+              }
+            }
           }
         }
       });
@@ -55,7 +65,17 @@ export class TagController {
         where: { slug },
         include: {
           _count: {
-            select: { articles: { where: { article: { status: 'PUBLISHED' } } } }
+            select: {
+              articles: {
+                where: {
+                  article: {
+                    status: 'PUBLISHED',
+                    category: { isActive: true },
+                    author: { status: 'ACTIVE' }
+                  }
+                }
+              }
+            }
           }
         }
       });

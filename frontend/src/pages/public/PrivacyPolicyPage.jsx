@@ -184,7 +184,7 @@ export default function PrivacyPolicyPage() {
                         <div className="space-y-4 my-4">
                           {sec.subSections.map((sub, sIdx) => (
                             <div key={sIdx} className="p-4 rounded-xl bg-white border border-paper-border/80 shadow-2xs">
-                              <h4 className="text-sm font-bold text-ink-darkest">{sub.title}</h4>
+                              <h4 className="text-sm font-semibold text-ink-darkest">{sub.title}</h4>
                               <p className="text-xs sm:text-sm text-ink-muted mt-1.5 leading-relaxed">
                                 {sub.content}
                               </p>

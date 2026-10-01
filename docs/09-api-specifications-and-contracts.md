@@ -82,18 +82,24 @@ For paginated collections:
 - `POST /forgot-password`: Issues a secure time-limited password reset token.
 - `POST /reset-password`: Resets password using valid token.
 
-### Public Content (`/api/v1/articles`, `/api/v1/categories`, `/api/v1/tags`, `/api/v1/search`)
-- `GET /articles`: Paginated list of published articles with `category`, `tag`, `type` (format enum: `RESEARCH`, `REVIEW`, `COMPARISON`, `GUIDE`, `ANALYSIS`, `OPINION`), and `sort` filters.
-- `GET /articles/:slug`: Full published article with blocks, author info, and related items.
+### Public Content (`/api/v1/articles`, `/api/v1/categories`, `/api/v1/tags`, `/api/v1/search`, `/api/v1/recommendations`)
+- **Active State Filtering Invariant**: All public-facing endpoints strictly enforce `category: { isActive: true }`, `author: { status: 'ACTIVE' }`, and `status: 'PUBLISHED'`. If an admin deactivates a category or suspends an author, their associated publications are immediately and automatically hidden from public archives, search results, recommendation rails, and direct slug lookups (returning `404 CATEGORY_INACTIVE` or `404 ARTICLE_NOT_FOUND`).
+- `GET /articles`: Paginated list of published articles with `category`, `tag`, `type` (format enum: `RESEARCH`, `REVIEW`, `COMPARISON`, `GUIDE`, `ANALYSIS`, `OPINION`), and `sort` filters. Strictly enforces `category.isActive = true` and `author.status = 'ACTIVE'` even when `category` parameter is omitted.
+- `GET /articles/:slug`: Full published article with blocks, author info, and related items. Returns `404` if the article's category is inactive or author is suspended.
 - `GET /categories`: Active public category listing and hierarchy (returns `id`, `name`, `slug`, `description`, `imageUrl`, `isActive`, `showInFooter`, `seoTitle`, `seoDescription`, `seoKeywords`, `canonicalUrl`, `parent`, and published article count `_count.articles`).
-- `GET /categories/:slug`: Public category detail by slug (returns single category metadata, custom SEO configuration fields, and active article counts; powers dynamic `/categories/:categorySlug` portal).
-- `GET /tags`: Query and autocomplete tags with active article counts (`?search=query`).
+- `GET /categories/:slug`: Public category detail by slug (returns single category metadata, custom SEO configuration fields, and active article counts; powers dynamic `/categories/:categorySlug` portal). Returns `404` if category is inactive.
+- `GET /tags`: Query and autocomplete tags with active article counts (`?search=query`). Excludes articles under inactive categories from counts.
 - `GET /tags/:slug`: Get tag metadata and article counts by slug.
 - `GET /tags/trending`: Most popular tags.
-- `GET /search`: Search published articles across titles, excerpts, categories, and tags with optional `type`, `category`, and `limit` filters.
-- `GET /search/trending`: Top trending research articles ordered by view counts and search click engagement (in-memory cached with 10-minute TTL to reduce database reads to near-zero).
-- `GET /search/recommendations`: Tailored research recommendations based on the user's recent search type (`ArticleType`) or category (in-memory cached with 10-minute TTL).
+- `GET /search`: Search published articles across titles, excerpts, categories, and tags with optional `type`, `category`, and `limit` filters. Strictly excludes articles from inactive categories or suspended authors.
+- `GET /search/trending`: Top trending research articles ordered by view counts and search click engagement (in-memory cached with 10-minute TTL, strictly active categories only).
+- `GET /search/recommendations`: Tailored research recommendations based on the user's recent search type (`ArticleType`) or category (strictly active categories only).
 - `POST /search/click`: Asynchronous, fire-and-forget search click engagement tracker that reinforces trending rankings without blocking client navigation.
+- `POST /recommendations/interests`: Saves or synchronizes reader explicit category interests (`{ visitorId, categoryIds: string[] }`). Synchronizes interests transactionally: any previously saved category not included in `categoryIds` is removed from `UserInterestProfile`. Passing `categoryIds: []` resets visitor interests to explore all disciplines.
+- `GET /recommendations/interests`: Retrieves the visitor's currently active saved interest profiles with scores and category details.
+- `GET /recommendations/feed`: Generates an aggregated personalized research feed based on the visitor's explicit and implicit interest profiles, returning `items` and active `topInterests`.
+- `GET /recommendations/article/:id`: Generates context-aware article recommendations for an article detail page. Returns a unified top-ranked `recommendations` list (ranked by multi-factor scoring combining reader interest profile, Jaccard tag similarity, category alignment, cross-format complementarity, and recency decay) alongside multi-intent journey clusters.
+- `POST /recommendations/events`: Records asynchronous visitor reading milestones and recommendation click telemetry (`RECOMMENDATION_CLICK`, `ARTICLE_VIEW`, `ARTICLE_SCROLL_50`, `ARTICLE_COMPLETED`).
 
 ### Author Workspace (`/api/v1/author/articles`)
 - `GET /author/articles`: List all articles created by the authenticated author.
@@ -108,7 +114,7 @@ For paginated collections:
 - **`ArticleDTO.toAuthorAdmin`**: Extends detail with `rejectionReason`, `scheduledAt`, `createdById`, `publishedById`, `createdAt`, `updatedAt`.
 
 ### Editorial & Administration (`/api/v1/admin/articles`, `/api/v1/categories`, `/api/v1/admin/users`)
-- `GET /admin/articles`: Filter all articles across system statuses (`PENDING_REVIEW`, etc.).
+- `GET /admin/articles`: Filter all articles across system statuses (`PENDING_REVIEW`, `PUBLISHED`, `DRAFT`, `APPROVED`, `REJECTED`, `ARCHIVED`), taxonomies (`categoryId`), and full-text search (`search`), scoped automatically by requester permissions.
 - `POST /admin/articles/:id/approve`: Move article to `APPROVED`.
 - `POST /admin/articles/:id/reject`: Reject article with required `rejectionReason`.
 - `POST /admin/articles/:id/publish`: Publish article live directly or from review queue (`article.publish` permission; updates status to `PUBLISHED`, locks slug history, & sets `publishedAt`).

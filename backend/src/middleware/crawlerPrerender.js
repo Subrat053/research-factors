@@ -18,7 +18,8 @@ export async function crawlerPrerenderMiddleware(req, res, next) {
     return next();
   }
 
-  const urlPath = req.path;
+  // Strip optional /rf base path prefix so routes match consistently
+  const urlPath = req.path.replace(/^\/rf(?=\/|$)/i, '') || '/';
 
   try {
     let entityType = null;
@@ -38,11 +39,18 @@ export async function crawlerPrerenderMiddleware(req, res, next) {
       entityId = categoryMatch[1];
     }
 
-    // 3. Detect 2-segment Category-Scoped Article Routes: /:categorySlug/:articleSlug
+    // 3. Detect Tag Routes: /tag/:slug or /tags/:slug
+    const tagMatch = urlPath.match(/^\/(?:tag|tags)\/([^/?#]+)$/i);
+    if (tagMatch) {
+      entityType = 'TAG';
+      entityId = tagMatch[1];
+    }
+
+    // 4. Detect 2-segment Category-Scoped Article Routes: /:categorySlug/:articleSlug
     if (!entityType) {
       const parts = urlPath.split('/').filter(Boolean);
       const reservedPrefixes = new Set([
-        'api', 'admin', 'rf', 'categories', 'sitemaps', 'auth', 'bookmarks',
+        'api', 'admin', 'rf', 'categories', 'tags', 'tag', 'sitemaps', 'auth', 'bookmarks',
         'about', 'contact', 'sponsorship', 'privacy-policy', 'terms', 'cookie-policy',
         'editorial-guidelines',
         'login', 'register', 'forgot-password', 'reset-password', 'editor', 'search'

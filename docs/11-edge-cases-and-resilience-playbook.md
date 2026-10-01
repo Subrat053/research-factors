@@ -75,3 +75,12 @@ This document defines the exact defensive mitigations implemented across Researc
   1. All database timestamps are strictly stored in **UTC (`DateTime @default(now())`)**.
   2. Scheduled publishing inputs require explicit ISO-8601 strings with timezone offsets.
   3. Frontend formats dates into the reader's local browser timezone using `Intl.DateTimeFormat`.
+
+### Edge Case 11: Inactive Category, Suspended Author & Disabled Package Leakage
+- **The Hazard**: An admin deactivates a category (`isActive = false`), suspends an author (`status = 'SUSPENDED'`), or disables a sponsorship package (`isActive = false`). If public endpoints only filter by `status: 'PUBLISHED'` without checking relation active flags, orphan or unapproved content leaks into homepage carousels, default archive queries, search indices, and recommendation rails.
+- **The Solution**:
+  1. **Strict Service-Level Filtering**: All public queries in `ArticleService`, `SearchService`, `CandidateService`, `BookmarkService`, and `CommentService` enforce `category: { isActive: true }` and `author: { status: 'ACTIVE' }`.
+  2. **Direct Access Guard**: Attempting to load an article via `GET /articles/:slug` whose category is inactive or whose author is suspended throws `404 CATEGORY_INACTIVE` or `404 AUTHOR_INACTIVE`.
+  3. **Publishing Invariant**: Authors and editors cannot publish an article under an inactive category; the transaction throws `400 CATEGORY_INACTIVE`.
+  4. **Public Settings Sanitation**: `SettingsAdminService.getPublicSettings` strips all sponsorship packages with `isActive === false`.
+  5. **Admin Visibility Retained**: All admin catalog routes (`/admin/articles`, `/admin/categories`, `/admin/users`) continue to display active and inactive items with visual badges so administrators can manage and reactivate them.

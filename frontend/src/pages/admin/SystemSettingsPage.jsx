@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { adminApi } from '../../services/admin.api.js';
+import { recommendationsApi } from '../../services/recommendations.api.js';
+import { useConfirm } from '../../context/ModalContext.jsx';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
 import {
   Settings,
@@ -16,12 +19,35 @@ import {
   Send,
   Loader2,
   X,
-  Server
+  Server,
+  Sparkles
 } from 'lucide-react';
 
 export default function SystemSettingsPage() {
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('general'); // 'general' | 'seo' | 'policies' | 'email' | 'health'
+  const confirm = useConfirm();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
+  // Gracefully redirect legacy or bookmark URLs (?tab=sponsorship) to dedicated route
+  if (tabParam === 'sponsorship') {
+    return <Navigate to="/admin/sponsorship/packages" replace />;
+  }
+
+  const [activeTab, setActiveTab] = useState(
+    ['general', 'seo', 'policies', 'email', 'recommendations', 'health'].includes(tabParam) ? tabParam : 'general'
+  );
+
+  useEffect(() => {
+    if (tabParam && ['general', 'seo', 'policies', 'email', 'recommendations', 'health'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setSearchParams(tabId === 'general' ? {} : { tab: tabId });
+  };
 
   // Settings Forms State
   const [generalForm, setGeneralForm] = useState({
@@ -108,6 +134,8 @@ export default function SystemSettingsPage() {
     mutationFn: (data) => adminApi.updateSettings(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['admin-settings']);
+      queryClient.invalidateQueries(['public-settings']);
+      queryClient.invalidateQueries(['sponsorship-packages']);
       setAlertMsg({ type: 'success', text: 'System configuration updated successfully.' });
     },
     onError: (err) => {
@@ -162,6 +190,49 @@ export default function SystemSettingsPage() {
     testEmailMutation.mutate(testEmailRecipient);
   };
 
+  // Recommendations & AI Settings
+  const [recommendationsForm, setRecommendationsForm] = useState({
+    popupEnabled: true,
+    dwellTimeSeconds: 30,
+    scrollThresholdPercent: 50,
+    cooldownDays: 7,
+    weights: {
+      interest: 0.35,
+      category: 0.25,
+      tag: 0.15,
+      complementarity: 0.15,
+      recency: 0.10
+    }
+  });
+
+  const { data: recConfigData, isLoading: recConfigLoading } = useQuery({
+    queryKey: ['admin-recommendation-config'],
+    queryFn: () => recommendationsApi.getConfig(),
+    enabled: activeTab === 'recommendations'
+  });
+
+  useEffect(() => {
+    if (recConfigData?.data) {
+      setRecommendationsForm(recConfigData.data);
+    }
+  }, [recConfigData]);
+
+  const updateRecConfigMutation = useMutation({
+    mutationFn: (cfg) => recommendationsApi.updateConfig(cfg),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['admin-recommendation-config']);
+      setAlertMsg({ type: 'success', text: 'Recommendation & Personalization settings updated.' });
+    },
+    onError: (err) => {
+      setAlertMsg({ type: 'error', text: err.message || 'Failed to update recommendation settings' });
+    }
+  });
+
+  const handleSaveRecommendations = (e) => {
+    e.preventDefault();
+    updateRecConfigMutation.mutate(recommendationsForm);
+  };
+
   return (
     <AdminLayout
       title="Platform Settings & Diagnostics"
@@ -194,6 +265,7 @@ export default function SystemSettingsPage() {
           { id: 'seo', label: 'Default SEO', icon: HardDrive },
           { id: 'policies', label: 'Policies & Safety', icon: Sliders },
           { id: 'email', label: 'Email SMTP Test', icon: Mail },
+          { id: 'recommendations', label: 'Personalization & AI', icon: Sparkles },
           { id: 'health', label: 'System Diagnostics', icon: Activity }
         ].map((tab) => {
           const Icon = tab.icon;
@@ -201,8 +273,8 @@ export default function SystemSettingsPage() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              onClick={() => handleTabChange(tab.id)}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 isActive
                   ? 'bg-blue-600 text-white shadow-xs'
                   : 'bg-white dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800'
@@ -221,7 +293,7 @@ export default function SystemSettingsPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400">Loading system settings...</p>
         </div>
       ) : (
-        <div className="max-w-3xl">
+        <div className="max-w-6xl">
           {/* TAB 1: GENERAL */}
           {activeTab === 'general' && (
             <form onSubmit={handleSaveGeneral} className="admin-card p-6 shadow-xs space-y-5">
@@ -449,7 +521,7 @@ export default function SystemSettingsPage() {
                 </button>
               </div>
             </form>
-          )}
+             )}
 
           {/* TAB 4: EMAIL SMTP TEST */}
           {activeTab === 'email' && (
@@ -517,7 +589,210 @@ export default function SystemSettingsPage() {
             </div>
           )}
 
-          {/* TAB 5: SYSTEM & STORAGE HEALTH */}
+          {/* TAB 5: PERSONALIZATION & AI RECOMMENDATIONS */}
+          {activeTab === 'recommendations' && (
+            <form onSubmit={handleSaveRecommendations} className="admin-card p-6 shadow-xs space-y-6">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">
+                  Personalization & Discovery Governance
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Configure behavior for the reader interest explorer, dwell/scroll triggers, and probabilistic journey algorithms.
+                </p>
+              </div>
+
+              {/* Behavior & Triggers */}
+              <div className="space-y-4 pt-2">
+                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">
+                  Reader Engagement Triggers
+                </h4>
+
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="popupEnabled"
+                    checked={recommendationsForm.popupEnabled}
+                    onChange={(e) => setRecommendationsForm({ ...recommendationsForm, popupEnabled: e.target.checked })}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-700 cursor-pointer"
+                  />
+                  <label htmlFor="popupEnabled" className="text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
+                    Enable Context-Aware Interest Discovery Popup
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Dwell Time Trigger (Seconds)
+                    </label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="180"
+                      value={recommendationsForm.dwellTimeSeconds}
+                      onChange={(e) => setRecommendationsForm({ ...recommendationsForm, dwellTimeSeconds: parseInt(e.target.value, 10) || 30 })}
+                      className="admin-input"
+                      required
+                    />
+                    <span className="text-[11px] text-slate-500">Wait duration before non-intrusive drawer prompts.</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Scroll Threshold (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="10"
+                      max="90"
+                      value={recommendationsForm.scrollThresholdPercent}
+                      onChange={(e) => setRecommendationsForm({ ...recommendationsForm, scrollThresholdPercent: parseInt(e.target.value, 10) || 50 })}
+                      className="admin-input"
+                      required
+                    />
+                    <span className="text-[11px] text-slate-500">Page scroll percentage required to trigger.</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Dismissal Cooldown (Days)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={recommendationsForm.cooldownDays}
+                      onChange={(e) => setRecommendationsForm({ ...recommendationsForm, cooldownDays: parseInt(e.target.value, 10) || 7 })}
+                      className="admin-input"
+                      required
+                    />
+                    <span className="text-[11px] text-slate-500">Days to wait before re-prompting dismissed readers.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Algorithm Scoring Weights */}
+              <div className="space-y-4 pt-4">
+                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">
+                  Scoring Weights (Normalized Pipeline)
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      User Interest Affinity ({Math.round((recommendationsForm.weights?.interest || 0.35) * 100)}%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.05"
+                      min="0"
+                      max="1"
+                      value={recommendationsForm.weights?.interest || 0.35}
+                      onChange={(e) =>
+                        setRecommendationsForm({
+                          ...recommendationsForm,
+                          weights: { ...recommendationsForm.weights, interest: parseFloat(e.target.value) || 0 }
+                        })
+                      }
+                      className="admin-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Category Proximity ({Math.round((recommendationsForm.weights?.category || 0.25) * 100)}%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.05"
+                      min="0"
+                      max="1"
+                      value={recommendationsForm.weights?.category || 0.25}
+                      onChange={(e) =>
+                        setRecommendationsForm({
+                          ...recommendationsForm,
+                          weights: { ...recommendationsForm.weights, category: parseFloat(e.target.value) || 0 }
+                        })
+                      }
+                      className="admin-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Tag Overlap ({Math.round((recommendationsForm.weights?.tag || 0.15) * 100)}%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.05"
+                      min="0"
+                      max="1"
+                      value={recommendationsForm.weights?.tag || 0.15}
+                      onChange={(e) =>
+                        setRecommendationsForm({
+                          ...recommendationsForm,
+                          weights: { ...recommendationsForm.weights, tag: parseFloat(e.target.value) || 0 }
+                        })
+                      }
+                      className="admin-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Format Complementarity ({Math.round((recommendationsForm.weights?.complementarity || 0.15) * 100)}%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.05"
+                      min="0"
+                      max="1"
+                      value={recommendationsForm.weights?.complementarity || 0.15}
+                      onChange={(e) =>
+                        setRecommendationsForm({
+                          ...recommendationsForm,
+                          weights: { ...recommendationsForm.weights, complementarity: parseFloat(e.target.value) || 0 }
+                        })
+                      }
+                      className="admin-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Recency Half-Life ({Math.round((recommendationsForm.weights?.recency || 0.10) * 100)}%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.05"
+                      min="0"
+                      max="1"
+                      value={recommendationsForm.weights?.recency || 0.10}
+                      onChange={(e) =>
+                        setRecommendationsForm({
+                          ...recommendationsForm,
+                          weights: { ...recommendationsForm.weights, recency: parseFloat(e.target.value) || 0 }
+                        })
+                      }
+                      className="admin-input"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={updateRecConfigMutation.isPending}
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-xs"
+                >
+                  {updateRecConfigMutation.isPending ? 'Saving...' : 'Save Personalization Settings'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* TAB 6: SYSTEM & STORAGE HEALTH */}
           {activeTab === 'health' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">

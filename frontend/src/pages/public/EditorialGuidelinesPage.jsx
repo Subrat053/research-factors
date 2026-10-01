@@ -127,10 +127,10 @@ export default function EditorialGuidelinesPage() {
                 <span className="font-semibold text-ink-darkest">Editorial Guidelines</span>
               </nav>
 
-              <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-rfblue-50 text-rfblue border border-rfblue-100 mb-4 shadow-2xs">
+              {/* <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-rfblue-50 text-rfblue border border-rfblue-100 mb-4 shadow-2xs">
                 <BookOpen className="w-3.5 h-3.5" />
                 <span>Editorial Standards & Integrity</span>
-              </div>
+              </div> */}
 
               <h1 className="text-2xl sm:text-4xl lg:text-5xl font-serif font-bold tracking-tight text-ink-darkest leading-tight">
                 {page?.title || 'Editorial Guidelines & Review Standards'}
@@ -140,7 +140,7 @@ export default function EditorialGuidelinesPage() {
                 {page?.subtitle || 'Empirical Rigor, Independence, and Peer-Reviewed Fact-Checking'}
               </p>
 
-              <div className="mt-5 flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-ink-light">
+              <div className="mt-5 flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-ink-light">
                 <div className="flex items-center space-x-1.5">
                   <Calendar className="w-3.5 h-3.5 text-rfblue" />
                   <span>Last Updated: {page?.lastUpdated || 'September 25, 2026'}</span>
@@ -198,15 +198,15 @@ export default function EditorialGuidelinesPage() {
               <aside className="hidden lg:block lg:col-span-4 sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-3 py-1 scrollbar-thin">
                 <div className="p-5 rounded-2xl bg-white dark:bg-paper-card border border-paper-border shadow-2xs space-y-4">
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-ink-darkest">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-ink-darkest">
                       Table of Contents
                     </h3>
-                    <p className="text-[11px] text-ink-light mt-0.5">
+                    <p className="text-xs text-ink-light mt-0.5">
                       8 Standardized Sections
                     </p>
                   </div>
 
-                  <nav className="space-y-1 text-xs">
+                  <nav className="space-y-1 text-sm">
                     {sections.map((sec) => (
                       <a
                         key={sec.id}
@@ -225,17 +225,17 @@ export default function EditorialGuidelinesPage() {
                   </nav>
 
                   <div className="pt-4 border-t border-paper-border">
-                    <div className="p-3.5 rounded-xl bg-paper-warm border border-paper-border text-xs space-y-2">
+                    <div className="p-3.5 rounded-xl bg-paper-warm border border-paper-border text-sm space-y-2">
                       <div className="flex items-center space-x-1.5 font-bold text-ink-darkest">
                         <Scale className="w-3.5 h-3.5 text-rfblue" />
                         <span>Editorial Inquiries</span>
                       </div>
-                      <p className="text-ink-muted text-[11px] leading-relaxed">
+                      <p className="text-ink-muted text-sm leading-relaxed">
                         Have questions regarding our peer review or testing methodologies?
                       </p>
                       <Link
                         to="/contact"
-                        className="inline-flex items-center text-xs font-semibold text-rfblue hover:underline"
+                        className="inline-flex items-center text-sm font-semibold text-rfblue hover:underline"
                       >
                         <span>Contact Editorial Board</span>
                         <ChevronRight className="w-3 h-3 ml-0.5" />
@@ -265,7 +265,7 @@ export default function EditorialGuidelinesPage() {
                   >
                     {/* Section Header */}
                     <div className="flex items-baseline space-x-3 mb-4">
-                      <span className="text-xs sm:text-sm font-mono font-bold text-rfblue bg-rfblue-50 px-2 sm:px-2.5 py-0.5 rounded-md border border-rfblue-100 shrink-0">
+                      <span className="text-xs sm:text-base font-mono font-bold text-rfblue bg-rfblue-50 px-2 sm:px-2.5 py-0.5 rounded-md border border-rfblue-100 shrink-0">
                         {String(sec.number).padStart(2, '0')}
                       </span>
                       <h2 className="text-lg sm:text-2xl font-bold text-ink-darkest tracking-tight">

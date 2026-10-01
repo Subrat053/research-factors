@@ -4,8 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { articlesApi } from '../../services/articles.api.js';
+import { recommendationsApi } from '../../services/recommendations.api.js';
 import { seoApi } from '../../services/seo.api.js';
 import { normalizeMediaUrl } from '../../services/media.api.js';
+import { resolveCategoryArt } from '../../utils/categoryTheme.js';
 import { SeoHead } from '../../components/common/SeoHead.jsx';
 import { Header } from '../../components/layout/Header.jsx';
 import { Footer } from '../../components/layout/Footer.jsx';
@@ -14,6 +16,8 @@ import { CategoryCard } from '../../components/category/CategoryCard.jsx';
 import { FeaturedArticlesCarousel } from '../../components/article/FeaturedArticlesCarousel.jsx';
 import { CardSkeleton } from '../../components/feedback/SkeletonLoader.jsx';
 import { EmptyState } from '../../components/feedback/EmptyState.jsx';
+import { InterestExplorerPopup } from '../../components/recommendations/InterestExplorerPopup.jsx';
+import { useReadingTracker } from '../../hooks/useReadingTracker.js';
 import {
   BadgeCheck,
   ArrowRight,
@@ -38,7 +42,8 @@ import {
   ExternalLink,
   Laptop,
   Target,
-  ShoppingBag
+  ShoppingBag,
+  SlidersHorizontal
 } from 'lucide-react';
 
 const sponsorshipContainerVariants = {
@@ -201,6 +206,55 @@ export default function HomePage() {
   const [testimonialIndex, setTestimonialIndex] = useState(0);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
+  const [isTopicModalOpen, setIsTopicModalOpen] = useState(false);
+
+  // Topic Strip Smooth Horizontal Scroll State
+  const topicScrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkTopicScrollState = () => {
+    const el = topicScrollRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 5);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 5);
+  };
+
+  useEffect(() => {
+    const el = topicScrollRef.current;
+    if (!el) return;
+    checkTopicScrollState();
+    el.addEventListener('scroll', checkTopicScrollState, { passive: true });
+    window.addEventListener('resize', checkTopicScrollState);
+    return () => {
+      el.removeEventListener('scroll', checkTopicScrollState);
+      window.removeEventListener('resize', checkTopicScrollState);
+    };
+  }, []);
+
+  const scrollTopics = (direction) => {
+    if (topicScrollRef.current) {
+      const scrollAmount = direction === 'left' ? -260 : 260;
+      topicScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  const handleTopicSelect = (categorySlug, event) => {
+    setSelectedCategory(categorySlug);
+    if (event?.currentTarget) {
+      event.currentTarget.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest'
+      });
+    }
+  };
+
+  // Dwell and scroll depth tracker
+  const { isEngaged } = useReadingTracker({
+    dwellSeconds: 40
+  });
 
   // 0. Fetch Resolved Page SEO
   const { data: seoResponse } = useQuery({
@@ -234,10 +288,26 @@ export default function HomePage() {
     queryFn: () => articlesApi.getCategories()
   });
 
+  // 5. Fetch Personalized Feed
+  const { data: feedData, isLoading: isFeedLoading } = useQuery({
+    queryKey: ['personalized-feed'],
+    queryFn: () => recommendationsApi.getPersonalizedFeed(8),
+    staleTime: 1000 * 60 * 5
+  });
+
   const articles = articlesData?.data?.items || [];
   const trending = trendingData?.data || [];
   const categories = categoriesData?.data || [];
   const featuredArticle = featuredData?.data || articles[0] || null;
+  const feedRecommendations = feedData?.data?.recommendations || [];
+  const rawTopInterests = feedData?.data?.topInterests || [];
+  const topInterests = rawTopInterests.filter(
+    (item) => item.isActive !== false && categories.some((c) => (c.id === item.id || c.slug === item.slug) && c.isActive !== false)
+  );
+
+  useEffect(() => {
+    checkTopicScrollState();
+  }, [categories]);
 
   // Derive pool of articles for the Featured Research 3-card carousel
   const carouselArticles = React.useMemo(() => {
@@ -543,7 +613,7 @@ export default function HomePage() {
                       <TrendingUp className="w-4 h-4 text-rfblue" />
                       <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink-darkest">Trending Today</h3>
                     </div>
-                    <Link to="/research?sort=popular" className="text-xs sm:text-sm font-semibold text-rfblue hover:underline">
+                    <Link to="/trending" className="text-xs sm:text-sm font-semibold text-rfblue hover:underline">
                       All
                     </Link>
                   </div>
@@ -568,10 +638,10 @@ export default function HomePage() {
                             {index + 1}
                           </span>
                           <div className="min-w-0 flex-1">
-                            <h4 className="text-xs sm:text-sm font-semibold text-ink-darkest group-hover:text-rfblue transition-colors line-clamp-2 leading-snug">
+                            <h4 className="text-sm sm:text-base font-semibold text-ink-darkest group-hover:text-rfblue transition-colors line-clamp-2 leading-snug">
                               {item.title}
                             </h4>
-                            <span className="text-xs text-ink-muted mt-1 block">
+                            <span className="text-xs lg:text-sm text-ink-muted mt-1 block">
                               {item.category?.name || 'Research'} • {item.readingTimeMin || 5} min read
                             </span>
                           </div>
@@ -625,7 +695,7 @@ export default function HomePage() {
               </div>
 
               <Link
-                to="/research"
+                to="/categories"
                 className="mt-4 md:mt-0 inline-flex items-center text-xs sm:text-sm font-bold text-rfblue hover:text-rfblue-700"
               >
                 <span>View All Categories</span>
@@ -662,7 +732,7 @@ export default function HomePage() {
                   <CategoryCard
                     key={topic.slug}
                     topic={topic}
-                    className="w-full h-full min-h-[235px] sm:min-h-[245px] p-5 sm:p-6"
+                    className="w-full h-full sm:min-h-[245px] p-5 sm:p-6"
                   />
                 ))}
               </div>
@@ -674,6 +744,96 @@ export default function HomePage() {
         {carouselArticles?.length > 0 && (
           <FeaturedArticlesCarousel articles={carouselArticles} />
         )}
+
+        {/* CURATED FOR YOUR RESEARCH (Personalized Recommendation Feed) */}
+        <section id="curated-research" className="py-14 lg:py-20 border-b border-paper-border bg-paper">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-paper-border gap-4">
+              <div>               
+                <h2>Curated For Your Research</h2>
+                <p className="mt-1.5 text-lead text-sm sm:text-base">
+                  {topInterests.length > 0
+                    ? 'Empirical studies and comparative research tailored to your reading profile and active topics.'
+                    : 'Discover key research across leading disciplines. Personalize your feed for deeper focus.'}
+                </p>
+              </div>
+
+              {/* <div className="flex flex-wrap items-center gap-2">
+                {topInterests.length > 0 ? (
+                  <>
+                    <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto">
+                      {topInterests.slice(0, 3).map((topic) => (
+                        <div
+                          key={topic.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-paper-warm border border-paper-border text-xs sm:text-sm font-semibold text-ink-darkest shrink-0"
+                        >
+                          <img
+                            src={resolveCategoryArt(topic)}
+                            alt=""
+                            className="w-4 h-4 object-contain"
+                            loading="lazy"
+                          />
+                          <span>{topic.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setIsTopicModalOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-rfblue/30 bg-rfblue-50/70 hover:bg-rfblue-100 text-rfblue text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+                      title="Manage your research topics"
+                    >
+                      <SlidersHorizontal className="w-4 h-4 text-rfblue" />
+                      <span>Customize Topics</span>
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setIsTopicModalOpen(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rfblue hover:bg-rfblue-700 text-white text-xs sm:text-sm font-semibold shadow-xs hover:shadow-md transition-all cursor-pointer"
+                  >
+                    <SlidersHorizontal className="w-4 h-4" />
+                    <span>Select Your Topics</span>
+                  </button>
+                )}
+              </div> */}
+            </div>
+
+            {/* Personalized 4-Column Responsive Grid */}
+            {isFeedLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
+              </div>
+            ) : feedRecommendations.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {feedRecommendations.slice(0, 8).map((item) => (
+                  <div key={item.article.id} className="flex flex-col h-full space-y-2">
+                    <ArticleCard article={item.article} variant="standard" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-paper-border p-8 text-center bg-paper/50">
+                
+                <h4 className="text-base font-semibold text-ink-darkest mb-1">
+                  Start Building Your Research Stream
+                </h4>
+                <p className="text-sm text-ink-muted max-w-md mx-auto mb-4">
+                  Select key topics or read articles across our library to receive tailored empirical suggestions.
+                </p>
+                <button
+                  onClick={() => setIsTopicModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rfblue text-white text-sm font-semibold hover:bg-rfblue-700 transition-colors cursor-pointer"
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span>Choose Topics</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* 4. LATEST RESEARCH & INSIGHTS (4-Column Grid) */}
         <section id="latest-research" className="py-16 lg:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -700,29 +860,63 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* Category Filter Pills */}
-          <div className="flex items-center space-x-2.5 overflow-x-auto pb-4 mb-8">
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold tracking-wider transition-colors shrink-0 ${selectedCategory === null
-                ? 'bg-slate-900 text-white shadow-2xs'
-                : 'bg-white border border-paper-border text-ink-muted hover:text-ink'
-                }`}
+          {/* Category Filter Pills without scrollbars */}
+          <div className="relative flex items-center mb-8 min-w-0">
+            {/* Left Scroll Navigation Button */}
+            {canScrollLeft && (
+              <div className="absolute left-0 z-10 flex items-center pr-3 bg-gradient-to-r from-paper via-paper/95 to-transparent h-full">
+                <button
+                  type="button"
+                  onClick={() => scrollTopics('left')}
+                  aria-label="Scroll topics left"
+                  className="w-7 h-7 rounded-full bg-white dark:bg-slate-900 border border-paper-border shadow-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-ink-muted hover:text-ink-darkest flex items-center justify-center transition-all duration-150 cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Scrollable Container without visible scrollbar */}
+            <div
+              ref={topicScrollRef}
+              className="flex items-center space-x-2.5 overflow-x-auto no-scrollbar scroll-smooth py-1 w-full"
             >
-              All Topics
-            </button>
-            {categories.map((cat) => (
               <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.slug)}
-                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold tracking-wider transition-colors shrink-0 ${selectedCategory === cat.slug
+                onClick={(e) => handleTopicSelect(null, e)}
+                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold tracking-wider transition-colors shrink-0 whitespace-nowrap ${selectedCategory === null
                   ? 'bg-slate-900 text-white shadow-2xs'
                   : 'bg-white border border-paper-border text-ink-muted hover:text-ink'
                   }`}
               >
-                {cat.name}
+                All Topics
               </button>
-            ))}
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={(e) => handleTopicSelect(cat.slug, e)}
+                  className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold tracking-wider transition-colors shrink-0 whitespace-nowrap ${selectedCategory === cat.slug
+                    ? 'bg-slate-900 text-white shadow-2xs'
+                    : 'bg-white border border-paper-border text-ink-muted hover:text-ink'
+                    }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+
+            {/* Right Scroll Navigation Button */}
+            {canScrollRight && (
+              <div className="absolute right-0 z-10 flex items-center pl-3 bg-gradient-to-l from-paper via-paper/95 to-transparent h-full">
+                <button
+                  type="button"
+                  onClick={() => scrollTopics('right')}
+                  aria-label="Scroll topics right"
+                  className="w-7 h-7 rounded-full bg-white dark:bg-slate-900 border border-paper-border shadow-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-ink-muted hover:text-ink-darkest flex items-center justify-center transition-all duration-150 cursor-pointer"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* 4-Column Responsive Grid */}
@@ -1273,6 +1467,12 @@ export default function HomePage() {
           </div>
         </section>
       </main>
+
+      <InterestExplorerPopup
+        isTriggered={isEngaged}
+        isOpen={isTopicModalOpen}
+        onClose={() => setIsTopicModalOpen(false)}
+      />
 
       <Footer />
     </div>

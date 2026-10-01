@@ -17,11 +17,53 @@ const registerSchema = z.object({
   bio: z.string().max(500, 'Bio cannot exceed 500 characters').optional()
 });
 
+// Helper to resolve the post-auth destination (panel or explicit redirect)
+function resolvePostAuthRedirect(user, searchParams) {
+  const explicitRedirect = searchParams.get('redirect');
+  if (
+    explicitRedirect &&
+    explicitRedirect !== '/' &&
+    !explicitRedirect.startsWith('/login') &&
+    !explicitRedirect.startsWith('/register')
+  ) {
+    return explicitRedirect;
+  }
+
+  const isSuperAdmin = user?.roles?.includes('SUPER_ADMIN');
+  const hasStaffOrAuthorPermission = user?.permissions?.some((p) =>
+    [
+      'article.create',
+      'article.update_own',
+      'article.approve',
+      'comment.moderate',
+      'user.read_list',
+      'author.approve',
+      'category.manage',
+      'tag.manage',
+      'media.manage',
+      'contact.manage',
+      'audit.read',
+      'role.manage',
+      'setting.manage'
+    ].includes(p)
+  );
+
+  return isSuperAdmin || hasStaffOrAuthorPermission ? '/admin' : '/admin/profile';
+}
+
 export default function RegisterPage() {
-  const { register: registerUser } = useAuth();
+  const { user, isAuthenticated, register: registerUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [serverError, setServerError] = useState(null);
+
+  // If already authenticated, redirect straight to panel
+  React.useEffect(() => {
+    if (isAuthenticated && user) {
+      const destination = resolvePostAuthRedirect(user, new URLSearchParams(location.search));
+      navigate(destination, { replace: true });
+    }
+  }, [isAuthenticated, user, location.search, navigate]);
 
   const { data: publicSettingsData, isLoading: isSettingsLoading } = useQuery({
     queryKey: ['public-settings'],
@@ -29,8 +71,6 @@ export default function RegisterPage() {
     staleTime: 60 * 1000
   });
   const allowRegistration = publicSettingsData?.data?.allowRegistration ?? true;
-
-  const redirectUrl = new URLSearchParams(location.search).get('redirect') || '/';
 
   const {
     register,
@@ -43,8 +83,9 @@ export default function RegisterPage() {
   const onSubmit = async (data) => {
     setServerError(null);
     try {
-      await registerUser(data);
-      navigate(redirectUrl, { replace: true });
+      const registeredUser = await registerUser(data);
+      const destination = resolvePostAuthRedirect(registeredUser, new URLSearchParams(location.search));
+      navigate(destination, { replace: true });
     } catch (err) {
       setServerError(err.message || 'Registration failed. Please try again.');
     }

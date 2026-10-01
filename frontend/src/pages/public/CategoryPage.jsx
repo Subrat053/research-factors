@@ -338,11 +338,10 @@ export default function CategoryPage() {
                   <button
                     key={t.slug}
                     onClick={() => updateParam('tag', isActive ? '' : t.slug)}
-                    className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
-                      isActive
+                    className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${isActive
                         ? 'bg-rfblue text-white font-medium'
                         : 'bg-paper text-ink-muted hover:text-ink hover:bg-slate-200/60 border border-paper-border'
-                    }`}
+                      }`}
                   >
                     {t.name}
                   </button>
@@ -397,11 +396,10 @@ export default function CategoryPage() {
                     <button
                       key={p}
                       onClick={() => updateParam('page', p.toString())}
-                      className={`w-9 h-9 rounded-xl text-xs sm:text-sm font-semibold transition-colors ${
-                        p === page
+                      className={`w-9 h-9 rounded-xl text-xs sm:text-sm font-semibold transition-colors ${p === page
                           ? 'bg-rfblue text-white shadow-xs'
                           : 'border border-paper-border bg-white text-ink hover:bg-paper shadow-2xs'
-                      }`}
+                        }`}
                     >
                       {p}
                     </button>

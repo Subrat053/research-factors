@@ -220,9 +220,11 @@ Below is the exhaustive mapping of how typography is applied across all public a
 - **Featured Variant (`variant="featured"`)**:
   - Category Badge: `text-xs font-bold uppercase tracking-wider`
   - Metadata: `.text-caption` (Date, reading time)
-  - Title H2: `text-lg sm:text-xl font-bold leading-snug tracking-tight text-ink-darkest`
-  - Excerpt: `text-xs sm:text-sm text-ink-muted font-normal leading-relaxed`
-  - Author: `text-xs sm:text-sm font-semibold text-ink-darkest`
+  - Title H2: `text-lg sm:text-xl lg:text-2xl font-bold leading-snug tracking-tight text-ink-darkest line-clamp-2`
+  - Subtitle Deck: `text-sm sm:text-base font-semibold leading-relaxed text-ink-darkest line-clamp-2` (rendered conditionally when present)
+  - Excerpt: `text-xs sm:text-sm text-ink-muted font-normal leading-relaxed` with dynamic clamp (`line-clamp-3 sm:line-clamp-4` with subtitle, or `line-clamp-4 sm:line-clamp-5` without)
+  - Tags Pill Row: Up to 3 discipline/topic badges (`text-[11px] font-medium bg-slate-100 text-slate-600`)
+  - Author: `text-xs sm:text-sm font-semibold text-ink-darkest` with avatar, headline, and direct article link button
 - **Standard Variant (`variant="standard"`)**:
   - Category Badge: `text-xs font-bold uppercase tracking-wider`
   - Metadata: `.text-caption`
@@ -452,16 +454,14 @@ For sponsored research publications, editorial transparency and FTC/regulatory c
 
 To maximize vertical viewport efficiency and maintain consistent UX across administrative workspaces:
 
-- **Single Horizontal Row Layout**:
-  - The admin toolbar container (`.admin-toolbar`) must organize primary channels, search controls, and filter buttons in a single responsive horizontal row (`flex flex-col md:flex-row md:items-center md:justify-between gap-3`).
-  - Left Section: Categorical channel switcher pills (e.g. `All`, `Sponsorships`, `General`).
-  - Right Section: Search input + Status Filter Button (`flex items-center gap-2.5 flex-1 md:justify-end`).
-- **Filter Dropdown Button Specification**:
-  - Instead of multi-line status pills occupying separate rows, status filtering is condensed into an interactive **Filter Button** (`<button>`) with an active indicator and dropdown menu.
-  - Button states:
-    - Active Filter: Accent tint (`bg-blue-50 dark:bg-blue-950/40 border-blue-300 text-blue-700`) displaying the current selection (e.g. *Unread*, *Pending*, *Resolved*).
-    - Inactive / All: Neutral slate border and text (`All Statuses`).
-  - Dropdown popover: Floating container with `z-30`, outside-click dismissal, clear header, and checkmark indicators for the selected state.
+- **Article Management Toolbar Specification (`ArticleManagementPage.jsx`)**:
+  - Structured as a high-density, ergonomic control surface:
+    - **Primary Flexible Search (`flex-1 min-w-[280px]`)**: Search bar takes the dominant flexible space with standard `text-sm font-normal` sizing (14px) and an inline clear button (`X`).
+    - **Controls Group (`flex flex-wrap items-center gap-3 shrink-0`)**: Keeps dropdowns and action buttons grouped together and strictly constrained to their natural widths without stretching across the layout.
+    - **Category Taxonomy Filter (`min-w-[170px] sm:min-w-[190px]`)**: Populated via `adminApi.getAllCategories()`, displaying active categories and tagging deactivated taxonomies with `(Inactive)` to facilitate administrative curation.
+    - **Lifecycle Status Filter (`min-w-[170px] sm:min-w-[190px]`)**: Compact select supporting all article stages (*Published, Pending Review, Approved / Scheduled, Draft, Needs Revision / Rejected, Archived*).
+    - **Reset Action**: Dynamic `Reset` button (`RotateCcw` icon) that appears whenever any filter (`search`, `statusFilter`, `categoryFilter`) is active, resetting all filters and pagination back to page 1.
+    - **Contextual Empty State**: When active filters produce zero results, an actionable empty state displays with a direct "Clear All Filters" button.
 
 ---
 

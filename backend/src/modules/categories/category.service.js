@@ -12,7 +12,14 @@ export class CategoryService {
       include: {
         parent: { select: { id: true, name: true, slug: true } },
         _count: {
-          select: { articles: { where: { status: 'PUBLISHED' } } }
+          select: {
+            articles: {
+              where: {
+                status: 'PUBLISHED',
+                author: { status: 'ACTIVE' }
+              }
+            }
+          }
         }
       },
       orderBy: { name: 'asc' }
@@ -41,7 +48,14 @@ export class CategoryService {
       include: {
         parent: { select: { id: true, name: true, slug: true } },
         _count: {
-          select: { articles: { where: { status: 'PUBLISHED' } } }
+          select: {
+            articles: {
+              where: {
+                status: 'PUBLISHED',
+                author: { status: 'ACTIVE' }
+              }
+            }
+          }
         }
       }
     });

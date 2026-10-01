@@ -52,9 +52,18 @@ export class BookmarkService {
   static async getUserBookmarks(userId, { page = 1, limit = 20 } = {}) {
     const skip = (page - 1) * limit;
 
+    const where = {
+      userId,
+      article: {
+        status: 'PUBLISHED',
+        category: { isActive: true },
+        author: { status: 'ACTIVE' }
+      }
+    };
+
     const [bookmarks, total] = await Promise.all([
       prisma.bookmark.findMany({
-        where: { userId },
+        where,
         include: {
           article: {
             include: {
@@ -80,11 +89,11 @@ export class BookmarkService {
         skip,
         take: limit
       }),
-      prisma.bookmark.count({ where: { userId } })
+      prisma.bookmark.count({ where })
     ]);
 
     const articles = bookmarks
-      .filter(b => b.article && b.article.status === 'PUBLISHED')
+      .filter(b => b.article)
       .map(b => ({
         ...ArticleDTO.toPublicSummary(b.article),
         bookmarkedAt: b.createdAt

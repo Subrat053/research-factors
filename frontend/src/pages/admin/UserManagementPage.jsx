@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { adminApi } from '../../services/admin.api.js';
+import { normalizeMediaUrl } from '../../services/media.api.js';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useConfirm } from '../../context/ModalContext.jsx';
@@ -19,8 +20,73 @@ import {
   ChevronRight,
   MoreVertical,
   X,
-  Loader2
+  Loader2,
+  Eye,
+  Copy,
+  Check,
+  ExternalLink,
+  FileText,
+  MessageSquare,
+  Bookmark,
+  Calendar,
+  Clock,
+  Globe,
+  Mail,
+  ShieldAlert,
+  History
 } from 'lucide-react';
+
+/**
+ * Production-ready User Avatar component with resilient image error fallback,
+ * lazy loading, and consistent visual styling.
+ */
+function UserAvatar({ src, name, size = 'md', className = '', rounded = 'rounded-full' }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [src]);
+
+  const initial = (name || 'U').trim().charAt(0).toUpperCase() || 'U';
+
+  const sizeStyles = {
+    sm: 'w-7 h-7 text-xs',
+    md: 'w-9 h-9 text-xs',
+    lg: 'w-14 h-14 text-xl'
+  };
+
+  const resolvedSize = sizeStyles[size] || sizeStyles.md;
+  const normalizedUrl = src ? normalizeMediaUrl(src) : null;
+
+  if (normalizedUrl && !imageFailed) {
+    return (
+      <div
+        className={`${resolvedSize} ${rounded} overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-2xs ${className}`}
+      >
+        <img
+          src={normalizedUrl}
+          alt={name ? `${name}'s profile avatar` : 'User profile avatar'}
+          loading="lazy"
+          decoding="async"
+          onError={() => setImageFailed(true)}
+          className="w-full h-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`${resolvedSize} ${rounded} ${
+        size === 'lg'
+          ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md'
+          : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+      } flex items-center justify-center font-bold shrink-0 select-none ${className}`}
+    >
+      {initial}
+    </div>
+  );
+}
 
 export default function UserManagementPage() {
   const queryClient = useQueryClient();
@@ -45,6 +111,41 @@ export default function UserManagementPage() {
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [feedbackMsg, setFeedbackMsg] = useState(null);
+
+  // User Profile & Detail Modal State
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedDetailUserId, setSelectedDetailUserId] = useState(null);
+  const [activeDetailTab, setActiveDetailTab] = useState('overview');
+  const [copiedId, setCopiedId] = useState(false);
+
+  // Fetch full user details dynamically
+  const {
+    data: detailData,
+    isLoading: isLoadingDetail,
+    error: detailError
+  } = useQuery({
+    queryKey: ['admin-user-detail', selectedDetailUserId],
+    queryFn: () => adminApi.getUserDetails(selectedDetailUserId),
+    enabled: !!selectedDetailUserId && detailModalOpen
+  });
+
+  const detailUser = detailData?.data?.user;
+  const recentArticles = detailData?.data?.recentArticles || [];
+  const recentComments = detailData?.data?.recentComments || [];
+  const auditHistory = detailData?.data?.auditHistory || [];
+
+  const handleOpenDetailModal = (userId) => {
+    setSelectedDetailUserId(userId);
+    setActiveDetailTab('overview');
+    setDetailModalOpen(true);
+  };
+
+  const handleCopyId = (id) => {
+    if (!id) return;
+    navigator.clipboard.writeText(id);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
 
   // Helper with auto-dismiss after 5 seconds
   const showFeedback = (msg) => {
@@ -139,6 +240,7 @@ export default function UserManagementPage() {
     mutationFn: ({ id, status, reason }) => adminApi.updateUserStatus(id, { status, reason }),
     onSuccess: (res) => {
       queryClient.invalidateQueries(['admin-users']);
+      queryClient.invalidateQueries(['admin-user-detail']);
       setStatusModalOpen(false);
       setStatusReason('');
       showFeedback({ type: 'success', text: res.message || 'User status updated successfully' });
@@ -203,6 +305,7 @@ export default function UserManagementPage() {
     mutationFn: ({ id, roleNames }) => adminApi.assignUserRoles(id, { roleNames }),
     onSuccess: (res) => {
       queryClient.invalidateQueries(['admin-users']);
+      queryClient.invalidateQueries(['admin-user-detail']);
       setRoleModalOpen(false);
       showFeedback({ type: 'success', text: 'Roles updated successfully' });
     },
@@ -236,7 +339,7 @@ export default function UserManagementPage() {
 
   return (
     <AdminLayout
-      title="User Directory & Governance"
+      title="User Management"
       subtitle="Manage reader accounts, staff credentials, suspension states, and role allocations"
       actions={
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
@@ -455,12 +558,19 @@ export default function UserManagementPage() {
                         />
                       </td>
                       <td className="py-4 px-6">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-slate-200">
-                            {u.firstName?.[0] || 'U'}
-                          </div>
+                        <div
+                          onClick={() => handleOpenDetailModal(u.id)}
+                          className="flex items-center space-x-3 cursor-pointer group/user"
+                          title="Click to view full user profile & activity"
+                        >
+                          <UserAvatar
+                            src={u.avatarUrl}
+                            name={u.fullName || `${u.firstName} ${u.lastName}`}
+                            size="md"
+                            className="group-hover/user:border-blue-500 group-hover/user:text-blue-600 transition-colors"
+                          />
                           <div>
-                            <div className="font-semibold text-slate-900 dark:text-white flex items-center space-x-1.5">
+                            <div className="font-semibold text-slate-900 dark:text-white flex items-center space-x-1.5 group-hover/user:text-blue-600 dark:group-hover/user:text-blue-400 transition-colors">
                               <span>{u.fullName || `${u.firstName} ${u.lastName}`}</span>
                               {isUserSuperAdmin && (
                                 <span title="Super Administrator">
@@ -523,6 +633,15 @@ export default function UserManagementPage() {
 
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={() => handleOpenDetailModal(u.id)}
+                            className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                            title="View User Profile & Activity"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Details</span>
+                          </button>
+
                           {isSuperAdmin && (
                             <button
                               onClick={() => handleOpenRoleModal(u)}
@@ -720,7 +839,7 @@ export default function UserManagementPage() {
       {/* Create User Modal */}
       {createModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-          <div className="admin-modal max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="admin-modal max-w-4xl w-full p-6 sm:p-7 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800 mb-5">
               <div className="flex items-center space-x-2.5">
                 <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
@@ -733,7 +852,7 @@ export default function UserManagementPage() {
               </div>
               <button
                 onClick={() => setCreateModalOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -742,7 +861,7 @@ export default function UserManagementPage() {
             {createFormError && (
               <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-300 flex items-center justify-between">
                 <span>{createFormError}</span>
-                <button onClick={() => setCreateFormError(null)} className="p-1 hover:opacity-75">
+                <button onClick={() => setCreateFormError(null)} className="p-1 hover:opacity-75 cursor-pointer">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -770,163 +889,182 @@ export default function UserManagementPage() {
                 }
                 createUserMutation.mutate(createForm);
               }}
-              className="space-y-4"
+              className="space-y-5"
             >
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
-                    First Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={createForm.firstName}
-                    onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
-                    placeholder="Eleanor"
-                    className="admin-input"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
-                    Last Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={createForm.lastName}
-                    onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
-                    placeholder="Vance"
-                    className="admin-input"
-                  />
-                </div>
-              </div>
+              {/* Responsive 2-Column Horizontal Layout on Desktop */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                {/* Column 1: Identity & Credentials */}
+                <div className="space-y-3.5">
+                  <div className="flex items-center space-x-2 text-[11px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider pb-1 border-b border-slate-100 dark:border-slate-800/80">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                    <span>Identity & Credentials</span>
+                  </div>
 
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={createForm.email}
-                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                  placeholder="name@institution.edu"
-                  className="admin-input"
-                />
-              </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                        First Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={createForm.firstName}
+                        onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
+                        placeholder="Eleanor"
+                        className="admin-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                        Last Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={createForm.lastName}
+                        onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
+                        placeholder="Vance"
+                        className="admin-input"
+                      />
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
-                  Initial Password *
-                </label>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  value={createForm.password}
-                  onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                  placeholder="Minimum 8 characters"
-                  className="admin-input"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
-                  Brief Bio / Academic Focus (Optional)
-                </label>
-                <textarea
-                  rows={2}
-                  value={createForm.bio}
-                  onChange={(e) => setCreateForm({ ...createForm, bio: e.target.value })}
-                  placeholder="e.g. Theoretical physicist focusing on quantum optics..."
-                  className="admin-input resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
-                  Initial Role Assignment *
-                </label>
-                <div className="space-y-1.5">
-                  {['USER', 'AUTHOR', 'EDITOR', 'ADMIN', 'SUPER_ADMIN'].map((r) => {
-                    const isRestricted = !isSuperAdmin && ['ADMIN', 'SUPER_ADMIN'].includes(r);
-                    const isSelected = createForm.roleNames.includes(r);
-                    return (
-                      <div
-                        key={r}
-                        onClick={() => {
-                          if (isRestricted) return;
-                          const newRoles = isSelected
-                            ? createForm.roleNames.filter((item) => item !== r)
-                            : [...createForm.roleNames, r];
-                          setCreateForm({ ...createForm, roleNames: newRoles });
-                        }}
-                        className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition-colors ${
-                          isRestricted
-                            ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800/20 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500'
-                            : isSelected
-                            ? 'bg-blue-50 dark:bg-blue-600/15 border-blue-300 dark:border-blue-500/40 text-blue-900 dark:text-white cursor-pointer'
-                            : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 cursor-pointer'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            disabled={isRestricted}
-                            checked={isSelected}
-                            onChange={() => {}}
-                            className="rounded text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="font-semibold">{r}</span>
-                          {isRestricted && (
-                            <span className="text-[10px] text-amber-500 dark:text-amber-400 ml-1">
-                              (Super Admin Required)
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                          {r === 'USER' && 'Community reader'}
-                          {r === 'AUTHOR' && 'Accredited writer'}
-                          {r === 'EDITOR' && 'Publishing manager'}
-                          {r === 'ADMIN' && 'Staff administrator'}
-                          {r === 'SUPER_ADMIN' && 'Principal system custodian'}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {isSuperAdmin ? (
-                <div className="pt-1">
-                  <label className="flex items-center space-x-2 cursor-pointer">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                      Email Address *
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={createForm.emailVerified}
-                      onChange={(e) => setCreateForm({ ...createForm, emailVerified: e.target.checked })}
-                      className="rounded text-blue-600 focus:ring-blue-500"
+                      type="email"
+                      required
+                      value={createForm.email}
+                      onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                      placeholder="name@institution.edu"
+                      className="admin-input"
                     />
-                    <span className="text-xs text-slate-700 dark:text-slate-300">Mark email as pre-verified by Super Administrator</span>
-                  </label>
-                </div>
-              ) : (
-                <div className="pt-1 p-2.5 rounded-xl admin-card-inner text-[11px] text-slate-500 dark:text-slate-400">
-                  Accounts created by non-super-admin staff will require the user to verify their email address before access is granted.
-                </div>
-              )}
+                  </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                      Initial Password *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength={8}
+                      value={createForm.password}
+                      onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                      placeholder="Minimum 8 characters"
+                      className="admin-input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                      Brief Bio / Academic Focus (Optional)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={createForm.bio}
+                      onChange={(e) => setCreateForm({ ...createForm, bio: e.target.value })}
+                      placeholder="e.g. Theoretical physicist focusing on quantum optics..."
+                      className="admin-input resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Column 2: Role Allocation & Access Control */}
+                <div className="space-y-3.5">
+                  <div className="flex items-center space-x-2 text-[11px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider pb-1 border-b border-slate-100 dark:border-slate-800/80">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <span>Role Allocation & Privileges *</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {['USER', 'AUTHOR', 'EDITOR', 'ADMIN', 'SUPER_ADMIN'].map((r) => {
+                      const isRestricted = !isSuperAdmin && ['ADMIN', 'SUPER_ADMIN'].includes(r);
+                      const isSelected = createForm.roleNames.includes(r);
+                      return (
+                        <div
+                          key={r}
+                          onClick={() => {
+                            if (isRestricted) return;
+                            const newRoles = isSelected
+                              ? createForm.roleNames.filter((item) => item !== r)
+                              : [...createForm.roleNames, r];
+                            setCreateForm({ ...createForm, roleNames: newRoles });
+                          }}
+                          className={`p-2 rounded-xl border flex items-center justify-between text-xs transition-colors ${
+                            isRestricted
+                              ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800/20 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500'
+                              : isSelected
+                              ? 'bg-blue-50 dark:bg-blue-600/15 border-blue-300 dark:border-blue-500/40 text-blue-900 dark:text-white cursor-pointer'
+                              : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 cursor-pointer'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              disabled={isRestricted}
+                              checked={isSelected}
+                              onChange={() => {}}
+                              className="rounded text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="font-semibold text-xs">{r}</span>
+                            {isRestricted && (
+                              <span className="text-[10px] text-amber-500 dark:text-amber-400 ml-1">
+                                (Super Admin Required)
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                            {r === 'USER' && 'Community reader'}
+                            {r === 'AUTHOR' && 'Accredited writer'}
+                            {r === 'EDITOR' && 'Publishing manager'}
+                            {r === 'ADMIN' && 'Staff administrator'}
+                            {r === 'SUPER_ADMIN' && 'Principal system custodian'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {isSuperAdmin ? (
+                    <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-slate-50/60 dark:bg-slate-800/30">
+                      <label className="flex items-start space-x-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={createForm.emailVerified}
+                          onChange={(e) => setCreateForm({ ...createForm, emailVerified: e.target.checked })}
+                          className="rounded text-blue-600 focus:ring-blue-500 mt-0.5"
+                        />
+                        <div className="text-xs text-slate-700 dark:text-slate-300">
+                          <span className="font-semibold block text-[11px]">Mark email as pre-verified</span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                            Instantly activates account without requiring email token confirmation.
+                          </span>
+                        </div>
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-xl admin-card-inner text-[11px] text-slate-500 dark:text-slate-400">
+                      Accounts created by non-super-admin staff will require the user to verify their email address before access is granted.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setCreateModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={createUserMutation.isPending}
-                  className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-all shadow-xs"
+                  className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-all shadow-xs cursor-pointer"
                 >
                   {createUserMutation.isPending ? (
                     <>
@@ -942,6 +1080,543 @@ export default function UserManagementPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* User Profile & Details Inspection Modal */}
+      {detailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs">
+          <div className="admin-modal max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/90 flex items-start justify-between gap-4">
+              {isLoadingDetail ? (
+                <div className="flex items-center space-x-3 py-2">
+                  <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                  <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Loading user profile...</span>
+                </div>
+              ) : detailUser ? (
+                <div className="flex items-start space-x-4 min-w-0">
+                  <UserAvatar
+                    src={detailUser.avatarUrl}
+                    name={detailUser.fullName || `${detailUser.firstName} ${detailUser.lastName}`}
+                    size="lg"
+                    rounded="rounded-2xl"
+                  />
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-lg font-bold text-slate-900 dark:text-white truncate">
+                        {detailUser.fullName || `${detailUser.firstName} ${detailUser.lastName}`}
+                      </h2>
+                      {detailUser.roles?.includes('SUPER_ADMIN') && (
+                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/25">
+                          <ShieldCheck className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                          <span>Super Admin</span>
+                        </span>
+                      )}
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          detailUser.status === 'ACTIVE'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            : 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                            detailUser.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-red-500'
+                          }`}
+                        />
+                        {detailUser.status}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="text-slate-700 dark:text-slate-300 font-medium">{detailUser.email}</span>
+                        {detailUser.isEmailVerified ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" title="Email Verified" />
+                        ) : (
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-500" title="Email Unverified" />
+                        )}
+                      </span>
+
+                      <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-400">
+                        <span>ID: {detailUser.id?.slice(0, 8)}...</span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyId(detailUser.id)}
+                          className="p-0.5 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                          title="Copy Full UUID"
+                        >
+                          {copiedId ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  User Profile
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setDetailModalOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Navigation Tabs */}
+            {detailUser && !isLoadingDetail && (
+              <div className="flex items-center border-b border-slate-200 dark:border-slate-800 px-5 sm:px-6 bg-slate-50/40 dark:bg-slate-900/40 overflow-x-auto text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setActiveDetailTab('overview')}
+                  className={`py-3 px-3.5 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
+                    activeDetailTab === 'overview'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Overview & Profile
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDetailTab('articles')}
+                  className={`py-3 px-3.5 border-b-2 transition-colors cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+                    activeDetailTab === 'articles'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <span>Articles</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                    {detailUser.counts?.articles ?? recentArticles.length}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDetailTab('comments')}
+                  className={`py-3 px-3.5 border-b-2 transition-colors cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+                    activeDetailTab === 'comments'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <span>Comments</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                    {detailUser.counts?.comments ?? recentComments.length}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDetailTab('audit')}
+                  className={`py-3 px-3.5 border-b-2 transition-colors cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+                    activeDetailTab === 'audit'
+                      ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <span>Audit History</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                    {auditHistory.length}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* Modal Body / Tab Content */}
+            <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-6">
+              {isLoadingDetail ? (
+                <div className="py-20 flex flex-col items-center justify-center space-y-3">
+                  <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Loading comprehensive profile details...</p>
+                </div>
+              ) : detailError ? (
+                <div className="py-16 text-center">
+                  <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-3" />
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Failed to load user details</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{detailError?.message || 'Unable to retrieve user record'}</p>
+                </div>
+              ) : detailUser ? (
+                <>
+                  {/* TAB 1: OVERVIEW & PROFILE */}
+                  {activeDetailTab === 'overview' && (
+                    <div className="space-y-6">
+                      {/* Metric Stat Cards */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+                          <div className="flex items-center space-x-2 text-slate-500 dark:text-slate-400 text-xs">
+                            <FileText className="w-3.5 h-3.5 text-blue-500" />
+                            <span>Articles</span>
+                          </div>
+                          <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">
+                            {detailUser.counts?.articles ?? 0}
+                          </p>
+                        </div>
+                        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+                          <div className="flex items-center space-x-2 text-slate-500 dark:text-slate-400 text-xs">
+                            <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
+                            <span>Comments</span>
+                          </div>
+                          <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">
+                            {detailUser.counts?.comments ?? 0}
+                          </p>
+                        </div>
+                        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+                          <div className="flex items-center space-x-2 text-slate-500 dark:text-slate-400 text-xs">
+                            <Bookmark className="w-3.5 h-3.5 text-amber-500" />
+                            <span>Bookmarks</span>
+                          </div>
+                          <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">
+                            {detailUser.counts?.bookmarks ?? 0}
+                          </p>
+                        </div>
+                        <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+                          <div className="flex items-center space-x-2 text-slate-500 dark:text-slate-400 text-xs">
+                            <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+                            <span>Reports Filed</span>
+                          </div>
+                          <p className="text-xl font-bold text-slate-900 dark:text-white mt-1">
+                            {detailUser.counts?.reportsFiled ?? 0}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Account Details Card */}
+                      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-850/40 space-y-4">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                          Account Profile & Credentials
+                        </h3>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                          <div>
+                            <span className="text-slate-500 dark:text-slate-400 block mb-1">Biography</span>
+                            <p className="text-slate-800 dark:text-slate-200 italic bg-white dark:bg-slate-900/60 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+                              {detailUser.bio || 'No personal biography provided.'}
+                            </p>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div>
+                              <span className="text-slate-500 dark:text-slate-400 block mb-1">Assigned Roles</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {detailUser.roles?.map((r, rIdx) => (
+                                  <span
+                                    key={rIdx}
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
+                                      r === 'SUPER_ADMIN'
+                                        ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/25'
+                                        : r === 'ADMIN'
+                                        ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/25'
+                                        : r === 'AUTHOR'
+                                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25'
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                                    }`}
+                                  >
+                                    {r}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
+                              <div>
+                                <span className="text-slate-500 dark:text-slate-400 block">Registration Date</span>
+                                <span className="font-medium text-slate-800 dark:text-slate-200">
+                                  {detailUser.createdAt ? new Date(detailUser.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-500 dark:text-slate-400 block">Last Profile Update</span>
+                                <span className="font-medium text-slate-800 dark:text-slate-200">
+                                  {detailUser.updatedAt ? new Date(detailUser.updatedAt).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Author Accreditation Section (If Present) */}
+                      {detailUser.authorProfile && (
+                        <div className="p-4 sm:p-5 rounded-xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/30 dark:bg-amber-950/20 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                              <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                              <span>Author Accreditation & Byline Portfolio</span>
+                            </h3>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              detailUser.authorProfile.isApproved
+                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                                : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                            }`}>
+                              {detailUser.authorProfile.isApproved ? 'Accredited & Approved' : 'Accreditation Pending'}
+                            </span>
+                          </div>
+
+                          {detailUser.authorProfile.headline && (
+                            <p className="text-xs font-semibold text-slate-900 dark:text-white">
+                              {detailUser.authorProfile.headline}
+                            </p>
+                          )}
+
+                          {detailUser.authorProfile.biography && (
+                            <p className="text-xs text-slate-600 dark:text-slate-300">
+                              {detailUser.authorProfile.biography}
+                            </p>
+                          )}
+
+                          <div className="flex flex-wrap gap-3 pt-2 text-xs">
+                            {detailUser.authorProfile.websiteUrl && (
+                              <a
+                                href={detailUser.authorProfile.websiteUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline"
+                              >
+                                <Globe className="w-3.5 h-3.5" />
+                                <span>Website</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                            {detailUser.authorProfile.twitterUrl && (
+                              <a
+                                href={detailUser.authorProfile.twitterUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline"
+                              >
+                                <span>Twitter/X</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                            {detailUser.authorProfile.linkedinUrl && (
+                              <a
+                                href={detailUser.authorProfile.linkedinUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline"
+                              >
+                                <span>LinkedIn</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                            {detailUser.authorProfile.githubUrl && (
+                              <a
+                                href={detailUser.authorProfile.githubUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline"
+                              >
+                                <span>GitHub</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 2: ARTICLES */}
+                  {activeDetailTab === 'articles' && (
+                    <div className="space-y-4">
+                      {recentArticles.length === 0 ? (
+                        <div className="p-8 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                          <FileText className="w-8 h-8 text-slate-400 dark:text-slate-500 mx-auto mb-2" />
+                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">No Articles Authored</p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">This user has not drafted or published any research articles yet.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5">
+                          {recentArticles.map(art => (
+                            <div
+                              key={art.id}
+                              className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-800/20 flex items-center justify-between gap-3"
+                            >
+                              <div className="min-w-0">
+                                <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                  {art.title}
+                                </h4>
+                                <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                                  <span className={`px-2 py-0.2 rounded-full font-semibold text-[10px] ${
+                                    art.status === 'PUBLISHED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
+                                    art.status === 'IN_REVIEW' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' :
+                                    'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                                  }`}>
+                                    {art.status}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Eye className="w-3 h-3" /> {art.viewCount || 0} views
+                                  </span>
+                                  <span>{new Date(art.createdAt).toLocaleDateString()}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-1.5 shrink-0">
+                                <a
+                                  href={`/rf/admin/editor/${art.id}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+                                  title="Open in Article Editor"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 3: COMMENTS */}
+                  {activeDetailTab === 'comments' && (
+                    <div className="space-y-4">
+                      {recentComments.length === 0 ? (
+                        <div className="p-8 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                          <MessageSquare className="w-8 h-8 text-slate-400 dark:text-slate-500 mx-auto mb-2" />
+                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">No Comments Posted</p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">This user has not contributed to article discussions.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5">
+                          {recentComments.map(com => (
+                            <div
+                              key={com.id}
+                              className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-850/20 space-y-1.5"
+                            >
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-md">
+                                  Article: {com.article?.title || 'Unknown Article'}
+                                </span>
+                                <span className={`px-2 py-0.2 rounded-full font-semibold text-[10px] ${
+                                  com.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                  com.status === 'PENDING' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
+                                  'bg-red-500/10 text-red-600 dark:text-red-400'
+                                }`}>
+                                  {com.status}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-600 dark:text-slate-300 italic">
+                                "{com.content}"
+                              </p>
+                              <span className="text-[10px] text-slate-400 block">
+                                {new Date(com.createdAt).toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 4: AUDIT HISTORY */}
+                  {activeDetailTab === 'audit' && (
+                    <div className="space-y-4">
+                      {auditHistory.length === 0 ? (
+                        <div className="p-8 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                          <History className="w-8 h-8 text-slate-400 dark:text-slate-500 mx-auto mb-2" />
+                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">No Audit Trail</p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">No administrative operations have been logged for this account.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5">
+                          {auditHistory.map((log, idx) => (
+                            <div
+                              key={log.id || idx}
+                              className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-850/20 text-xs space-y-1"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-slate-900 dark:text-white uppercase text-[11px] tracking-wide">
+                                  {log.action?.replace(/_/g, ' ') || 'ACTION'}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  {new Date(log.createdAt).toLocaleString()}
+                                </span>
+                              </div>
+                              {log.reason && (
+                                <p className="text-slate-600 dark:text-slate-300 text-[11px]">
+                                  <strong className="font-semibold text-slate-700 dark:text-slate-200">Reason:</strong> {log.reason}
+                                </p>
+                              )}
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 pt-0.5">
+                                <span>Actor:</span>
+                                <span className="font-medium text-slate-700 dark:text-slate-300">
+                                  {log.actor ? `${log.actor.firstName || ''} ${log.actor.lastName || ''} (${log.actor.email})` : 'System Automated'}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : null}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/90 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                {isSuperAdmin && detailUser && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDetailModalOpen(false);
+                      handleOpenRoleModal(detailUser);
+                    }}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                  >
+                    Manage Roles
+                  </button>
+                )}
+
+                {detailUser && (
+                  detailUser.status === 'ACTIVE' ? (
+                    <button
+                      type="button"
+                      disabled={detailUser.roles?.includes('SUPER_ADMIN') && !isSuperAdmin}
+                      onClick={() => {
+                        setDetailModalOpen(false);
+                        handleOpenStatusModal(detailUser, 'SUSPENDED');
+                      }}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 border border-red-200 dark:border-red-500/20 transition-colors disabled:opacity-30 cursor-pointer"
+                    >
+                      Suspend Account
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={detailUser.roles?.includes('SUPER_ADMIN') && !isSuperAdmin}
+                      onClick={() => {
+                        setDetailModalOpen(false);
+                        handleOpenStatusModal(detailUser, 'ACTIVE');
+                      }}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 transition-colors disabled:opacity-30 cursor-pointer"
+                    >
+                      Reactivate Account
+                    </button>
+                  )
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setDetailModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-2xs"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

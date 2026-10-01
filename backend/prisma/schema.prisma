@@ -77,6 +77,8 @@ model User {
   notifications        Notification[]
   media                Media[]
   auditLogs            AuditLog[]   @relation("ActorAudit")
+  events               UserEvent[]
+  interestProfiles     UserInterestProfile[]
 
   @@index([email])
   @@index([status])
@@ -172,6 +174,8 @@ model Category {
   parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children    Category[] @relation("CategoryHierarchy")
   articles    Article[]
+  events      UserEvent[]
+  interestProfiles UserInterestProfile[]
 
   @@index([slug])
   @@index([isActive])
@@ -186,6 +190,7 @@ model Tag {
   createdAt DateTime     @default(now()) @map("created_at")
 
   articles  ArticleTag[]
+  events    UserEvent[]
 
   @@index([slug])
   @@map("tags")
@@ -229,6 +234,7 @@ model Article {
   comments        Comment[]
   bookmarks       Bookmark[]
   slugHistory     ArticleSlugHistory[]
+  events          UserEvent[]
 
   @@index([slug])
   @@index([status, publishedAt])
@@ -481,5 +487,56 @@ model SeoMetadata {
   @@index([entityType, entityId])
   @@index([isNoIndex])
   @@map("seo_metadata")
+}
+
+// ================= PERSONALIZATION & EVENTS =================
+
+model UserEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  visitorId  String   @map("visitor_id")
+  userId     String?  @map("user_id") @db.Uuid
+  sessionId  String   @map("session_id")
+  eventType  String   @map("event_type") // ARTICLE_VIEW, ARTICLE_SCROLL_50, ARTICLE_COMPLETED, CATEGORY_CLICK, INTEREST_SELECTED, RECOMMENDATION_CLICK, SEARCH
+  articleId  String?  @map("article_id") @db.Uuid
+  categoryId String?  @map("category_id") @db.Uuid
+  tagId      String?  @map("tag_id") @db.Uuid
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  article    Article?  @relation(fields: [articleId], references: [id], onDelete: SetNull)
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tag        Tag?      @relation(fields: [tagId], references: [id], onDelete: SetNull)
+
+  @@index([visitorId, eventType])
+  @@index([userId, eventType])
+  @@index([sessionId])
+  @@index([articleId])
+  @@index([categoryId])
+  @@index([createdAt])
+  @@map("user_events")
+}
+
+model UserInterestProfile {
+  id               String    @id @default(uuid()) @db.Uuid
+  visitorId        String    @map("visitor_id")
+  userId           String?   @map("user_id") @db.Uuid
+  categoryId       String    @map("category_id") @db.Uuid
+  score            Float     @default(0)
+  interactionCount Int       @default(1) @map("interaction_count")
+  lastInteractedAt DateTime  @default(now()) @map("last_interacted_at")
+  confidence       Float     @default(1.0)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  user             User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  category         Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([visitorId, categoryId])
+  @@index([visitorId])
+  @@index([userId])
+  @@index([categoryId])
+  @@index([score])
+  @@map("user_interest_profiles")
 }
 

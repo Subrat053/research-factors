@@ -13,7 +13,9 @@ import {
   Layers,
   BookOpen,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { articlesApi } from '../../services/articles.api.js';
 import { seoApi } from '../../services/seo.api.js';
@@ -122,8 +124,40 @@ export default function TrendingPage() {
     }
   }, [latestData, latestPage]);
 
-  // Reset pagination on category change
-  const handleCategoryChange = (categorySlug) => {
+  // Topic Strip Smooth Horizontal Scroll State
+  const topicScrollRef = React.useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScrollState = () => {
+    const el = topicScrollRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 5);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 5);
+  };
+
+  React.useEffect(() => {
+    const el = topicScrollRef.current;
+    if (!el) return;
+    checkScrollState();
+    el.addEventListener('scroll', checkScrollState, { passive: true });
+    window.addEventListener('resize', checkScrollState);
+    return () => {
+      el.removeEventListener('scroll', checkScrollState);
+      window.removeEventListener('resize', checkScrollState);
+    };
+  }, [categories]);
+
+  const scrollTopics = (direction) => {
+    if (topicScrollRef.current) {
+      const scrollAmount = direction === 'left' ? -260 : 260;
+      topicScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  // Reset pagination on category change and smoothly center active tab
+  const handleCategoryChange = (categorySlug, event) => {
     setLatestPage(1);
     const newParams = new URLSearchParams(searchParams);
     if (categorySlug === 'all') {
@@ -132,6 +166,14 @@ export default function TrendingPage() {
       newParams.set('category', categorySlug);
     }
     setSearchParams(newParams);
+
+    if (event?.currentTarget) {
+      event.currentTarget.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest'
+      });
+    }
   };
 
   // 4. Fetch Resolved SEO
@@ -238,7 +280,7 @@ export default function TrendingPage() {
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-ink-darkest font-serif leading-tight">
                 What Readers Are Researching
               </h1>
-              <p className="mt-2 text-xs sm:text-sm lg:text-base text-ink-muted leading-relaxed">
+              <p className="mt-2 text-sm sm:text-base text-ink-muted leading-relaxed">
                 Discover the articles, comparisons, analysis, and ideas currently getting attention across Research Factors.
               </p>
             </div>
@@ -390,37 +432,72 @@ export default function TrendingPage() {
               aria-label="Filter trending by category"
               className="pt-2 pb-2 border-y border-paper-border"
             >
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
                 <span className="hidden md:inline-flex text-xs font-bold uppercase tracking-wider text-ink-light shrink-0">
                   Filter Topics:
                 </span>
-                <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar scroll-smooth py-1 w-full">
-                  {/* "All" category button */}
-                  <button
-                    onClick={() => handleCategoryChange('all')}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0 ${
-                      activeCategory === 'all'
-                        ? 'bg-rfblue text-white shadow-xs'
-                        : 'bg-white border border-paper-border text-ink-muted hover:border-rfblue/40 hover:text-ink-darkest'
-                    }`}
-                  >
-                    All Disciplines
-                  </button>
 
-                  {/* Dynamic Category List */}
-                  {categories.map((cat) => (
+                <div className="relative flex-1 flex items-center min-w-0">
+                  {/* Left Scroll Navigation Button */}
+                  {canScrollLeft && (
+                    <div className="absolute left-0 z-10 flex items-center pr-3 bg-gradient-to-r from-paper via-paper/95 to-transparent h-full">
+                      <button
+                        type="button"
+                        onClick={() => scrollTopics('left')}
+                        aria-label="Scroll topics left"
+                        className="w-7 h-7 rounded-full bg-white dark:bg-slate-900 border border-paper-border shadow-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-ink-muted hover:text-ink-darkest flex items-center justify-center transition-all duration-150 cursor-pointer"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Scrollable Container without visible scrollbar */}
+                  <div
+                    ref={topicScrollRef}
+                    className="flex items-center space-x-2 overflow-x-auto no-scrollbar scroll-smooth py-1 w-full"
+                  >
+                    {/* "All" category button */}
                     <button
-                      key={cat.id || cat.slug}
-                      onClick={() => handleCategoryChange(cat.slug)}
-                      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0 ${
-                        activeCategory === cat.slug
+                      onClick={(e) => handleCategoryChange('all', e)}
+                      className={`px-3.5 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 shrink-0 ${
+                        activeCategory === 'all'
                           ? 'bg-rfblue text-white shadow-xs'
                           : 'bg-white border border-paper-border text-ink-muted hover:border-rfblue/40 hover:text-ink-darkest'
                       }`}
                     >
-                      {cat.name}
+                      All Disciplines
                     </button>
-                  ))}
+
+                    {/* Dynamic Category List */}
+                    {categories.map((cat) => (
+                      <button
+                        key={cat.id || cat.slug}
+                        onClick={(e) => handleCategoryChange(cat.slug, e)}
+                        className={`px-3.5 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 shrink-0 ${
+                          activeCategory === cat.slug
+                            ? 'bg-rfblue text-white shadow-xs'
+                            : 'bg-white border border-paper-border text-ink-muted hover:border-rfblue/40 hover:text-ink-darkest'
+                        }`}
+                      >
+                        {cat.name}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Right Scroll Navigation Button */}
+                  {canScrollRight && (
+                    <div className="absolute right-0 z-10 flex items-center pl-3 bg-gradient-to-l from-paper via-paper/95 to-transparent h-full">
+                      <button
+                        type="button"
+                        onClick={() => scrollTopics('right')}
+                        aria-label="Scroll topics right"
+                        className="w-7 h-7 rounded-full bg-white dark:bg-slate-900 border border-paper-border shadow-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-ink-muted hover:text-ink-darkest flex items-center justify-center transition-all duration-150 cursor-pointer"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
@@ -471,17 +548,17 @@ export default function TrendingPage() {
               <div className="lg:col-span-8 space-y-6">
                 <div className="flex items-center justify-between pb-3 border-b border-paper-border">
                   <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-rfblue block mb-1">
+                    {/* <span className="text-xs font-bold uppercase tracking-wider text-rfblue block mb-1">
                       Chronological Index
-                    </span>
-                    <h2
+                    </span> */}
+                    <h1
                       id="latest-research-heading"
                       className="text-xl sm:text-2xl font-bold tracking-tight text-ink-darkest font-serif"
                     >
                       Latest Research
-                    </h2>
+                    </h1>
                   </div>
-                  <span className="text-xs text-ink-light font-medium">
+                  <span className="text-sm text-ink-light font-medium">
                     {activeCategory !== 'all' ? `Filtered by ${activeCategory}` : 'All Publications'}
                   </span>
                 </div>
@@ -498,7 +575,7 @@ export default function TrendingPage() {
 
                   {latestResearchArticles.length === 0 && !isLatestLoading && (
                     <div className="p-8 text-center rounded-xl bg-white border border-paper-border">
-                      <p className="text-xs sm:text-sm text-ink-muted">
+                      <p className="text-sm sm:text-base text-ink-muted">
                         No additional articles found for this topic filter.
                       </p>
                     </div>
@@ -540,7 +617,7 @@ export default function TrendingPage() {
                         Most Read
                       </h3>
                     </div>
-                    <span className="text-[11px] text-ink-light">Top Interest</span>
+                    <span className="text-sm text-ink-light">Top Interest</span>
                   </div>
 
                   <div className="divide-y divide-paper-border/60">
@@ -554,7 +631,7 @@ export default function TrendingPage() {
                     ))}
 
                     {mostReadArticles.length === 0 && (
-                      <p className="text-xs text-ink-muted py-4 text-center">
+                      <p className="text-sm text-ink-muted py-4 text-center">
                         Trending ranking in progress.
                       </p>
                     )}
@@ -584,7 +661,7 @@ export default function TrendingPage() {
                 >
                   Research-Driven Content for High-Stakes Decisions
                 </h2>
-                <p className="mt-2 text-xs sm:text-sm text-ink-muted leading-relaxed">
+                <p className="mt-2 text-base sm:text-base text-ink-muted leading-relaxed">
                   Designed to help engineers, executives, and researchers understand products, technologies, companies, and ideas with rigorous empirical backing.
                 </p>
               </div>
@@ -595,10 +672,10 @@ export default function TrendingPage() {
                     <BookOpen className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-ink-darkest mb-1">
+                    <h3 className="text-base font-bold text-ink-darkest mb-1">
                       Research-Backed
                     </h3>
-                    <p className="text-xs text-ink-muted leading-relaxed">
+                    <p className="text-sm text-ink-muted leading-relaxed">
                       Every insight is supported by primary datasets, reproducible benchmarks, and literature citations.
                     </p>
                   </div>
@@ -609,10 +686,10 @@ export default function TrendingPage() {
                     <BarChart3 className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-ink-darkest mb-1">
+                    <h3 className="text-base font-bold text-ink-darkest mb-1">
                       Clear Comparisons
                     </h3>
-                    <p className="text-xs text-ink-muted leading-relaxed">
+                    <p className="text-sm text-ink-muted leading-relaxed">
                       Systematic head-to-head parameter evaluations without promotional ambiguity or inflated claims.
                     </p>
                   </div>
@@ -623,10 +700,10 @@ export default function TrendingPage() {
                     <Layers className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-ink-darkest mb-1">
+                    <h3 className="text-base font-bold text-ink-darkest mb-1">
                       Independent Governance
                     </h3>
-                    <p className="text-xs text-ink-muted leading-relaxed">
+                    <p className="text-sm text-ink-muted leading-relaxed">
                       Strict editorial separation: commercial sponsorships are transparently declared and peer-reviewed.
                     </p>
                   </div>
@@ -646,10 +723,10 @@ export default function TrendingPage() {
               <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 lg:gap-12">
                 {/* Left Column: Heading & Description */}
                 <div className="max-w-xl">
-                  <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-white/10 text-rfblue-200 border border-white/15 mb-3">
+                  {/* <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-white/10 text-rfblue-200 border border-white/15 mb-3">
                     <Mail className="w-3.5 h-3.5" />
                     <span>Research Dispatch</span>
-                  </div>
+                  </div> */}
                   <h2
                     id="newsletter-heading"
                     className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-white font-serif leading-snug"
@@ -691,7 +768,7 @@ export default function TrendingPage() {
                     </form>
                   )}
 
-                  <p className="mt-3 text-[11px] text-slate-400">
+                  <p className="mt-3 text-xs text-slate-400">
                     Zero spam. Unsubscribe anytime. Strictly peer-reviewed research updates.
                   </p>
                 </div>

@@ -20,9 +20,13 @@ export function CategoryCard({ topic, className = '' }) {
   const artUrl = resolveCategoryArt(topic);
   const displayDesc = desc || description || `Empirical analysis, benchmarks, and research in ${name}.`;
 
-  const countDisplay = typeof articleCount === 'number'
-    ? `${articleCount} ${articleCount === 1 ? 'article' : 'articles'}`
-    : articleCount || 'Explore';
+  const count = typeof articleCount === 'number'
+    ? articleCount
+    : (typeof topic._count?.articles === 'number' ? topic._count.articles : null);
+
+  const countDisplay = typeof count === 'number'
+    ? `${count} ${count === 1 ? 'article' : 'articles'}`
+    : (articleCount || 'Explore');
 
   // Detect whether artUrl is a photo/raster upload (non-SVG, not in /icons/categories/)
   const isPhoto = /\.(jpg|jpeg|webp|png)(\?|$)/i.test(artUrl) && !artUrl.includes('/icons/categories/');

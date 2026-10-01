@@ -30,7 +30,7 @@ export function EditorialSponsorAd({ className = '' }) {
       </p>
 
       {/* Key Proof Points */}
-      <div className="grid grid-cols-1 gap-2 mb-5 pt-3 border-t border-rfblue/10 text-xs text-ink">
+      <div className="grid grid-cols-1 gap-2 mb-5 pt-3 border-t border-rfblue/10 text-sm text-ink">
         <div className="flex items-center space-x-2">
           <ShieldCheck className="w-3.5 h-3.5 text-rfblue shrink-0" />
           <span>Independent editorial governance & ethics</span>

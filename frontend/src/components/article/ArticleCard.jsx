@@ -3,6 +3,24 @@ import { Link } from 'react-router-dom';
 import { Clock, MessageSquare, ArrowUpRight, TrendingUp, Sparkles, Eye } from 'lucide-react';
 import { normalizeMediaUrl } from '../../services/media.api.js';
 
+// Helper for formatting tags in clean normal form with valid slug
+function formatTag(tag) {
+  if (!tag) return { name: '', slug: '' };
+  const tagObj = tag.tag || tag;
+  const raw = typeof tagObj === 'string' ? tagObj : (tagObj.name || tagObj.slug || '');
+  const clean = String(raw).replace(/^#+/, '').trim();
+  const slug = (typeof tagObj === 'object' && tagObj.slug)
+    ? tagObj.slug
+    : clean.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+  let name = (typeof tagObj === 'object' && tagObj.name) ? tagObj.name : clean;
+  name = name.replace(/^#+/, '').trim();
+  if (name.includes('_') || (name.includes('-') && !name.includes(' '))) {
+    name = name.replace(/[-_]/g, ' ');
+  }
+  return { name, slug };
+}
+
 export function ArticleCard({ article, variant = 'standard', rank, className = '' }) {
   if (!article) return null;
 
@@ -19,15 +37,16 @@ export function ArticleCard({ article, variant = 'standard', rank, className = '
     commentCount,
     viewCount,
     isSponsored,
-    sponsorName
+    sponsorName,
+    tags = []
   } = article;
 
   const formattedDate = publishedAt
     ? new Date(publishedAt).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      })
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    })
     : null;
 
   const categorySlug = category?.slug || 'research';
@@ -35,12 +54,12 @@ export function ArticleCard({ article, variant = 'standard', rank, className = '
 
   // A. TRENDING HERO VARIANT (60% Left Hero Asymmetric Card)
   if (variant === 'trendingHero') {
-    const displayExcerpt = subtitle || excerpt || 'In-depth empirical research, critical analysis, and findings from Research Factors.';
+    const displayExcerpt = excerpt || 'In-depth empirical research, critical analysis, and findings from Research Factors.';
 
     return (
       <article className={`group relative bg-white rounded-2xl border border-paper-border overflow-hidden shadow-xs hover:shadow-lg hover:border-rfblue/40 transition-all duration-300 flex flex-col h-full ${className}`}>
         {/* Large Image Container with calibrated height */}
-        <div className="relative aspect-[16/9] max-h-[290px] sm:max-h-[310px] w-full overflow-hidden bg-slate-100 shrink-0">
+        <div className="relative aspect-[16/9] max-h-[290px] sm:max-h-[330px] w-full overflow-hidden bg-slate-100 shrink-0">
           <Link to={articleUrl} className="block w-full h-full">
             {coverImageUrl ? (
               <img
@@ -108,7 +127,10 @@ export function ArticleCard({ article, variant = 'standard', rank, className = '
               </h2>
             </Link>
 
-            <p className="mt-2.5 text-xs sm:text-sm lg:text-base text-ink-muted leading-relaxed line-clamp-3">
+            <p className="mt-2.5 text-xs sm:text-base text-ink-muted leading-relaxed line-clamp-3">
+              {subtitle}
+            </p>
+            <p className="mt-2.5 text-xs sm:text-base text-ink-muted leading-relaxed line-clamp-3">
               {displayExcerpt}
             </p>
           </div>
@@ -182,7 +204,7 @@ export function ArticleCard({ article, variant = 'standard', rank, className = '
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
               />
             ) : (
-              <div className="w-full h-full bg-slate-100 flex items-center justify-center p-2 text-center text-[10px] text-ink-light">
+              <div className="w-full h-full bg-slate-100 flex items-center justify-center p-2 text-center text-sm text-ink-light">
                 Research Factors
               </div>
             )}
@@ -217,17 +239,17 @@ export function ArticleCard({ article, variant = 'standard', rank, className = '
             </div>
 
             <Link to={articleUrl} className="block">
-              <h3 className="text-xs sm:text-sm lg:text-[15px] font-bold text-ink-darkest group-hover:text-rfblue transition-colors leading-snug line-clamp-2">
+              <h3 className="text-xs sm:text-base font-bold text-ink-darkest group-hover:text-rfblue transition-colors leading-snug line-clamp-3">
                 {title}
               </h3>
             </Link>
 
-            <p className="mt-1 text-xs text-ink-muted line-clamp-1 sm:line-clamp-2 leading-relaxed hidden sm:block">
-              {subtitle || excerpt}
+            <p className="mt-1 text-sm text-ink-muted line-clamp-2 sm:line-clamp-2 leading-relaxed hidden sm:block">
+              {(subtitle || excerpt).slice(0, 110)} ...
             </p>
           </div>
 
-          <div className="mt-2 pt-1.5 border-t border-paper-border/60 flex items-center justify-between text-[11px] sm:text-xs text-ink-light">
+          <div className="mt-2 pt-1.5 border-t border-paper-border/60 flex items-center justify-between text-[11px] sm:text-sm text-ink-light">
             <span className="truncate max-w-[130px] font-medium text-ink-darkest">
               {author?.fullName || 'RF Research'}
             </span>
@@ -425,12 +447,12 @@ export function ArticleCard({ article, variant = 'standard', rank, className = '
           </div>
 
           <Link to={articleUrl} className="block">
-            <h4 className="text-xs sm:text-sm font-bold text-ink-darkest group-hover:text-rfblue transition-colors leading-snug line-clamp-2">
+            <h4 className="text-sm sm:text-base font-bold text-ink-darkest group-hover:text-rfblue transition-colors leading-snug line-clamp-2">
               {title}
             </h4>
           </Link>
 
-          <div className="mt-1 flex items-center space-x-2 text-[11px] text-ink-light">
+          <div className="mt-1 flex items-center space-x-2 text-sm text-ink-light">
             <span className="truncate max-w-[120px]">{author?.fullName || 'Contributor'}</span>
             {viewCount > 0 && (
               <>
@@ -457,7 +479,7 @@ export function ArticleCard({ article, variant = 'standard', rank, className = '
 
   // 1. FEATURED HERO VARIANT
   if (variant === 'featured') {
-    const displayExcerpt = subtitle || excerpt || 'In-depth empirical research, critical analysis, and findings from Research Factors.';
+    const displayExcerpt = excerpt || subtitle || 'In-depth empirical research, critical analysis, and findings from Research Factors.';
 
     return (
       <article className="h-full w-full group relative bg-white rounded-2xl border border-paper-border overflow-hidden shadow-xs hover:shadow-md hover:border-rfblue/40 transition-all duration-200 flex flex-col">
@@ -512,10 +534,35 @@ export function ArticleCard({ article, variant = 'standard', rank, className = '
                 <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-ink-darkest leading-snug tracking-tight group-hover:text-rfblue transition-colors line-clamp-2">
                   {title}
                 </h2>
-                <p className="mt-2.5 text-xs sm:text-sm text-ink-muted leading-relaxed line-clamp-2 sm:line-clamp-3">
+                {subtitle && (
+                  <p className="mt-2 text-sm sm:text-base text-ink-darkest font-semibold leading-relaxed line-clamp-2">
+                    {subtitle}
+                  </p>
+                )}
+                <p className={`mt-2 text-xs sm:text-sm text-ink-muted leading-relaxed line-clamp-3 sm:line-clamp-4`}>
                   {displayExcerpt}
                 </p>
               </Link>
+
+              {tags && tags.length > 0 && (
+                <div className="h-[24px] overflow-hidden flex flex-wrap items-center gap-1.5 mt-3">
+                  {tags.map((t, idx) => {
+                    const { name, slug } = formatTag(t);
+                    if (!name || !slug) return null;
+                    return (
+                      <Link
+                        key={t.id || slug || idx}
+                        to={`/tag/${slug}`}
+                        onClick={(e) => e.stopPropagation()}
+                        title={`Browse research tagged ${name}`}
+                        className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-rfblue hover:text-white dark:hover:bg-rfblue dark:hover:text-white transition-colors whitespace-nowrap shrink-0 max-w-[200px] truncate cursor-pointer z-10"
+                      >
+                        {name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Author Footer */}
@@ -599,6 +646,7 @@ export function ArticleCard({ article, variant = 'standard', rank, className = '
 
   // 3. RELATED HORIZONTAL VARIANT (Left Image, Right Heading Only)
   if (variant === 'related-horizontal') {
+    const displayExcert = excerpt || subtitle;
     return (
       <Link
         to={articleUrl}
@@ -618,9 +666,12 @@ export function ArticleCard({ article, variant = 'standard', rank, className = '
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm sm:text-base font-semibold text-ink-darkest group-hover:text-rfblue transition-colors leading-snug line-clamp-2 sm:line-clamp-3">
+          <h4 className="text-sm sm:text-base font-semibold text-ink-darkest group-hover:text-rfblue transition-colors leading-snug line-clamp-2 sm:line-clamp-2">
             {title}
           </h4>
+          <p className={`mt-2 text-xs sm:text-sm text-ink-muted leading-relaxed line-clamp-2 sm:line-clamp-2`}>
+            {displayExcert}
+          </p>
         </div>
       </Link>
     );

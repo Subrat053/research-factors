@@ -34,7 +34,8 @@ import {
   Globe,
   Archive,
   Search,
-  Megaphone
+  Megaphone,
+  HelpCircle
 } from 'lucide-react';
 import { articlesApi } from '../../services/articles.api.js';
 import { adminApi } from '../../services/admin.api.js';
@@ -144,7 +145,7 @@ export default function ArticleEditorPage() {
         id: 'block-1',
         blockType: 'paragraph',
         position: 0,
-        content: { text: 'Begin drafting your research findings, empirical methodology, and analysis here...' }
+        content: {  }
       }
     ]
   });
@@ -555,6 +556,15 @@ export default function ArticleEditorPage() {
       };
     } else if (type === 'divider') {
       initialContent = {};
+    } else if (type === 'faq') {
+      initialContent = {
+        items: [
+          {
+            question: 'What is the primary objective of this research?',
+            answer: 'Provide clear, empirical answers addressing key reader inquiries and findings.'
+          }
+        ]
+      };
     }
 
     const newBlock = {
@@ -996,6 +1006,10 @@ export default function ArticleEditorPage() {
       if (b.blockType === 'paragraph' || b.blockType === 'heading') return b.content?.text || '';
       if (b.blockType === 'quote') return b.content?.quote || '';
       if (b.blockType === 'callout') return `${b.content?.title || ''} ${b.content?.text || ''}`;
+      if (b.blockType === 'faq') {
+        const items = Array.isArray(b.content?.items) ? b.content.items : [];
+        return items.map(it => `${it.question || ''} ${it.answer || ''}`).join(' ');
+      }
       return '';
     })
   ].join(' ').trim().split(/\s+/).filter(Boolean).length;
@@ -1457,7 +1471,7 @@ export default function ArticleEditorPage() {
                               : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                           }`}
                         >
-                          H3 Section
+                          H2 Section
                         </button>
                         <button
                           type="button"
@@ -1468,7 +1482,7 @@ export default function ArticleEditorPage() {
                               : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                           }`}
                         >
-                          H4 Subsection
+                          H3 Subsection
                         </button>
                       </div>
                       <input
@@ -1817,6 +1831,140 @@ export default function ArticleEditorPage() {
                       </span>
                     </div>
                   )}
+
+                  {/* 8. FAQ ACCORDION BLOCK (100% Dynamic) */}
+                  {block.blockType === 'faq' && (() => {
+                    const items = Array.isArray(block.content?.items) ? block.content.items : [];
+
+                    const updateItems = (nextItems) => {
+                      handleBlockContentChange(index, { items: nextItems });
+                    };
+
+                    const handleItemChange = (itemIdx, field, value) => {
+                      const next = items.map((it, i) => (i === itemIdx ? { ...it, [field]: value } : it));
+                      updateItems(next);
+                    };
+
+                    const addItem = () => {
+                      updateItems([
+                        ...items,
+                        { question: '', answer: '' }
+                      ]);
+                    };
+
+                    const removeItem = (itemIdx) => {
+                      updateItems(items.filter((_, i) => i !== itemIdx));
+                    };
+
+                    const moveItem = (itemIdx, direction) => {
+                      const targetIdx = itemIdx + direction;
+                      if (targetIdx < 0 || targetIdx >= items.length) return;
+                      const next = [...items];
+                      const temp = next[itemIdx];
+                      next[itemIdx] = next[targetIdx];
+                      next[targetIdx] = temp;
+                      updateItems(next);
+                    };
+
+                    return (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <HelpCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                              FAQ Accordion ({items.length} {items.length === 1 ? 'Question' : 'Questions'})
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={addItem}
+                            className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 transition-colors cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Add Question</span>
+                          </button>
+                        </div>
+
+                        {items.length === 0 ? (
+                          <div className="p-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/60 dark:bg-slate-950/30">
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                              No FAQ questions added yet to this accordion block.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={addItem}
+                              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                            >
+                              + Add First Question
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {items.map((item, itemIdx) => (
+                              <div
+                                key={itemIdx}
+                                className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 space-y-2.5 transition-colors"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                    Question {itemIdx + 1}
+                                  </span>
+                                  <div className="flex items-center space-x-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => moveItem(itemIdx, -1)}
+                                      disabled={itemIdx === 0}
+                                      className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-25 transition-colors cursor-pointer"
+                                      title="Move Question Up"
+                                    >
+                                      <MoveUp className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => moveItem(itemIdx, 1)}
+                                      disabled={itemIdx === items.length - 1}
+                                      className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-25 transition-colors cursor-pointer"
+                                      title="Move Question Down"
+                                    >
+                                      <MoveDown className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeItem(itemIdx)}
+                                      className="p-1 text-slate-400 hover:text-red-500 transition-colors cursor-pointer ml-1"
+                                      title="Delete Question"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <input
+                                    type="text"
+                                    value={item.question || ''}
+                                    onChange={(e) => handleItemChange(itemIdx, 'question', e.target.value)}
+                                    placeholder="Question (e.g. When is a real estate investment considered a good idea?)"
+                                    className="w-full text-xs font-semibold p-2.5 rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
+                                  />
+                                </div>
+
+                                <div>
+                                  <textarea
+                                    value={item.answer || ''}
+                                    onChange={(e) => handleItemChange(itemIdx, 'answer', e.target.value)}
+                                    placeholder="Detailed answer or response..."
+                                    rows={2}
+                                    className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500 resize-y placeholder-slate-400 dark:placeholder-slate-500 leading-relaxed"
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -1882,6 +2030,14 @@ export default function ArticleEditorPage() {
                 >
                   <Minus className="w-3.5 h-3.5 text-slate-500" />
                   <span>Divider</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addBlock('faq')}
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
+                >
+                  <HelpCircle className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <span>FAQ Accordion</span>
                 </button>
               </div>
             </div>

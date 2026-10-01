@@ -119,12 +119,14 @@ export class ArticleService {
   }) {
     const skip = (Math.max(1, page) - 1) * limit;
     const where = {
-      status: 'PUBLISHED'
+      status: 'PUBLISHED',
+      category: categorySlug
+        ? { slug: categorySlug, isActive: true }
+        : { isActive: true },
+      author: {
+        status: 'ACTIVE'
+      }
     };
-
-    if (categorySlug) {
-      where.category = { slug: categorySlug, isActive: true };
-    }
 
     if (tagSlug) {
       where.tags = {
@@ -225,15 +227,21 @@ export class ArticleService {
     if (!article) {
       const history = await prisma.articleSlugHistory.findUnique({
         where: { slug },
-        include: { article: { include: { category: true } } }
+        include: { article: { include: { category: true, author: true } } }
       });
 
       if (history?.article) {
-        return {
-          redirect: true,
-          newSlug: history.article.slug,
-          categorySlug: history.article.category?.slug || 'research'
-        };
+        if (
+          history.article.status === 'PUBLISHED' &&
+          history.article.category?.isActive !== false &&
+          history.article.author?.status === 'ACTIVE'
+        ) {
+          return {
+            redirect: true,
+            newSlug: history.article.slug,
+            categorySlug: history.article.category?.slug || 'research'
+          };
+        }
       }
 
       throw new AppError('Article not found', 404, 'ARTICLE_NOT_FOUND');
@@ -241,6 +249,14 @@ export class ArticleService {
 
     if (article.status !== 'PUBLISHED') {
       throw new AppError('This article is not currently published', 403, 'ARTICLE_UNPUBLISHED');
+    }
+
+    if (article.category && !article.category.isActive) {
+      throw new AppError('The topic for this research article is currently inactive', 404, 'CATEGORY_INACTIVE');
+    }
+
+    if (article.author && article.author.status !== 'ACTIVE') {
+      throw new AppError('The author of this research article is currently inactive', 404, 'AUTHOR_INACTIVE');
     }
 
     // Increment view count asynchronously
@@ -254,7 +270,9 @@ export class ArticleService {
       where: {
         categoryId: article.categoryId,
         id: { not: article.id },
-        status: 'PUBLISHED'
+        status: 'PUBLISHED',
+        category: { isActive: true },
+        author: { status: 'ACTIVE' }
       },
       take: 4,
       orderBy: { publishedAt: 'desc' },
@@ -288,7 +306,9 @@ export class ArticleService {
     let article = await prisma.article.findFirst({
       where: {
         status: 'PUBLISHED',
-        isFeatured: true
+        isFeatured: true,
+        category: { isActive: true },
+        author: { status: 'ACTIVE' }
       },
       orderBy: { publishedAt: 'desc' },
       include: {
@@ -303,7 +323,11 @@ export class ArticleService {
 
     if (!article) {
       article = await prisma.article.findFirst({
-        where: { status: 'PUBLISHED' },
+        where: {
+          status: 'PUBLISHED',
+          category: { isActive: true },
+          author: { status: 'ACTIVE' }
+        },
         orderBy: { publishedAt: 'desc' },
         include: {
           category: true,
@@ -324,7 +348,11 @@ export class ArticleService {
    */
   static async getTrendingArticles(limit = 5) {
     return prisma.article.findMany({
-      where: { status: 'PUBLISHED' },
+      where: {
+        status: 'PUBLISHED',
+        category: { isActive: true },
+        author: { status: 'ACTIVE' }
+      },
       take: limit,
       orderBy: [
         { viewCount: 'desc' },
@@ -866,8 +894,19 @@ export class ArticleService {
 
   static async publishArticle(articleId, publisherId) {
     return prisma.$transaction(async (tx) => {
-      const article = await tx.article.findUnique({ where: { id: articleId } });
+      const article = await tx.article.findUnique({
+        where: { id: articleId },
+        include: { category: true }
+      });
       if (!article) throw new AppError('Article not found', 404);
+
+      if (article.category && !article.category.isActive) {
+        throw new AppError(
+          'Cannot publish an article under an inactive category. Please activate the category or assign an active category first.',
+          400,
+          'CATEGORY_INACTIVE'
+        );
+      }
 
       if (!article.title || article.title.trim().length < 3) {
         throw new AppError('Article must have a valid title before publishing', 400);

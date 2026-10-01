@@ -8,6 +8,7 @@ import { authApi } from '../../services/auth.api.js';
 import { articlesApi } from '../../services/articles.api.js';
 import { LOGO_URL } from '../../services/media.api.js';
 import { SearchModal } from '../search/SearchModal.jsx';
+import { InterestExplorerPopup } from '../recommendations/InterestExplorerPopup.jsx';
 import {
   Search,
   PenTool,
@@ -18,9 +19,11 @@ import {
   Menu,
   X,
   ChevronDown,
-  Sparkles,
-  ArrowRight
+  SlidersHorizontal,
+  ArrowRight,
+  Compass
 } from 'lucide-react';
+import { resolveCategoryArt } from '../../utils/categoryTheme.js';
 
 export function Header() {
   const { user, isAuthenticated, logout, hasPermission, hasAnyPermission } = useAuth();
@@ -30,6 +33,7 @@ export function Header() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isMobileCategoryOpen, setIsMobileCategoryOpen] = useState(false);
+  const [isTopicsModalOpen, setIsTopicsModalOpen] = useState(false);
   const categoryDropdownRef = useRef(null);
   const categoryHoverTimeoutRef = useRef(null);
   const location = useLocation();
@@ -200,7 +204,7 @@ export function Header() {
                 onMouseLeave={handleCategoryMouseLeave}
               >
                 <Link
-                  to="/research"
+                  to="/categories"
                   className={`flex items-center py-1.5 transition-colors ${
                     location.pathname.startsWith('/research') ||
                     location.pathname.startsWith('/categories') ||
@@ -219,57 +223,71 @@ export function Header() {
                   />
                 </Link>
 
-                {/* Dropdown Menu on Hover with Smooth Framer Motion Animations */}
+                {/* Mega Menu on Hover with 4 Columns Centered to the Middle of the Page */}
                 <AnimatePresence>
                   {isCategoryOpen && (
                     <motion.div
-                      key="category-dropdown"
-                      initial={{ opacity: 0, y: 8, scale: 0.96, x: '-50%' }}
+                      key="category-mega-menu"
+                      initial={{ opacity: 0, y: 10, scale: 0.98, x: '-50%' }}
                       animate={{ opacity: 1, y: 0, scale: 1, x: '-50%' }}
-                      exit={{ opacity: 0, y: 6, scale: 0.96, x: '-50%' }}
-                      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                      className="absolute left-1/2 top-full pt-1.5 w-80 z-50 pointer-events-auto"
+                      exit={{ opacity: 0, y: 8, scale: 0.98, x: '-50%' }}
+                      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                      onMouseEnter={handleCategoryMouseEnter}
+                      onMouseLeave={handleCategoryMouseLeave}
+                      className="fixed left-1/2 -translate-x-1/2 top-16 sm:top-20 w-[94vw] max-w-6xl z-50 pointer-events-auto"
                     >
-                      <div className="rounded-xl bg-white shadow-xl border border-paper-border py-2.5 overflow-hidden">
-                        {/* <div className="px-3.5 py-1.5 border-b border-paper-border/60 text-xs font-bold uppercase tracking-wider text-ink-light flex items-center justify-between">
-                          <span>Research Categories</span>
+                      <div className="rounded-2xl bg-white shadow-2xl border border-paper-border overflow-hidden">
+                        {/* Top Editorial Bar */}
+                        {/* <div className="px-6 py-3.5 border-b border-paper-border/60 bg-paper-light/50 flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <Compass className="w-4 h-4 text-rfblue" />
+                            <span className="text-xs font-bold uppercase tracking-wider text-ink-darkest">
+                              Research Disciplines
+                            </span>
+                          </div>
                           <Link
-                            to="/research"
+                            to="/categories"
                             onClick={() => setIsCategoryOpen(false)}
-                            className="text-[11px] font-semibold text-rfblue hover:underline lowercase tracking-normal"
+                            className="text-xs font-semibold text-rfblue hover:text-rfblue-700 flex items-center transition-colors"
                           >
-                            all research
+                            <span>View All Categories Directory</span>
+                            <ArrowRight className="w-3.5 h-3.5 ml-1" />
                           </Link>
                         </div> */}
-                        <div className="p-1.5 max-h-[360px] overflow-y-auto space-y-0.5">
+
+                        {/* 4-Column Dynamic Grid (filled row by row) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-5 sm:p-6 max-h-[70vh] overflow-y-auto no-scrollbar">
                           {categories.map((cat) => (
                             <Link
                               key={cat.id || cat.slug}
                               to={`/categories/${cat.slug}`}
                               onClick={() => setIsCategoryOpen(false)}
-                              className="flex flex-col px-3.5 py-2 rounded-lg hover:bg-paper transition-colors group"
+                              className="flex items-start space-x-3 p-3 rounded-xl hover:bg-paper-warm/80 dark:hover:bg-slate-800/60 border border-transparent hover:border-paper-border transition-all duration-150 group"
                             >
-                              <span className="text-sm font-semibold text-ink-darkest group-hover:text-rfblue transition-colors">
-                                {cat.name}
-                              </span>
-                              {cat.description && (
-                                <span className="text-xs text-ink-light line-clamp-1 mt-0.5">
-                                  {cat.description}
-                                </span>
-                              )}
+                              <div className="w-10 h-10 rounded-xl bg-paper border border-paper-border/80 flex items-center justify-center shrink-0 p-1.5 group-hover:border-rfblue/40 group-hover:scale-105 transition-all">
+                                <img
+                                  src={resolveCategoryArt(cat)}
+                                  alt=""
+                                  className="w-full h-full object-contain"
+                                  loading="lazy"
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="text-sm font-bold text-ink-darkest group-hover:text-rfblue transition-colors truncate">
+                                    {cat.name}
+                                  </span>
+                                  
+                                </div>
+                                <p className="text-xs text-ink-muted line-clamp-2 mt-0.5 leading-snug">
+                                  {cat.desc || cat.description || `Research and empirical analysis in ${cat.name}.`}
+                                </p>
+                              </div>
                             </Link>
                           ))}
                         </div>
-                        {/* <div className="p-2 border-t border-paper-border/60 bg-slate-50/50">
-                          <Link
-                            to="/research"
-                            onClick={() => setIsCategoryOpen(false)}
-                            className="flex items-center justify-between px-3.5 py-1.5 text-xs font-semibold text-rfblue hover:text-rfblue-700 transition-colors"
-                          >
-                            <span>Universal Research Archive</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </Link>
-                        </div> */}
+
+                        
                       </div>
                     </motion.div>
                   )}
@@ -317,7 +335,19 @@ export function Header() {
                 <span className="hidden sm:inline text-xs sm:text-sm font-medium text-ink-muted group-hover:text-ink">
                   Search
                 </span>
-                
+              </button>
+
+              {/* Desktop: My Topics Preferences Trigger */}
+              <button
+                onClick={() => setIsTopicsModalOpen(true)}
+                className="hidden sm:inline-flex items-center h-9 sm:h-10 px-3 rounded-xl border border-paper-border bg-paper hover:bg-paper-warm text-ink-muted hover:text-ink transition-all shadow-2xs group"
+                title="Personalize your research topics"
+                aria-label="My Topics"
+              >
+                <SlidersHorizontal className="w-4 h-4 text-rfblue mr-2 shrink-0 group-hover:rotate-45 transition-transform" />
+                <span className="text-xs sm:text-sm font-semibold text-ink-darkest">
+                  My Topics
+                </span>
               </button>
 
               {/* Desktop Only: Become an Author CTA (Readers & Guests) */}
@@ -690,10 +720,13 @@ export function Header() {
             <Link
               to="/sponsorship"
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-rfblue bg-rfblue-50/60 hover:bg-rfblue-50 transition-colors"
+              className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                isActive('/sponsorship')
+                  ? 'bg-rfblue-50/60 text-rfblue font-semibold'
+                  : 'text-ink-darkest hover:bg-paper'
+              }`}
             >
               <span>For Sponsorship</span>
-              {/* <Sparkles className="w-3.5 h-3.5 text-rfblue" /> */}
             </Link>
             <Link
               to="/about"
@@ -704,6 +737,23 @@ export function Header() {
             >
               <span>About Us</span>
             </Link>
+
+            {/* Mobile Personalize Topics Trigger */}
+            <button
+              onClick={() => {
+                setIsMenuOpen(false);
+                setIsTopicsModalOpen(true);
+              }}
+              className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-sm font-semibold text-ink-darkest hover:bg-paper transition-colors text-left"
+            >
+              <div className="flex items-center space-x-2.5">
+                <SlidersHorizontal className="w-4 h-4 text-rfblue shrink-0" />
+                <span>My Topics</span>
+              </div>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-rfblue-50 text-rfblue">
+                Personalize
+              </span>
+            </button>
           </div>
 
           {/* Become an Author Callout (for readers & guests) */}
@@ -764,6 +814,12 @@ export function Header() {
 
       {/* Global Search Modal */}
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+
+      {/* Global On-Demand Topic Personalization Modal */}
+      <InterestExplorerPopup
+        isOpen={isTopicsModalOpen}
+        onClose={() => setIsTopicsModalOpen(false)}
+      />
     </>
   );
 }

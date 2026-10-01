@@ -170,6 +170,38 @@ Drafted using the custom Tiptap v2 Rich Text Editor (`RichTextEditor.jsx`) using
 }
 ```
 
+### 8. FAQ Accordion Block (`faq`)
+Used for structured, expandable Q&A sections with interactive `<details>` / `<summary>` accordions, animated `ChevronDown` states, and automated Schema.org `FAQPage` JSON-LD rich snippet generation:
+```json
+{
+  "type": "faq",
+  "content": {
+    "items": [
+      {
+        "question": "What is the expected outcome of these tax appeals?",
+        "answer": "Outcomes depend on the facts, applicable tax provisions, evidence, and decisions of the relevant authorities or courts."
+      }
+    ]
+  }
+}
+```
+
+### 9. List Block (`list`)
+Used for structured bulleted (`unordered`) or numbered (`ordered`) editorial lists with customized typography and `marker:text-rfblue` bullet styling:
+```json
+{
+  "type": "list",
+  "content": {
+    "ordered": false,
+    "items": [
+      "Competitive pricing and financing schemes",
+      "Improved fuel efficiency and emission compliance",
+      "Introduction of new connected-car features and infotainment systems"
+    ]
+  }
+}
+```
+
 ---
 
 ## 4. Autosave Engine & Concurrency Protections
@@ -262,6 +294,7 @@ All actions are conditionally enabled based on the author's resolved permissions
 - **Comparison Matrix Table**: Visual spreadsheet-style editor supporting dynamic `+ Add Column`, `- Remove Column`, `+ Add Row`, and `- Remove Row` with real-time JSON synchronization.
 - **Media Image**: Drag-and-drop or file picker uploading via Sharp WebP, URL fallback, alt description, and figure caption.
 - **Divider**: Visual horizontal break separator with reorder and delete controls.
+- **FAQ Accordion**: 100% dynamic question-and-answer list editor supporting dynamic `+ Add Question`, item deletion (`Trash2`), item reordering (`MoveUp` / `MoveDown`), real-time debounced autosave, and reading time estimation. Rendered interactively via animated collapsible accordions on the reader view, with automatic Google `Schema.org FAQPage` structured data generation.
 
 ### 4. Review Submission Resilience & Workflow Status Guards
 - Pre-submission validation asserts title length (>= 5 chars), required primary category, and at least one content block.
@@ -297,6 +330,12 @@ The form controls in [`ArticleEditorPage.jsx`](file:///d:/Wizmonk/ResearchFactor
 - Integrated via [`ThemeContext.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/context/ThemeContext.jsx) with `localStorage` persistence and `document.documentElement` `.dark` class synchronization.
 - Top navigation bar and sidebar footer in [`AdminLayout.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/components/admin/AdminLayout.jsx) feature an instant Sun / Moon theme toggle button.
 - Full high-contrast styling across all admin portals, layout chrome, block containers, and inputs in both Light Mode (crisp editorial slate/white) and Dark Mode (sleek dark slate).
+
+### 9. Editorial Production Seed Manuscripts
+- **Real Estate Comprehensive Guide** (`backend/scripts/seed-real-estate-article.js`):
+  - Ingests *"When Is Investing in Real Estate a Wise Decision in 2026? A Comprehensive Guide"* (`slug: 'when-is-investing-in-real-estate-a-wise-decision-in-2026-a-comprehensive-guide'`) under the `Real Estate` subcategory (`slug: 'real-estate'`, parent: `Business`).
+  - Features 18 structured blocks including H2 chapters, card subsections, commercial & residential property breakdowns, risk mitigation matrices, sponsored partner profile for **Gharabadi Realty** (`https://gharabadi.com`), and an interactive collapsible FAQ accordion (`blockType: 'faq'`).
+  - Associated with 8 topic tags (`real-estate-investment`, `commercial-real-estate`, `residential-real-estate`, `reits`, etc.).
 
 ---
 

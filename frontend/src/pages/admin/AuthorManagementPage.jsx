@@ -122,8 +122,8 @@ export default function AuthorManagementPage() {
 
   return (
     <AdminLayout
-      title="Author Accreditation & Lifecycle"
-      subtitle="Review manuscript contributor applications, oversee verified authors, and inspect publication metrics"
+      title="Author Verification & Management"
+      subtitle="Review article contributor applications, oversee verified authors, and inspect publication metrics"
     >
       <Helmet>
         <title>Author Management — Research Factors Admin</title>
@@ -158,7 +158,7 @@ export default function AuthorManagementPage() {
               : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
           }`}
         >
-          <span>Accreditation Queue</span>
+          <span>Requests</span>
           {applications.length > 0 && (
             <span className="ml-2 px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-300 text-[10px]">
               {applications.length}
@@ -177,7 +177,7 @@ export default function AuthorManagementPage() {
               : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
           }`}
         >
-          <span>Verified Authors Directory</span>
+          <span>Verified</span>
         </button>
       </div>
 

@@ -75,6 +75,10 @@ export class SeoResolverService {
         entity = await prisma.category.findFirst({
           where: isUuid ? { OR: [{ id: entityId }, { slug: entityId }] } : { slug: entityId }
         });
+      } else if (normalizedType === 'TAG') {
+        entity = await prisma.tag.findFirst({
+          where: isUuid ? { OR: [{ id: entityId }, { slug: entityId }] } : { slug: entityId }
+        });
       }
     }
 
@@ -117,6 +121,17 @@ export class SeoResolverService {
       );
     } else if (normalizedType === 'CATEGORY' && entity) {
       generated = SeoGeneratorService.generateCategorySeo(entity);
+    } else if (normalizedType === 'TAG' && entity) {
+      const tagName = entity.name || entity.slug;
+      generated = {
+        generatedTitle: `#${tagName} - Research & Publications | ${siteDefaults.siteName}`,
+        generatedDescription: `Explore peer-reviewed publications, in-depth analyses, and benchmarks tagged with #${tagName} on ${siteDefaults.siteName}.`,
+        generatedCanonicalUrl: `${siteDefaults.siteUrl}/tag/${entity.slug}`,
+        generatedOgTitle: `#${tagName} - Research & Publications`,
+        generatedOgDescription: `Explore research articles and analyses tagged with #${tagName} on ${siteDefaults.siteName}.`,
+        generatedOgImage: siteDefaults.defaultOgImage,
+        schemaType: 'CollectionPage'
+      };
     } else if (normalizedType === 'PAGE') {
       generated = SeoGeneratorService.getStaticPageDefaults(entityId);
     } else {
@@ -158,7 +173,7 @@ export class SeoResolverService {
       seoRecord?.generatedCanonicalUrl ||
       generated.generatedCanonicalUrl ||
       (entity?.slug
-        ? `${siteDefaults.siteUrl}/${normalizedType === 'CATEGORY' ? 'categories' : 'research'}/${entity.slug}`
+        ? `${siteDefaults.siteUrl}/${normalizedType === 'CATEGORY' ? 'categories' : normalizedType === 'TAG' ? 'tag' : 'research'}/${entity.slug}`
         : `${siteDefaults.siteUrl}/`);
 
     // 7. Resolve Robots Directives

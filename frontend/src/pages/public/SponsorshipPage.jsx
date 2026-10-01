@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { contactApi } from '../../services/contact.api.js';
 import { seoApi } from '../../services/seo.api.js';
 import { normalizeMediaUrl } from '../../services/media.api.js';
+import { DEFAULT_SPONSORSHIP_TIERS } from '../../data/defaultSponsorship.js';
 import { SeoHead } from '../../components/common/SeoHead.jsx';
 import { Header } from '../../components/layout/Header.jsx';
 import { Footer } from '../../components/layout/Footer.jsx';
@@ -83,72 +84,24 @@ export default function SponsorshipPage() {
     }
   };
 
-  const pricingTiers = [
-    {
-      id: 'launch-article',
-      name: 'Launch Article',
-      kicker: 'Starter',
-      price: '₹14,999',
-      period: 'Single Study Investment',
-      description: 'Best for one-time brand visibility and technical awareness with an evidence-led sponsored study or review.',
-      features: [
-        '1 Sponsored research article or review (up to 1,500 words)',
-        '1 Primary category hub directory listing',
-        'Full Schema.org JSON-LD & OpenGraph SEO metadata',
-        'Transparent commercial disclosure badge',
-        'Contextual brand callout box with outbound link',
-        '1 Editorial revision & factual verification round',
-        'Permanent indexing in universal Research Archive'
-      ],
-      cta: 'Start With Starter',
-      isPopular: false
+  // Dynamic Sponsorship Packages from API with offline fallback
+  const { data: packagesData, isLoading: isPackagesLoading } = useQuery({
+    queryKey: ['sponsorship-packages'],
+    queryFn: async () => {
+      const res = await contactApi.getSponsorshipPackages();
+      return res?.data || null;
     },
-    {
-      id: 'authority-series',
-      name: 'Authority Series',
-      kicker: 'Growth',
-      price: '₹34,999',
-      period: '3-Part Research Package',
-      description: 'Designed for brands seeking compounding search visibility, comparative positioning, and deep category authority.',
-      features: [
-        '3 Long-form research articles or reviews (up to 2,000 words each)',
-        'Priority placement across multiple category hubs',
-        'Structured side-by-side comparison matrix integration',
-        'Featured placement in Homepage Latest Research section',
-        'Dedicated brand CTA card with custom trial/documentation link',
-        '2 Editorial revision rounds with direct desk review',
-        'Quarterly verified reader engagement summary'
-      ],
-      cta: 'Choose Growth',
-      isPopular: true
-    },
-    {
-      id: 'enterprise-benchmark',
-      name: 'Enterprise & Benchmark',
-      kicker: 'Scale',
-      price: '₹74,999',
-      period: 'Comprehensive Partnership',
-      description: 'For technology leaders and enterprise solutions requiring definitive market leadership and extensive editorial reach.',
-      features: [
-        'Co-branded Industry Benchmark Report or 6-article series (up to 2,500 words)',
-        'Homepage Featured Research Carousel rotation',
-        'Executive / engineering interview (Brand Insight Feature)',
-        'Cross-category syndication & indexed topic tag network',
-        'Priority editorial turnaround with dedicated senior editor',
-        'Comprehensive reader engagement & audience analytics dossier',
-        'Custom whitepaper or lead generation integration'
-      ],
-      cta: 'Inquire Enterprise',
-      isPopular: false
-    }
-  ];
+    staleTime: 1000 * 60 * 10
+  });
+
+  const pricingTiers = (packagesData || DEFAULT_SPONSORSHIP_TIERS).filter((t) => t.isActive !== false);
 
   const sponsorshipFormats = [
     {
       icon: FileText,
       title: 'Sponsored Research Articles',
       description:
-        'Long-form, comprehensive articles exploring a product, technology, category, problem, or market trend with your brand incorporated naturally into the subject.',
+        'In-depth, research-driven articles that explore a product, technology, category, problem, or emerging market trend from multiple perspectives. Your brand, product, or solution is incorporated naturally into the research so readers can understand its value, use cases, differentiators, and relevance while discovering information that helps them make more informed decisions. This format is designed to build awareness, educate high-intent audiences, strengthen brand credibility, and position your company within meaningful conversations around your industry.',
       tags: ['Product Education', 'Category Awareness', 'Thought Leadership', 'Market Positioning']
     },
     {
@@ -346,7 +299,7 @@ export default function SponsorshipPage() {
                   </a>
                 </div>
 
-                <p className="mt-6 text-xs text-ink-muted/80 leading-relaxed max-w-xl">
+                <p className="mt-6 text-sm text-ink-muted/80 leading-relaxed max-w-xl">
                   Sponsored content is clearly disclosed and developed around relevant reader intent, with commercial
                   involvement presented transparently.
                 </p>
@@ -644,7 +597,7 @@ export default function SponsorshipPage() {
                       aria-expanded={isOpen}
                     >
                       <span
-                        className={`text-sm sm:text-base font-bold transition-colors duration-200 ${
+                        className={`text-sm sm:text-base font-semibold transition-colors duration-200 ${
                           isOpen ? 'text-rfblue' : 'text-ink-darkest'
                         }`}
                       >
@@ -795,9 +748,11 @@ export default function SponsorshipPage() {
                     className="w-full px-4 py-3 rounded-lg border border-paper-border bg-white text-sm text-ink focus:outline-none focus:ring-2 focus:ring-rfblue/20 focus:border-rfblue transition-all"
                   >
                     <optgroup label="Sponsorship Packages">
-                      <option value="launch-article">Launch Article — ₹14,999</option>
-                      <option value="authority-series">Authority Series — ₹34,999 (Most Popular)</option>
-                      <option value="enterprise-benchmark">Enterprise & Benchmark — ₹74,999</option>
+                      {pricingTiers.map((tier) => (
+                        <option key={tier.id} value={tier.id}>
+                          {tier.name} — {tier.price}{tier.isPopular ? ' (Most Popular)' : ''}
+                        </option>
+                      ))}
                     </optgroup>
                     <optgroup label="Bespoke Formats & Custom">
                       <option value="sponsored-research">Native Research Article</option>

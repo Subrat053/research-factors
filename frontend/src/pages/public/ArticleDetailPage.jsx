@@ -1,5 +1,5 @@
-import React from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import React, { useMemo } from 'react';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { articlesApi } from '../../services/articles.api.js';
@@ -16,8 +16,12 @@ import { DetailSkeleton } from '../../components/feedback/SkeletonLoader.jsx';
 import { CommentSection } from '../../components/comments/CommentSection.jsx';
 import { bookmarksApi } from '../../services/bookmarks.api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { useAlert } from '../../context/ModalContext.jsx';
-import { Clock, Calendar, ChevronRight, User, ShieldCheck, Sparkles, ArrowRight } from 'lucide-react';
+import { useConfirm, useAlert } from '../../context/ModalContext.jsx';
+import { Clock,Sparkles, Calendar, ChevronRight, User, ShieldCheck, Compass, ArrowRight } from 'lucide-react';
+import { recommendationsApi } from '../../services/recommendations.api.js';
+import { useReadingTracker } from '../../hooks/useReadingTracker.js';
+import { InterestExplorerPopup } from '../../components/recommendations/InterestExplorerPopup.jsx';
+import { PersonalizedRecommendationRail } from '../../components/recommendations/PersonalizedRecommendationRail.jsx';
 
 // Helper for formatting tags in clean, human-readable normal form
 function formatNormalTag(tag) {
@@ -39,7 +43,9 @@ function formatNormalTag(tag) {
 export default function ArticleDetailPage() {
   const { categorySlug: urlCategorySlug, slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  const confirm = useConfirm();
   const showAlert = useAlert();
   const [isBookmarked, setIsBookmarked] = React.useState(false);
 
@@ -88,6 +94,62 @@ export default function ArticleDetailPage() {
         .catch(() => {});
     }
   }, [user, article?.id]);
+
+  // Structured Multi-Intent Recommendation Query
+  const { data: recommendationsData, isLoading: isRecsLoading } = useQuery({
+    queryKey: ['article-recommendations', article?.id],
+    queryFn: () => recommendationsApi.getArticleRecommendations(article.id),
+    enabled: Boolean(article?.id)
+  });
+  const journeys = recommendationsData?.data || null;
+  const journeyItems = journeys?.recommendations?.length
+    ? journeys.recommendations
+    : (journeys?.completeYourResearch?.items?.length
+      ? journeys.completeYourResearch.items
+      : (journeys?.deepTopicDive?.items?.length ? journeys.deepTopicDive.items : []));
+
+  // Dwell time & Scroll depth engagement tracker
+  const { isEngaged } = useReadingTracker({
+    articleId: article?.id,
+    categoryId: article?.category?.id,
+    tags: article?.tags
+  });
+
+  // Schema.org FAQPage structured data extraction for Google Rich Results (Must be called unconditionally)
+  const combinedJsonLd = useMemo(() => {
+    if (!article) return null;
+    const faqBlock = (article.blocks || []).find(b => b.blockType === 'faq');
+    const faqItems = Array.isArray(faqBlock?.content?.items) ? faqBlock.content.items : [];
+    const faqJsonLd = faqItems.length > 0 ? {
+      '@type': 'FAQPage',
+      mainEntity: faqItems.map(item => ({
+        '@type': 'Question',
+        name: item.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: item.answer
+        }
+      }))
+    } : null;
+
+    const baseLd = article.seo?.schema?.jsonLd;
+    if (baseLd && faqJsonLd) {
+      return {
+        '@context': 'https://schema.org',
+        '@graph': [
+          ...(Array.isArray(baseLd['@graph']) ? baseLd['@graph'] : [baseLd]),
+          faqJsonLd
+        ]
+      };
+    }
+    if (faqJsonLd) {
+      return {
+        '@context': 'https://schema.org',
+        ...faqJsonLd
+      };
+    }
+    return baseLd || null;
+  }, [article]);
 
   if (isLoading) {
     return (
@@ -141,14 +203,27 @@ export default function ArticleDetailPage() {
 
   const handleBookmarkToggle = async () => {
     if (!user) {
-      alert('Please sign in to save articles to your bookmarks');
+      const shouldLogin = await confirm({
+        title: 'Sign In Required',
+        message: 'Please sign in to your Research Factors account to save articles to your personal bookmarks and sync reading lists.',
+        confirmText: 'Sign In',
+        cancelText: 'Cancel',
+        variant: 'info'
+      });
+      if (shouldLogin) {
+        navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`);
+      }
       return;
     }
     try {
       const res = await bookmarksApi.toggleBookmark(article.id);
       setIsBookmarked(res.data?.bookmarked || false);
     } catch {
-      alert('Failed to update bookmark');
+      showAlert({
+        title: 'Unable to Save',
+        message: 'We were unable to update your bookmark at this time. Please check your connection and try again.',
+        variant: 'warning'
+      });
     }
   };
 
@@ -160,6 +235,7 @@ export default function ArticleDetailPage() {
         title={`${article.seoTitle || article.title} — Research Factors`}
         description={article.seoDescription || article.excerpt}
         canonicalUrl={article.canonicalUrl}
+        jsonLd={combinedJsonLd}
         openGraph={{
           title: article.seoTitle || article.title,
           description: article.seoDescription || article.excerpt,
@@ -179,7 +255,7 @@ export default function ArticleDetailPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
               {/* LEFT COLUMN: All Article Content (8 cols) */}
-              <div className="lg:col-span-8 space-y-8 min-w-0">
+              <div className="lg:col-span-8 space-y-6 lg:space-y-8 min-w-0">
                 {/* 1. Breadcrumb Navigation */}
                 <nav aria-label="Breadcrumbs" className="flex items-center space-x-2 text-xs sm:text-sm text-ink-light flex-wrap">
                   <Link to="/" className="hover:text-rfblue transition-colors">Home</Link>
@@ -216,9 +292,9 @@ export default function ArticleDetailPage() {
                 </div>
 
                 {/* 3. Primary Article Headline */}
-                <h2 className="text-ink-darkest font-semibold">
+                <h1 className="lg:text-[46px] text-ink-darkest font-semibold">
                   {article.title}
-                </h2>
+                </h1>
 
                 {/* 4. Subtitle / Excerpt */}
                 {article.subtitle && (
@@ -265,10 +341,6 @@ export default function ArticleDetailPage() {
 
                       <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-xs sm:text-sm text-ink-light mt-0.5">
                         {formattedDate && <span>{formattedDate}</span>}
-                        {formattedDate && <span>•</span>}
-                        <span className="text-ink-muted">
-                          {article.author?.authorProfile?.headline || 'Research Fellow'}
-                        </span>
                       </div>
                     </div>
                   </div>
@@ -320,8 +392,8 @@ export default function ArticleDetailPage() {
                         return (
                           <Link
                             key={tag.id || slug || idx}
-                            to={`/research?tag=${slug}`}
-                            className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-[#eef5f6] dark:bg-[#152e35] text-[#0f5466] dark:text-[#5eead4] hover:bg-[#dbebee] dark:hover:bg-[#1b3d46] transition-colors cursor-pointer border border-[#d6e7eb] dark:border-[#1e444e] shadow-2xs"
+                            to={`/tag/${slug}`}
+                            className="px-3.5 py-1.5 rounded-full text-xs font-medium bg-[#eef5f6] text-rfblue hover:bg-ink-light hover:text-rfblue transition-colors cursor-pointer border border-[#d6e7eb] shadow-2xs"
                             title={`Browse research tagged ${name}`}
                           >
                             {name}
@@ -411,7 +483,6 @@ export default function ArticleDetailPage() {
                   <div className="lg:hidden pt-8 border-t border-paper-border">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg sm:text-xl font-bold text-ink-darkest flex items-center">
-                        <Sparkles className="w-4 h-4 text-rfblue mr-2" />
                         Related Articles
                       </h3>
                     </div>
@@ -469,8 +540,8 @@ export default function ArticleDetailPage() {
                         return (
                           <Link
                             key={tag.id || slug || idx}
-                            to={`/research?tag=${slug}`}
-                            className="px-3.5 py-1.5 rounded-full text-xs sm:text-[13px] font-medium bg-[#eef5f6] dark:bg-[#152e35] text-[#0f5466] dark:text-[#5eead4] hover:bg-[#dbebee] dark:hover:bg-[#1b3d46] transition-colors cursor-pointer border border-[#d6e7eb] dark:border-[#1e444e] shadow-2xs"
+                            to={`/tag/${slug}`}
+                            className="px-3.5 py-1.5 rounded-full text-xs sm:text-[13px] font-medium bg-white  text-[#0f5466] hover:bg-blue-600/50  transition-colors cursor-pointer border border-ink-darkest shadow-2xs"
                             title={`Browse publications under ${name}`}
                           >
                             {name}
@@ -519,8 +590,26 @@ export default function ArticleDetailPage() {
 
                 {/* 4 & 5. Sticky Lower Sidebar Cluster (Related Articles + Sponsorship Opportunity Banner) */}
                 <div className="sticky top-24 space-y-6">
-                  {/* Related Articles Card */}
-                  {relatedArticles.length > 0 && (
+                  {/* Curated Journey or Related Articles Card */}
+                  {journeyItems.length > 0 ? (
+                    <div className="bg-white dark:bg-paper-card rounded-2xl border border-paper-border p-5 shadow-xs space-y-3">
+                      <div className="flex items-center justify-between pb-3 border-b border-paper-border">
+                        <div className="flex items-center space-x-2">
+                          {/* <Compass className="w-4 h-4 text-rfblue" /> */}
+                          <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink-darkest">
+                            Next In Your Journey
+                          </h3>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        {journeyItems.slice(0, 3).map((jItem) => (
+                          <div key={jItem.article.id} className="group flex flex-col space-y-1.5 pb-2.5 border-b border-paper-border/60 last:border-b-0 last:pb-0">
+                            <ArticleCard article={jItem.article} variant="related-horizontal" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : relatedArticles.length > 0 ? (
                     <div className="bg-white dark:bg-paper-card rounded-2xl border border-paper-border p-5 shadow-xs space-y-3">
                       <div className="flex items-center justify-between pb-3 border-b border-paper-border">
                         <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-ink-darkest flex items-center">
@@ -533,7 +622,7 @@ export default function ArticleDetailPage() {
                         ))}
                       </div>
                     </div>
-                  )}
+                  ) : null}
 
                   {/* Sponsorship Opportunity Banner */}
                   <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#060D1A] via-[#0F172A] to-[#1E3A8A] text-white p-6 shadow-md border border-slate-800">
@@ -564,7 +653,26 @@ export default function ArticleDetailPage() {
             </div>
           </div>
         </article>
+
+        {/* Structured Multi-Intent Recommendation Rails */}
+        {article && (
+          <section className="border-t border-paper-border bg-paper py-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <PersonalizedRecommendationRail
+                journeys={journeys}
+                currentArticle={article}
+                isLoading={isRecsLoading}
+              />
+            </div>
+          </section>
+        )}
       </main>
+
+      <InterestExplorerPopup
+        currentCategoryId={article?.category?.id}
+        currentCategoryName={article?.category?.name}
+        isTriggered={isEngaged}
+      />
 
       <Footer />
     </div>
