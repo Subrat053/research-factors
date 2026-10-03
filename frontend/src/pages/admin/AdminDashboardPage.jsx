@@ -194,7 +194,7 @@ export default function AdminDashboardPage() {
               {stats.totalUsers}
             </p>
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-2">
-              <span>{stats.totalAuthors} Accredited Authors</span>
+              <span>{stats.totalAuthors} Verified Authors</span>
               <span className="text-blue-500 dark:text-blue-400 font-semibold">Verified</span>
             </div>
           </div>

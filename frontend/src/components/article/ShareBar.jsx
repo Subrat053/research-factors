@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Share2, Bookmark, Twitter, Linkedin } from 'lucide-react';
 import { generateShareableUrl, getShareLinks } from '../../utils/shareUrl.js';
 import { ShareModal } from './ShareModal.jsx';
+import { ArticleFeedbackButtons } from './ArticleFeedbackButtons.jsx';
 
 export function ShareBar({
   article = null,
@@ -91,6 +92,11 @@ export function ShareBar({
             <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-current' : ''}`} />
             <span>{isBookmarked ? 'Saved' : 'Save'}</span>
           </button>
+        )}
+
+        {/* Like / Dislike Feedback Controls */}
+        {article?.id && (
+          <ArticleFeedbackButtons articleId={article.id} variant="compact" />
         )}
       </div>
 

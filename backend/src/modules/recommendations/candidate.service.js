@@ -1,8 +1,9 @@
 import { prisma } from '../../config/db.js';
+import { RECOMMENDATION_CONFIG } from './recommendation.config.js';
 
 export class CandidateService {
   /**
-   * Retrieves diverse candidate articles for recommendation scoring
+   * Retrieves diverse candidate articles across 8 candidate pools for recommendation scoring
    */
   static async getCandidates({
     currentArticleId = null,
@@ -10,12 +11,20 @@ export class CandidateService {
     taxonomyContext = {},
     currentTagIds = [],
     interestCategoryIds = [],
+    preferredArticleTypes = [],
+    dislikedArticleIds = [],
     excludeArticleIds = [],
-    limit = 36
+    limit = 80
   }) {
     const allExcludeIds = new Set(excludeArticleIds);
     if (currentArticleId) {
       allExcludeIds.add(currentArticleId);
+    }
+    // Hard suppression: explicitly disliked articles must NEVER be recommended
+    if (Array.isArray(dislikedArticleIds)) {
+      for (const id of dislikedArticleIds) {
+        allExcludeIds.add(id);
+      }
     }
 
     const parentCategoryId = taxonomyContext.parentCategoryId || null;
@@ -74,73 +83,78 @@ export class CandidateService {
       }
     };
 
-    // Parallel multi-source candidate generation with dynamic taxonomy hierarchy
-    const queries = [];
+    const poolSizes = RECOMMENDATION_CONFIG.thresholds.candidatePoolSizes;
+    const namedQueries = [];
 
-    // 1. Same exact category candidates (Highest priority pool)
+    // 1. Same exact category candidates (Highest topical cohesion pool)
     if (currentCategoryId) {
-      queries.push(
-        prisma.article.findMany({
+      namedQueries.push({
+        source: 'same_category',
+        query: prisma.article.findMany({
           where: {
             ...baseWhere,
             categoryId: currentCategoryId
           },
           include: includeRelations,
           orderBy: { publishedAt: 'desc' },
-          take: 16
+          take: poolSizes.exactCategory || 20
         })
-      );
+      });
     }
 
-    // 2. Parent category candidates (Fallback when in subcategory)
+    // 2. Parent category candidates (Broader domain fallback)
     if (parentCategoryId && parentCategoryId !== currentCategoryId) {
-      queries.push(
-        prisma.article.findMany({
+      namedQueries.push({
+        source: 'parent_category',
+        query: prisma.article.findMany({
           where: {
             ...baseWhere,
             categoryId: parentCategoryId
           },
           include: includeRelations,
           orderBy: { publishedAt: 'desc' },
-          take: 10
+          take: poolSizes.parentCategory || 12
         })
-      );
+      });
     }
 
-    // 3. Sibling subcategory candidates (Fallback when in subcategory)
+    // 3. Sibling subcategory candidates (Related domain disciplines)
     if (siblingCategoryIds.length > 0) {
-      queries.push(
-        prisma.article.findMany({
+      namedQueries.push({
+        source: 'sibling_category',
+        query: prisma.article.findMany({
           where: {
             ...baseWhere,
             categoryId: { in: siblingCategoryIds }
           },
           include: includeRelations,
           orderBy: { publishedAt: 'desc' },
-          take: 12
+          take: poolSizes.siblingCategory || 16
         })
-      );
+      });
     }
 
-    // 4. Child subcategory candidates (Fallback when viewing parent category)
+    // 4. Child subcategory candidates (Domain specializations)
     if (childCategoryIds.length > 0) {
-      queries.push(
-        prisma.article.findMany({
+      namedQueries.push({
+        source: 'child_category',
+        query: prisma.article.findMany({
           where: {
             ...baseWhere,
             categoryId: { in: childCategoryIds }
           },
           include: includeRelations,
           orderBy: { publishedAt: 'desc' },
-          take: 14
+          take: poolSizes.childCategory || 16
         })
-      );
+      });
     }
 
-    // 5. Tag match candidates
+    // 5. Tag match candidates (Cross-category semantic convergence)
     if (currentTagIds && currentTagIds.length > 0) {
-      queries.push(
-        prisma.article.findMany({
+      namedQueries.push({
+        source: 'matching_tags',
+        query: prisma.article.findMany({
           where: {
             ...baseWhere,
             tags: {
@@ -151,29 +165,47 @@ export class CandidateService {
           },
           include: includeRelations,
           orderBy: { publishedAt: 'desc' },
-          take: 12
+          take: poolSizes.tagMatch || 16
         })
-      );
+      });
     }
 
-    // 6. User interest profile categories
+    // 6. User interest profile categories (Learned reader affinity)
     if (interestCategoryIds && interestCategoryIds.length > 0) {
-      queries.push(
-        prisma.article.findMany({
+      namedQueries.push({
+        source: 'user_interest',
+        query: prisma.article.findMany({
           where: {
             ...baseWhere,
             categoryId: { in: interestCategoryIds }
           },
           include: includeRelations,
           orderBy: { publishedAt: 'desc' },
-          take: 14
+          take: poolSizes.userInterests || 16
         })
-      );
+      });
     }
 
-    // 4. Trending & popular editorial fallback
-    queries.push(
-      prisma.article.findMany({
+    // 7. Preferred article types pool (User format affinity)
+    if (preferredArticleTypes && preferredArticleTypes.length > 0) {
+      namedQueries.push({
+        source: 'article_type_affinity',
+        query: prisma.article.findMany({
+          where: {
+            ...baseWhere,
+            type: { in: preferredArticleTypes }
+          },
+          include: includeRelations,
+          orderBy: { publishedAt: 'desc' },
+          take: poolSizes.typeAffinity || 16
+        })
+      });
+    }
+
+    // 8. Trending & popular editorial fallback (Freshness & community velocity)
+    namedQueries.push({
+      source: 'trending_editorial',
+      query: prisma.article.findMany({
         where: baseWhere,
         include: includeRelations,
         orderBy: [
@@ -181,22 +213,31 @@ export class CandidateService {
           { viewCount: 'desc' },
           { publishedAt: 'desc' }
         ],
-        take: 14
+        take: poolSizes.trendingFallback || 16
       })
-    );
+    });
 
-    const queryResults = await Promise.all(queries);
+    const queryResults = await Promise.all(namedQueries.map((nq) => nq.query));
 
-    // Deduplicate candidates by article id
+    // Deduplicate candidates while merging selection sources
     const candidateMap = new Map();
-    for (const articleList of queryResults) {
+    queryResults.forEach((articleList, index) => {
+      const sourceName = namedQueries[index].source;
       for (const article of articleList) {
         if (!candidateMap.has(article.id)) {
+          article.sources = new Set([sourceName]);
           candidateMap.set(article.id, article);
+        } else {
+          candidateMap.get(article.id).sources.add(sourceName);
         }
       }
+    });
+
+    // Convert candidate sources from Set to Array for downstream consumption
+    for (const cand of candidateMap.values()) {
+      cand.sources = Array.from(cand.sources);
     }
 
-    return Array.from(candidateMap.values()).slice(0, limit);
+    return Array.from(candidateMap.values()).slice(0, Math.min(limit, poolSizes.totalPreScoreCap || 100));
   }
 }

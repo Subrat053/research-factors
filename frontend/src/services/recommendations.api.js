@@ -1,5 +1,17 @@
 import { apiClient } from './api.client.js';
 import { getVisitorContext } from '../utils/visitor.js';
+import fallbackData from '../data/fallbackData.json';
+
+const isNetworkError = (err) => {
+  return (
+    !err?.response ||
+    err?.code === 'NETWORK_ERROR' ||
+    err?.code === 'ERR_NETWORK' ||
+    err?.code === 'ECONNREFUSED' ||
+    (typeof err?.message === 'string' &&
+      (err.message.includes('Network Error') || err.message.includes('connect')))
+  );
+};
 
 export const recommendationsApi = {
   /**
@@ -25,6 +37,73 @@ export const recommendationsApi = {
   },
 
   /**
+   * Sets or toggles explicit article feedback (LIKE / DISLIKE / NONE)
+   */
+  async setArticleFeedback({ articleId, feedbackType }) {
+    const { visitorId, sessionId } = getVisitorContext();
+    try {
+      return await apiClient.post('/recommendations/feedback', {
+        visitorId,
+        sessionId,
+        articleId,
+        feedbackType
+      });
+    } catch (err) {
+      if (isNetworkError(err)) {
+        return { success: true, data: { feedbackType }, _isFallback: true };
+      }
+      throw err;
+    }
+  },
+
+  /**
+   * Retrieves active feedback state for an article
+   */
+  async getArticleFeedback(articleId) {
+    const { visitorId } = getVisitorContext();
+    try {
+      return await apiClient.get(`/recommendations/feedback/${articleId}`, {
+        params: { visitorId }
+      });
+    } catch (err) {
+      if (isNetworkError(err)) {
+        return { success: true, data: { feedbackType: 'NONE' }, _isFallback: true };
+      }
+      throw err;
+    }
+  },
+
+  /**
+   * Removes explicit feedback for an article
+   */
+  async removeArticleFeedback(articleId) {
+    const { visitorId, sessionId } = getVisitorContext();
+    try {
+      return await apiClient.delete(`/recommendations/feedback/${articleId}`, {
+        params: { visitorId, sessionId }
+      });
+    } catch (err) {
+      if (isNetworkError(err)) {
+        return { success: true, data: { feedbackType: 'NONE' }, _isFallback: true };
+      }
+      throw err;
+    }
+  },
+
+  /**
+   * Synchronizes anonymous visitor data to an authenticated user
+   */
+  async syncVisitor() {
+    const { visitorId } = getVisitorContext();
+    try {
+      return await apiClient.post('/recommendations/sync-visitor', { visitorId });
+    } catch (err) {
+      console.debug('Visitor sync fallback', err);
+      return null;
+    }
+  },
+
+  /**
    * Saves reader explicit category interests
    */
   async setInterests(categoryIds = []) {
@@ -40,9 +119,16 @@ export const recommendationsApi = {
    */
   async getVisitorInterests() {
     const { visitorId } = getVisitorContext();
-    return apiClient.get('/recommendations/interests', {
-      params: { visitorId }
-    });
+    try {
+      return await apiClient.get('/recommendations/interests', {
+        params: { visitorId }
+      });
+    } catch (err) {
+      if (isNetworkError(err)) {
+        return { success: true, data: [], _isFallback: true };
+      }
+      throw err;
+    }
   },
 
   /**
@@ -60,9 +146,31 @@ export const recommendationsApi = {
    */
   async getArticleRecommendations(articleId) {
     const { visitorId, sessionId } = getVisitorContext();
-    return apiClient.get(`/recommendations/article/${articleId}`, {
-      params: { visitorId, sessionId }
-    });
+    try {
+      return await apiClient.get(`/recommendations/article/${articleId}`, {
+        params: { visitorId, sessionId }
+      });
+    } catch (err) {
+      if (isNetworkError(err)) {
+        const otherArticles = (fallbackData?.articles || []).filter((a) => a.id !== articleId);
+        const recs = otherArticles.slice(0, 4).map((art) => ({
+          article: art,
+          matchPercentage: 86,
+          reason: `Featured research in ${art.category?.name || 'Research Factors'}`,
+          intent: 'RECOMMENDED'
+        }));
+        return {
+          success: true,
+          data: {
+            recommendations: recs,
+            completeYourResearch: { items: recs.slice(0, 2) },
+            deepTopicDive: { items: recs.slice(2, 4) }
+          },
+          _isFallback: true
+        };
+      }
+      throw err;
+    }
   },
 
   /**
@@ -70,9 +178,29 @@ export const recommendationsApi = {
    */
   async getPersonalizedFeed(limit = 8) {
     const { visitorId, sessionId } = getVisitorContext();
-    return apiClient.get('/recommendations/feed', {
-      params: { visitorId, sessionId, limit }
-    });
+    try {
+      return await apiClient.get('/recommendations/feed', {
+        params: { visitorId, sessionId, limit }
+      });
+    } catch (err) {
+      if (isNetworkError(err)) {
+        const recs = (fallbackData?.articles || []).slice(0, limit).map((art) => ({
+          article: art,
+          matchPercentage: 88,
+          reason: `Popular in ${art.category?.name || 'Research Factors'}`,
+          intent: 'RECOMMENDED'
+        }));
+        return {
+          success: true,
+          data: {
+            topInterests: [],
+            recommendations: recs
+          },
+          _isFallback: true
+        };
+      }
+      throw err;
+    }
   },
 
   /**

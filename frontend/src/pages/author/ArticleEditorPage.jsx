@@ -1,50 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useConfirm } from '../../context/ModalContext.jsx';
 import {
-  Save,
-  Send,
-  Eye,
-  Edit3,
-  Plus,
-  Trash2,
-  MoveUp,
-  MoveDown,
-  Image as ImageIcon,
-  Table as TableIcon,
-  Quote,
-  AlertTriangle,
-  Heading,
-  AlignLeft,
-  Check,
-  Loader2,
-  ArrowLeft,
-  UploadCloud,
-  X,
-  Minus,
-  Sparkles,
-  Info,
-  Lightbulb,
-  ExternalLink,
-  SplitSquareVertical,
-  AlertCircle,
-  Clock,
-  Globe,
-  Archive,
+  FileText,
+  Layers,
+  Database,
+  BookOpen,
   Search,
-  Megaphone,
-  HelpCircle
+  Globe,
+  AlertCircle,
+  Check,
+  X,
+  Loader2
 } from 'lucide-react';
 import { articlesApi } from '../../services/articles.api.js';
 import { adminApi } from '../../services/admin.api.js';
-import { mediaApi, normalizeMediaUrl } from '../../services/media.api.js';
+import { normalizeMediaUrl } from '../../services/media.api.js';
 import { seoApi } from '../../services/seo.api.js';
-import { BlockRenderer } from '../../components/article/BlockRenderer.jsx';
-import { RichTextEditor } from '../../components/article/RichTextEditor.jsx';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
-import { ArticleSeoStudio } from '../../components/article/ArticleSeoStudio.jsx';
+
+// Modular Workspace Tab Components
+import { ArticleWorkspaceHeader } from '../../components/author/ArticleWorkspaceHeader.jsx';
+import { ArticleOverviewTab } from '../../components/author/ArticleOverviewTab.jsx';
+import { ArticleContentTab } from '../../components/author/ArticleContentTab.jsx';
+import { ArticleResearchDataTab } from '../../components/author/ArticleResearchDataTab.jsx';
+import { ArticleSourcesTab } from '../../components/author/ArticleSourcesTab.jsx';
+import { ArticleSeoTab } from '../../components/author/ArticleSeoTab.jsx';
+import { ArticlePublishingTab } from '../../components/author/ArticlePublishingTab.jsx';
 
 const slugify = (text) => {
   return String(text || '')
@@ -64,7 +48,6 @@ const getGeneratedArticleSeo = (data = {}, categoriesList = []) => {
     : 'Empirical research findings, methodologies, and analysis published on Research Factors.';
   const slug = data.slug || slugify(cleanTitle) || 'manuscript-slug';
 
-  // Dynamic category determination
   let categorySlug = 'research';
   if (data.category && typeof data.category === 'object' && data.category.slug) {
     categorySlug = data.category.slug;
@@ -105,8 +88,14 @@ export default function ArticleEditorPage() {
   const canSubmit = hasPermission('article.submit');
   const canUploadMedia = hasPermission('media.upload');
   const canPublish = hasPermission('article.publish');
+  const canUpdateAny = hasPermission('article.update_any');
+
+  // RBAC SEO Gating: Authors without publishing/update_any permissions cannot manage SEO
+  const canAccessSeo = canPublish || canUpdateAny || user?.role === 'ADMIN' || user?.role === 'EDITOR' || user?.role === 'SUPER_ADMIN';
 
   const [currentId, setCurrentId] = useState(id && id !== 'new' ? id : null);
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'content' | 'research' | 'sources' | 'seo' | 'publishing'
+
   const [article, setArticle] = useState({
     title: '',
     subtitle: '',
@@ -122,6 +111,11 @@ export default function ArticleEditorPage() {
     sponsorDescription: '',
     sponsorUrl: '',
     sponsorLogoUrl: '',
+    methodologyEnvironment: '',
+    sampleSize: '',
+    datasetUrl: '',
+    methodologyNotes: '',
+    sources: [],
     seoTitle: '',
     isSeoTitleCustom: false,
     seoDescription: '',
@@ -145,7 +139,7 @@ export default function ArticleEditorPage() {
         id: 'block-1',
         blockType: 'paragraph',
         position: 0,
-        content: {  }
+        content: { text: 'Begin drafting your research findings here...' }
       }
     ]
   });
@@ -159,10 +153,7 @@ export default function ArticleEditorPage() {
   const [saveStatus, setSaveStatus] = useState('saved'); // 'saved', 'saving', 'unsaved'
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
-  const [uploadingCover, setUploadingCover] = useState(false);
-  const [coverInputMode, setCoverInputMode] = useState('upload'); // 'upload' | 'url'
   const [activeAlert, setActiveAlert] = useState(null); // { type: 'error' | 'success', message: '' }
-  const [uploadingBlockIndex, setUploadingBlockIndex] = useState(null);
 
   // Dynamic Category & Topic Tags states
   const [isCustomCategory, setIsCustomCategory] = useState(false);
@@ -265,6 +256,11 @@ export default function ArticleEditorPage() {
               sponsorDescription: data.sponsorDescription || '',
               sponsorUrl: data.sponsorUrl || '',
               sponsorLogoUrl: data.sponsorLogoUrl || '',
+              methodologyEnvironment: data.methodologyEnvironment || '',
+              sampleSize: data.sampleSize || '',
+              datasetUrl: data.datasetUrl || '',
+              methodologyNotes: data.methodologyNotes || '',
+              sources: Array.isArray(data.sources) ? data.sources : [],
               seoTitle: initialSeoTitle,
               isSeoTitleCustom: hasCustomTitle,
               seoDescription: initialSeoDesc,
@@ -304,7 +300,6 @@ export default function ArticleEditorPage() {
           }
         })
         .catch(err => {
-          // Fallback to getMyArticles if getDraft fails
           articlesApi.getMyArticles()
             .then(res => {
               const found = (res.data || []).find(a => a.id === id);
@@ -361,6 +356,11 @@ export default function ArticleEditorPage() {
                   sponsorDescription: found.sponsorDescription || '',
                   sponsorUrl: found.sponsorUrl || '',
                   sponsorLogoUrl: found.sponsorLogoUrl || '',
+                  methodologyEnvironment: found.methodologyEnvironment || '',
+                  sampleSize: found.sampleSize || '',
+                  datasetUrl: found.datasetUrl || '',
+                  methodologyNotes: found.methodologyNotes || '',
+                  sources: Array.isArray(found.sources) ? found.sources : [],
                   seoTitle: initialSeoTitle,
                   isSeoTitleCustom: hasCustomTitle,
                   seoDescription: initialSeoDesc,
@@ -475,7 +475,6 @@ export default function ArticleEditorPage() {
     clean = clean.replace(/^#+/, '').trim();
     if (!clean) return;
 
-    // Normalize for comparison
     const cleanSlug = clean.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const existingSlugs = (article.tags || []).map(t =>
       (typeof t === 'string' ? t.replace(/^#+/, '') : (t.slug || t.name || '')).toLowerCase().replace(/[^a-z0-9]+/g, '-')
@@ -509,176 +508,6 @@ export default function ArticleEditorPage() {
   const handleRemoveTag = (indexToRemove) => {
     const updatedTags = (article.tags || []).filter((_, idx) => idx !== indexToRemove);
     handleChange('tags', updatedTags);
-  };
-
-  const handleBlockContentChange = (index, newContent) => {
-    const newBlocks = [...article.blocks];
-    newBlocks[index] = {
-      ...newBlocks[index],
-      content: { ...newBlocks[index].content, ...newContent }
-    };
-    const updated = { ...article, blocks: newBlocks };
-    setArticle(updated);
-    triggerAutosave(updated);
-  };
-
-  const addBlock = (type) => {
-    let initialContent = {};
-    if (type === 'heading') {
-      initialContent = { level: 2, text: 'New Section Heading' };
-    } else if (type === 'paragraph') {
-      initialContent = { text: 'Write detailed analysis and empirical methodology...' };
-    } else if (type === 'quote') {
-      initialContent = {
-        quote: 'Key empirical statement or quotation.',
-        author: 'Principal Researcher',
-        source: 'Laboratory Benchmark 2026'
-      };
-    } else if (type === 'callout') {
-      initialContent = {
-        variant: 'info',
-        title: 'Key Takeaway',
-        text: 'Important contextual takeaway or finding for researchers.'
-      };
-    } else if (type === 'table' || type === 'comparison') {
-      initialContent = {
-        headers: ['Factor', 'Methodology', 'Benchmark Score'],
-        rows: [
-          { label: 'Inference Latency', values: ['FP16 TensorRT', '98.4 ms'] },
-          { label: 'Energy Consumption', values: ['70W TDP', '0.04 kWh'] }
-        ]
-      };
-    } else if (type === 'image') {
-      initialContent = {
-        url: '',
-        alt: 'Research visualization',
-        caption: 'Figure: Comparative analysis of empirical results'
-      };
-    } else if (type === 'divider') {
-      initialContent = {};
-    } else if (type === 'faq') {
-      initialContent = {
-        items: [
-          {
-            question: 'What is the primary objective of this research?',
-            answer: 'Provide clear, empirical answers addressing key reader inquiries and findings.'
-          }
-        ]
-      };
-    }
-
-    const newBlock = {
-      id: `block-${Date.now()}`,
-      blockType: type,
-      position: article.blocks.length,
-      content: initialContent
-    };
-
-    const updated = { ...article, blocks: [...article.blocks, newBlock] };
-    setArticle(updated);
-    triggerAutosave(updated);
-  };
-
-  const removeBlock = (index) => {
-    const newBlocks = article.blocks
-      .filter((_, i) => i !== index)
-      .map((b, i) => ({ ...b, position: i }));
-    const updated = { ...article, blocks: newBlocks };
-    setArticle(updated);
-    triggerAutosave(updated);
-  };
-
-  const moveBlock = (index, direction) => {
-    if (
-      (direction === -1 && index === 0) ||
-      (direction === 1 && index === article.blocks.length - 1)
-    ) {
-      return;
-    }
-    const newBlocks = [...article.blocks];
-    const targetIndex = index + direction;
-    const temp = newBlocks[index];
-    newBlocks[index] = newBlocks[targetIndex];
-    newBlocks[targetIndex] = temp;
-
-    const reindexed = newBlocks.map((b, i) => ({ ...b, position: i }));
-    const updated = { ...article, blocks: reindexed };
-    setArticle(updated);
-    triggerAutosave(updated);
-  };
-
-  // Cover Image Upload Handler
-  const handleCoverUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!canUploadMedia) {
-      setActiveAlert({
-        type: 'error',
-        message: 'Permission denied: Your account role does not possess media upload privileges.'
-      });
-      return;
-    }
-
-    setUploadingCover(true);
-    setActiveAlert(null);
-    try {
-      const res = await mediaApi.upload(file, {
-        altText: article.coverImageAlt || article.title || 'Article Cover'
-      });
-      const publicUrl = res.data?.publicUrl || res.publicUrl;
-      if (!publicUrl) throw new Error('Failed to obtain uploaded file URL from storage provider.');
-
-      handleChange('coverImageUrl', normalizeMediaUrl(publicUrl));
-      setActiveAlert({
-        type: 'success',
-        message: 'Cover image uploaded and converted to WebP successfully!'
-      });
-    } catch (err) {
-      setActiveAlert({
-        type: 'error',
-        message: err.message || 'Failed to upload cover image. Please verify file type (JPEG, PNG, WebP) and size (<8MB).'
-      });
-    } finally {
-      setUploadingCover(false);
-      e.target.value = '';
-    }
-  };
-
-  // In-Block Media Image Upload Handler
-  const handleBlockImageUpload = async (index, file) => {
-    if (!file) return;
-
-    if (!canUploadMedia) {
-      setActiveAlert({
-        type: 'error',
-        message: 'Permission denied: Your account role does not possess media upload privileges.'
-      });
-      return;
-    }
-
-    setUploadingBlockIndex(index);
-    setActiveAlert(null);
-    try {
-      const res = await mediaApi.upload(file, {
-        altText: article.blocks[index]?.content?.alt || 'Manuscript Figure'
-      });
-      const publicUrl = res.data?.publicUrl || res.publicUrl;
-      if (!publicUrl) throw new Error('Failed to obtain uploaded asset URL.');
-
-      handleBlockContentChange(index, { url: normalizeMediaUrl(publicUrl) });
-      setActiveAlert({
-        type: 'success',
-        message: 'Block media image uploaded and optimized successfully!'
-      });
-    } catch (err) {
-      setActiveAlert({
-        type: 'error',
-        message: err.message || 'Failed to upload block media image.'
-      });
-    } finally {
-      setUploadingBlockIndex(null);
-    }
   };
 
   // Explicit Save Draft Button Action
@@ -766,7 +595,6 @@ export default function ArticleEditorPage() {
         const resolved = await seoApi.resolveSeo({ type: 'ARTICLE', id: currentId });
         if (resolved?.seo) setResolvedSeo(resolved.seo);
 
-        // Populate regenerated values into input fields and mark them as live-sync auto-generated
         const updated = {
           ...article,
           seoTitle: res.data.generatedTitle || article.seoTitle,
@@ -800,7 +628,6 @@ export default function ArticleEditorPage() {
     }
   };
 
-  // Open live production simulation in a separate tab
   const handlePreviewInNewTab = async () => {
     let targetId = currentId;
     if (!targetId || saveStatus === 'unsaved') {
@@ -811,7 +638,6 @@ export default function ArticleEditorPage() {
     }
   };
 
-  // Submit for Editorial Review Action
   const handleSubmitForReview = async () => {
     setActiveAlert(null);
 
@@ -892,7 +718,6 @@ export default function ArticleEditorPage() {
     }
   };
 
-  // Direct publish for admin / publisher
   const handleDirectPublish = async () => {
     setActiveAlert(null);
 
@@ -966,7 +791,6 @@ export default function ArticleEditorPage() {
     }
   };
 
-  // Unpublish / archive for admin / publisher
   const handleUnpublish = async () => {
     if (!currentId) return;
     const ok = await confirm({
@@ -997,160 +821,99 @@ export default function ArticleEditorPage() {
     }
   };
 
-  // Calculate total manuscript words and estimated reading time
-  const totalWords = [
-    article.title || '',
-    article.subtitle || '',
-    article.excerpt || '',
-    ...(article.blocks || []).map(b => {
-      if (b.blockType === 'paragraph' || b.blockType === 'heading') return b.content?.text || '';
-      if (b.blockType === 'quote') return b.content?.quote || '';
-      if (b.blockType === 'callout') return `${b.content?.title || ''} ${b.content?.text || ''}`;
-      if (b.blockType === 'faq') {
-        const items = Array.isArray(b.content?.items) ? b.content.items : [];
-        return items.map(it => `${it.question || ''} ${it.answer || ''}`).join(' ');
-      }
-      return '';
-    })
-  ].join(' ').trim().split(/\s+/).filter(Boolean).length;
+  // Word count and reading time metrics
+  const totalWords = useMemo(() => {
+    return [
+      article.title || '',
+      article.subtitle || '',
+      article.excerpt || '',
+      ...(article.blocks || []).map(b => {
+        if (b.blockType === 'paragraph' || b.blockType === 'heading') return b.content?.text || '';
+        if (b.blockType === 'quote') return b.content?.quote || '';
+        if (b.blockType === 'callout') return `${b.content?.title || ''} ${b.content?.text || ''}`;
+        if (b.blockType === 'list') {
+          const items = Array.isArray(b.content?.items) ? b.content.items : [];
+          return items.map(it => (typeof it === 'string' ? it : it?.text || '')).join(' ');
+        }
+        if (b.blockType === 'faq') {
+          const items = Array.isArray(b.content?.items) ? b.content.items : [];
+          return items.map(it => `${it.question || ''} ${it.answer || ''}`).join(' ');
+        }
+        return '';
+      })
+    ].join(' ').trim().split(/\s+/).filter(Boolean).length;
+  }, [article.title, article.subtitle, article.excerpt, article.blocks]);
 
   const estimatedReadingTime = Math.max(1, Math.ceil(totalWords / 200));
 
-  const editorActions = (
-    <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-      {/* Save status indicator */}
-      <span
-        className={`text-[11px] px-2.5 py-1 rounded-full font-semibold border ${
-          saveStatus === 'saved'
-            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
-            : saveStatus === 'saving'
-            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 animate-pulse'
-            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
-        }`}
-      >
-        {saveStatus === 'saved' ? '● Saved' : saveStatus === 'saving' ? 'Saving...' : '● Unsaved'}
-      </span>
+  // Workspace Tabs Definition with RBAC SEO Gating
+  const visibleTabs = useMemo(() => {
+    const tabs = [
+      { key: 'overview', label: 'Overview', icon: FileText },
+      { key: 'content', label: 'Content', icon: Layers, badge: `${(article.blocks || []).length}` },
+      { key: 'research', label: 'Research Data', icon: Database },
+      {
+        key: 'sources',
+        label: 'Sources',
+        icon: BookOpen,
+        badge: Array.isArray(article.sources) && article.sources.length ? `${article.sources.length}` : undefined
+      }
+    ];
 
-      {/* Article publication status */}
-      <span
-        className={`text-[11px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider border ${
-          article.status === 'PUBLISHED'
-            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
-            : article.status === 'PENDING_REVIEW'
-            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
-            : article.status === 'REJECTED'
-            ? 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30'
-            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
-        }`}
-      >
-        {article.status === 'PENDING_REVIEW'
-          ? 'Under Review'
-          : article.status === 'REJECTED'
-          ? 'Changes Requested'
-          : article.status === 'PUBLISHED'
-          ? 'Published'
-          : 'Draft'}
-      </span>
+    // SEO tab is ONLY shown if user has publishing/update_any or editor/admin privileges
+    if (canAccessSeo) {
+      tabs.push({ key: 'seo', label: 'SEO & Social', icon: Search });
+    }
 
-      {/* Live Production Preview in New Tab */}
-      <button
-        type="button"
-        onClick={handlePreviewInNewTab}
-        disabled={savingDraft || submitting}
-        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white text-xs font-semibold transition-all cursor-pointer shadow-2xs disabled:opacity-50"
-        title="Open production-accurate live simulation in a new browser tab"
-      >
-        <ExternalLink className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-        <span className="hidden sm:inline">Preview Live</span>
-        <span className="sm:hidden">Preview</span>
-      </button>
+    tabs.push({ key: 'publishing', label: 'Publishing', icon: Globe });
 
-      {/* Manual Save Draft Button */}
-      <button
-        type="button"
-        onClick={handleSaveDraft}
-        disabled={savingDraft || submitting}
-        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white text-xs font-semibold transition-all disabled:opacity-50 cursor-pointer shadow-2xs"
-      >
-        {savingDraft ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-        <span>Save Draft</span>
-      </button>
+    return tabs;
+  }, [article.blocks, article.sources, canAccessSeo]);
 
-      {/* Direct Publish / Unpublish for Admin, or Review actions for Authors */}
-      {canPublish ? (
-        article.status === 'PUBLISHED' ? (
-          <button
-            type="button"
-            onClick={handleUnpublish}
-            disabled={submitting}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-600 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
-            title="Unpublish article back to archive"
-          >
-            {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Archive className="w-3.5 h-3.5" />}
-            <span>Unpublish</span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleDirectPublish}
-            disabled={submitting}
-            title="Direct publish manuscript live to public magazine"
-            className="inline-flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
-            <span>Publish Live</span>
-          </button>
-        )
-      ) : article.status === 'PENDING_REVIEW' ? (
-        <button
-          type="button"
-          disabled
-          title="This manuscript is currently undergoing editorial review."
-          className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold cursor-not-allowed"
-        >
-          <Clock className="w-3.5 h-3.5" />
-          <span>Under Review</span>
-        </button>
-      ) : article.status === 'PUBLISHED' ? (
-        <button
-          type="button"
-          disabled
-          title="This manuscript is already published live."
-          className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold cursor-not-allowed"
-        >
-          <Check className="w-3.5 h-3.5" />
-          <span>Published</span>
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={handleSubmitForReview}
-          disabled={submitting || !canSubmit}
-          title={!canSubmit ? 'You do not have permission to submit manuscripts' : 'Submit for peer editorial review'}
-          className="inline-flex items-center space-x-1.5 px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
-        >
-          {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-          <span>{article.status === 'REJECTED' ? 'Re-submit for Review' : 'Submit for Review'}</span>
-        </button>
-      )}
-    </div>
-  );
+  // If user loses permission or direct URL specifies SEO when forbidden, fallback to content
+  useEffect(() => {
+    if (activeTab === 'seo' && !canAccessSeo) {
+      setActiveTab('content');
+    }
+  }, [activeTab, canAccessSeo]);
 
   return (
     <AdminLayout
-      title={currentId ? 'Editor' : 'Write Article'}
-      subtitle={article.title ? `Draft: "${article.title}"` : 'Draft, structure content blocks, and submit articles for peer editorial review.'}
-      actions={editorActions}
+      title={currentId ? 'Manuscript Workspace' : 'Draft Manuscript'}
+      subtitle={article.title ? `Working on: "${article.title}"` : 'Structure chapters, empirical benchmarks, and submit for peer review.'}
     >
       <Helmet>
-        <title>{article.title ? `${article.title} — Editor` : 'Write Article'} — Research Factors Admin</title>
+        <title>{article.title ? `${article.title} — Workspace` : 'New Article'} — Research Factors</title>
       </Helmet>
 
-      <div className="max-w-5xl mx-auto space-y-6">
+      {/* Sticky Workspace Navigation & Action Header */}
+      <div className="-mx-4 sm:-mx-8 -mt-6 mb-6">
+        <ArticleWorkspaceHeader
+          article={article}
+          currentId={currentId}
+          saveStatus={saveStatus}
+          savingDraft={savingDraft}
+          submitting={submitting}
+          totalWords={totalWords}
+          estimatedReadingTime={estimatedReadingTime}
+          canPublish={canPublish}
+          canSubmit={canSubmit}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          visibleTabs={visibleTabs}
+          onSaveDraft={handleSaveDraft}
+          onPreviewLive={handlePreviewInNewTab}
+          onSubmitForReview={handleSubmitForReview}
+          onDirectPublish={handleDirectPublish}
+          onUnpublish={handleUnpublish}
+        />
+      </div>
+
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Dynamic Alert Banner */}
         {activeAlert && (
           <div
-            className={`p-4 rounded-2xl flex items-start justify-between border ${
+            className={`p-4 rounded-2xl flex items-start justify-between border animate-in fade-in duration-200 ${
               activeAlert.type === 'error'
                 ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/60 text-red-800 dark:text-red-300'
                 : 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300'
@@ -1173,1102 +936,94 @@ export default function ArticleEditorPage() {
           </div>
         )}
 
-        {/* Rejection Feedback Banner */}
-        {article.status === 'REJECTED' && article.rejectionReason && (
-          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-start space-x-3">
-            <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-0.5">
-                Editorial Feedback & Revision Notes
-              </p>
-              <p className="text-sm text-slate-200">{article.rejectionReason}</p>
-            </div>
-          </div>
-        )}
-
+        {/* Loading State */}
         {loading ? (
           <div className="py-24 text-center">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-3" />
-            <p className="text-sm text-slate-400">Loading article workspace...</p>
+            <p className="text-sm text-slate-400">Loading manuscript workspace...</p>
           </div>
         ) : (
-          /* Live Block Authoring Mode */
-          <div className="space-y-6">
-            {/* 1. TOP TAXONOMY & READING TIME BAR (Matches Breadcrumbs & Format Badge on Public Frontend) */}
-            <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800/80 shadow-xs transition-colors">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-                {/* Primary Research Category Selector */}
-                <div className="md:col-span-5">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Article Category <span className="text-red-500">*</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCustomCategory(!isCustomCategory);
-                        if (!isCustomCategory) {
-                          handleChange('categoryId', '');
-                        } else {
-                          setCustomCategoryName('');
-                        }
-                      }}
-                      className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-                    >
-                      {isCustomCategory ? 'Select Existing' : '+ Custom Category'}
-                    </button>
-                  </div>
-                  {isCustomCategory ? (
-                    <input
-                      type="text"
-                      value={customCategoryName}
-                      onChange={(e) => {
-                        setCustomCategoryName(e.target.value);
-                        handleChange('categoryName', e.target.value);
-                      }}
-                      placeholder="e.g. Quantum Cryptography, Bioengineering..."
-                      className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium placeholder-slate-400 dark:placeholder-slate-500"
-                    />
-                  ) : (
-                    <select
-                      value={article.categoryId}
-                      onChange={(e) => handleChange('categoryId', e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
-                    >
-                      <option value="">Select Field of Study...</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
+          /* Active Tab Panels */
+          <div>
+            {/* Tab 1: Overview */}
+            {activeTab === 'overview' && (
+              <ArticleOverviewTab
+                article={article}
+                onChange={handleChange}
+                categories={categories}
+                isCustomCategory={isCustomCategory}
+                setIsCustomCategory={setIsCustomCategory}
+                customCategoryName={customCategoryName}
+                setCustomCategoryName={setCustomCategoryName}
+                tagInput={tagInput}
+                setTagInput={setTagInput}
+                suggestedTags={suggestedTags}
+                showTagSuggestions={showTagSuggestions}
+                setShowTagSuggestions={setShowTagSuggestions}
+                onAddTag={handleAddTag}
+                onRemoveTag={handleRemoveTag}
+                canUploadMedia={canUploadMedia}
+                onAlert={setActiveAlert}
+                totalWords={totalWords}
+                estimatedReadingTime={estimatedReadingTime}
+              />
+            )}
 
-                {/* Article Format / Genre Selector */}
-                <div className="md:col-span-4">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Article Format / Type <span className="text-red-500">*</span>
-                    </label>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400">Editorial genre</span>
-                  </div>
-                  <select
-                    value={article.type || 'RESEARCH'}
-                    onChange={(e) => handleChange('type', e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
-                  >
-                    <option value="RESEARCH">Research (Empirical / Experimental)</option>
-                    <option value="REVIEW">Review (Literature / Technology)</option>
-                    <option value="COMPARISON">Comparison (Benchmarks / Matrix)</option>
-                    <option value="ANALYSIS">Analysis (Architectural / Economic)</option>
-                    <option value="GUIDE">Guide (Methodology / Technical)</option>
-                    <option value="OPINION">Opinion (Perspective / Commentary)</option>
-                  </select>
-                </div>
+            {/* Tab 2: Content (Mode A Section Builder / Mode B Full Article Editor) */}
+            {activeTab === 'content' && (
+              <ArticleContentTab
+                blocks={article.blocks}
+                onChange={handleChange}
+                canUploadMedia={canUploadMedia}
+                onAlert={setActiveAlert}
+              />
+            )}
 
-                {/* Estimated Reading Time Indicator */}
-                <div className="md:col-span-3 flex md:justify-end items-end pt-2 md:pt-0">
-                  <div className="inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs text-slate-600 dark:text-slate-400 font-medium shadow-2xs">
-                    <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-                    <span>~{estimatedReadingTime} min read</span>
-                    <span className="text-slate-300 dark:text-slate-700">•</span>
-                    <span className="text-[11px] text-slate-500">{totalWords} words</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Tab 3: Research Data & Underwriting */}
+            {activeTab === 'research' && (
+              <ArticleResearchDataTab
+                article={article}
+                onChange={handleChange}
+              />
+            )}
 
-            {/* 2. MANUSCRIPT HEADLINE & THESIS METADATA (Matches Primary Title & Subtitle on Public Frontend) */}
-            <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800/80 shadow-xs space-y-5 transition-colors">
-              {/* Title */}
-              <div>
-                <input
-                  type="text"
-                  value={article.title}
-                  onChange={(e) => handleChange('title', e.target.value)}
-                  placeholder="Article Title (e.g. Empirical Benchmarks of Quantum Processors...)"
-                  className="w-full text-2xl sm:text-3xl lg:text-4xl font-semibold text-slate-900 dark:text-white focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent border-b border-transparent focus:border-blue-500 pb-1"
-                />
-              </div>
+            {/* Tab 4: Sources & Citations */}
+            {activeTab === 'sources' && (
+              <ArticleSourcesTab
+                article={article}
+                onChange={handleChange}
+              />
+            )}
 
-              {/* Subtitle */}
-              <div>
-                <input
-                  type="text"
-                  value={article.subtitle || ''}
-                  onChange={(e) => handleChange('subtitle', e.target.value)}
-                  placeholder="Thesis statement or research subtitle..."
-                  className="w-full text-base sm:text-lg font-normal text-slate-700 dark:text-slate-300 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent border-b border-transparent focus:border-blue-500 pb-1"
-                />
-              </div>
+            {/* Tab 5: SEO & Social (RBAC Gated) */}
+            {activeTab === 'seo' && (
+              <ArticleSeoTab
+                article={article}
+                onChange={handleChange}
+                seoMetadata={seoMetadata}
+                resolvedSeo={resolvedSeo}
+                onRegenerate={currentId ? handleRegenerateSeo : null}
+                isRegenerating={isRegeneratingSeo}
+                canAccessSeo={canAccessSeo}
+              />
+            )}
 
-              {/* Excerpt */}
-              <div>
-                <textarea
-                  value={article.excerpt || ''}
-                  onChange={(e) => handleChange('excerpt', e.target.value)}
-                  placeholder="Abstract / Executive Summary (visible on archive cards, social cards, and search previews)..."
-                  rows={2}
-                  className="w-full text-sm font-normal text-slate-600 dark:text-slate-400 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 bg-transparent resize-none border-b border-transparent focus:border-blue-500 pb-1"
-                />
-              </div>
-            </div>
-
-            {/* 3. HERO COVER ASSET BANNER (Matches Hero Figure on Public Frontend) */}
-            <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800/80 shadow-xs space-y-4 transition-colors">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/80">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Hero Cover Asset
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Prominent editorial banner displayed between headline metadata and body prose
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setCoverInputMode('upload')}
-                    className={`font-semibold cursor-pointer ${coverInputMode === 'upload' ? 'text-blue-600 dark:text-blue-400 underline' : 'text-slate-500 dark:text-slate-400'}`}
-                  >
-                    Upload File
-                  </button>
-                  <span className="text-slate-300 dark:text-slate-700">|</span>
-                  <button
-                    type="button"
-                    onClick={() => setCoverInputMode('url')}
-                    className={`font-semibold cursor-pointer ${coverInputMode === 'url' ? 'text-blue-600 dark:text-blue-400 underline' : 'text-slate-500 dark:text-slate-400'}`}
-                  >
-                    Enter Direct URL
-                  </button>
-                </div>
-              </div>
-
-              {article.coverImageUrl ? (
-                <div className="space-y-3">
-                  <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-950 group max-h-80 shadow-xs">
-                    <img
-                      src={normalizeMediaUrl(article.coverImageUrl)}
-                      alt={article.coverImageAlt || article.title || 'Cover Asset'}
-                      className="w-full h-full object-cover max-h-80"
-                    />
-                    <div className="absolute top-3 right-3 flex items-center space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => handleChange('coverImageUrl', '')}
-                        className="p-1.5 bg-black/70 hover:bg-black text-white rounded-full transition-colors shadow-md cursor-pointer"
-                        title="Remove cover asset"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Cover Image Alt Text & Caption */}
-                  <div>
-                    <input
-                      type="text"
-                      value={article.coverImageAlt || ''}
-                      onChange={(e) => handleChange('coverImageAlt', e.target.value)}
-                      placeholder="Cover Image Alt Description & Figure Caption (displays below hero image on public reader view)..."
-                      className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
-                    />
-                  </div>
-                </div>
-              ) : coverInputMode === 'upload' ? (
-                <label className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl cursor-pointer hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-center">
-                  {uploadingCover ? (
-                    <div className="flex items-center space-x-2 text-blue-600 dark:text-blue-400">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span className="text-xs font-semibold">Processing via Sharp WebP...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <UploadCloud className="w-8 h-8 text-blue-600 dark:text-blue-400 mb-2" />
-                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                        Upload Article Cover Image
-                      </span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        PNG, JPG, WebP up to 8MB (Auto-optimized to modern WebP)
-                      </span>
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/avif"
-                    onChange={handleCoverUpload}
-                    disabled={uploadingCover}
-                    className="hidden"
-                  />
-                </label>
-              ) : (
-                <input
-                  type="url"
-                  value={article.coverImageUrl || ''}
-                  onChange={(e) => handleChange('coverImageUrl', e.target.value)}
-                  placeholder="https://... (Direct image URL or CDN link)"
-                  className="w-full text-xs p-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
-                />
-              )}
-            </div>
-
-            {/* 4. MANUSCRIPT CONTENT BLOCKS (Matches Article Prose Body on Public Frontend) */}
-            <div className="space-y-4">
-              {article.blocks.map((block, index) => (
-                <div
-                  key={block.id || index}
-                  className="group bg-white dark:bg-slate-900/80 rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800/80 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors text-slate-800 dark:text-slate-100"
-                >
-                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-slate-800/80 text-xs text-slate-500 dark:text-slate-400">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 text-[10px]">
-                        Block {index + 1}: {block.blockType}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-1">
-                      <button
-                        type="button"
-                        onClick={() => moveBlock(index, -1)}
-                        disabled={index === 0}
-                        className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 transition-colors cursor-pointer"
-                        title="Move Up"
-                      >
-                        <MoveUp className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveBlock(index, 1)}
-                        disabled={index === article.blocks.length - 1}
-                        className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 transition-colors cursor-pointer"
-                        title="Move Down"
-                      >
-                        <MoveDown className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeBlock(index)}
-                        className="p-1 text-slate-500 dark:text-slate-400 hover:text-red-500 ml-2 transition-colors cursor-pointer"
-                        title="Delete Block"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 1. HEADING BLOCK */}
-                  {block.blockType === 'heading' && (
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Level:</span>
-                        <button
-                          type="button"
-                          onClick={() => handleBlockContentChange(index, { level: 2 })}
-                          className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition-colors cursor-pointer ${
-                            (block.content?.level || 2) === 2
-                              ? 'bg-blue-600 text-white shadow-2xs'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                          }`}
-                        >
-                          H2 Section
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleBlockContentChange(index, { level: 3 })}
-                          className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition-colors cursor-pointer ${
-                            block.content?.level === 3
-                              ? 'bg-blue-600 text-white shadow-2xs'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                          }`}
-                        >
-                          H3 Subsection
-                        </button>
-                      </div>
-                      <input
-                        type="text"
-                        value={block.content?.text || ''}
-                        onChange={(e) => handleBlockContentChange(index, { text: e.target.value })}
-                        placeholder="Section Heading Title..."
-                        className="w-full text-xl font-semibold text-slate-900 dark:text-white focus:outline-none border-b border-slate-200 dark:border-slate-800 focus:border-blue-500 pb-1 bg-transparent placeholder-slate-400 dark:placeholder-slate-500"
-                      />
-                    </div>
-                  )}
-
-                  {/* 2. PARAGRAPH BLOCK (Production-ready Rich Text Editor) */}
-                  {block.blockType === 'paragraph' && (
-                    <div className="space-y-2">
-                      <RichTextEditor
-                        content={block.content}
-                        onChange={(updated) => handleBlockContentChange(index, updated)}
-                        placeholder="Write manuscript findings, empirical prose, or methodology..."
-                      />
-                    </div>
-                  )}
-
-                  {/* 3. PULL QUOTE BLOCK */}
-                  {block.blockType === 'quote' && (
-                    <div className="space-y-3 pl-4 border-l-4 border-blue-600 dark:border-blue-500">
-                      <textarea
-                        value={block.content?.quote ?? block.content?.text ?? ''}
-                        onChange={(e) => handleBlockContentChange(index, {
-                          quote: e.target.value,
-                          text: e.target.value
-                        })}
-                        placeholder="Key quote or thesis statement..."
-                        rows={2}
-                        className="w-full text-base italic text-slate-900 dark:text-white focus:outline-none resize-none bg-transparent placeholder-slate-400 dark:placeholder-slate-500"
-                      />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <input
-                          type="text"
-                          value={block.content?.author ?? block.content?.citation ?? ''}
-                          onChange={(e) => handleBlockContentChange(index, {
-                            author: e.target.value,
-                            citation: e.target.value
-                          })}
-                          placeholder="Attribution (e.g. Dr. Eleanor Vance)"
-                          className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
-                        />
-                        <input
-                          type="text"
-                          value={block.content?.source || ''}
-                          onChange={(e) => handleBlockContentChange(index, { source: e.target.value })}
-                          placeholder="Source / Citation (e.g. Nature 2026)"
-                          className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 4. CALLOUT BOX BLOCK */}
-                  {block.blockType === 'callout' && (
-                    <div
-                      className={`space-y-3 p-4 rounded-xl border ${
-                        block.content?.variant === 'warning'
-                          ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30'
-                          : block.content?.variant === 'tip'
-                          ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30'
-                          : 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">Callout Type:</span>
-                        {['info', 'warning', 'tip'].map((v) => (
-                          <button
-                            key={v}
-                            type="button"
-                            onClick={() => handleBlockContentChange(index, { variant: v, type: v })}
-                            className={`px-2.5 py-0.5 rounded text-[11px] font-bold capitalize transition-colors cursor-pointer ${
-                              (block.content?.variant || 'info') === v
-                                ? 'bg-blue-600 text-white shadow-2xs'
-                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-transparent'
-                            }`}
-                          >
-                            {v}
-                          </button>
-                        ))}
-                      </div>
-
-                      <input
-                        type="text"
-                        value={block.content?.title || ''}
-                        onChange={(e) => handleBlockContentChange(index, { title: e.target.value })}
-                        placeholder="Callout Header / Title..."
-                        className="w-full text-xs font-bold text-slate-900 dark:text-white bg-transparent focus:outline-none border-b border-slate-300 dark:border-slate-800 focus:border-blue-500 pb-1 placeholder-slate-400 dark:placeholder-slate-500"
-                      />
-
-                      <textarea
-                        value={block.content?.text ?? block.content?.message ?? ''}
-                        onChange={(e) => handleBlockContentChange(index, {
-                          text: e.target.value,
-                          message: e.target.value
-                        })}
-                        placeholder="Callout body text or contextual observation..."
-                        rows={2}
-                        className="w-full text-xs text-slate-700 dark:text-slate-300 bg-transparent focus:outline-none resize-none placeholder-slate-400 dark:placeholder-slate-500"
-                      />
-                    </div>
-                  )}
-
-                  {/* 5. COMPARISON TABLE / MATRIX BLOCK */}
-                  {(block.blockType === 'table' || block.blockType === 'comparison') && (() => {
-                    const headers = Array.isArray(block.content?.headers) ? block.content.headers : ['Column 1', 'Column 2'];
-                    const rawRows = Array.isArray(block.content?.rows) ? block.content.rows : [];
-                    const rows = rawRows.map(r => {
-                      if (Array.isArray(r)) return { label: r[0] || '', values: r.slice(1) };
-                      return { label: r?.label || '', values: Array.isArray(r?.values) ? r.values : [] };
-                    });
-
-                    const updateHeaders = (newHeaders) => {
-                      handleBlockContentChange(index, { headers: newHeaders });
-                    };
-
-                    const updateRows = (newRows) => {
-                      handleBlockContentChange(index, { rows: newRows });
-                    };
-
-                    return (
-                      <div className="space-y-3 overflow-x-auto">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                            Interactive Matrix Table Editor
-                          </span>
-                          <div className="flex items-center space-x-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newHeaders = [...headers, `Col ${headers.length + 1}`];
-                                const newRows = rows.map(r => ({ ...r, values: [...r.values, ''] }));
-                                handleBlockContentChange(index, { headers: newHeaders, rows: newRows });
-                              }}
-                              className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center space-x-1 cursor-pointer"
-                            >
-                              <Plus className="w-3 h-3" />
-                              <span>Add Column</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newRows = [...rows, { label: `Factor ${rows.length + 1}`, values: new Array(Math.max(1, headers.length - 1)).fill('') }];
-                                updateRows(newRows);
-                              }}
-                              className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center space-x-1 cursor-pointer"
-                            >
-                              <Plus className="w-3 h-3" />
-                              <span>Add Row</span>
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Visual Table Editor */}
-                        <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-950/40">
-                          <table className="w-full text-left text-xs">
-                            <thead className="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-                              <tr>
-                                {headers.map((h, hIdx) => (
-                                  <th key={hIdx} className="p-2 min-w-[120px]">
-                                    <div className="flex items-center space-x-1">
-                                      <input
-                                        type="text"
-                                        value={h}
-                                        onChange={(e) => {
-                                          const next = [...headers];
-                                          next[hIdx] = e.target.value;
-                                          updateHeaders(next);
-                                        }}
-                                        placeholder={`Header ${hIdx + 1}`}
-                                        className="w-full text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-950 px-2 py-1 rounded border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
-                                      />
-                                      {headers.length > 2 && hIdx > 0 && (
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            const nextHeaders = headers.filter((_, i) => i !== hIdx);
-                                            const nextRows = rows.map(r => ({
-                                              ...r,
-                                              values: r.values.filter((_, i) => i !== hIdx - 1)
-                                            }));
-                                            handleBlockContentChange(index, { headers: nextHeaders, rows: nextRows });
-                                          }}
-                                          className="text-slate-400 hover:text-red-500 p-0.5 cursor-pointer"
-                                          title="Delete column"
-                                        >
-                                          <X className="w-3 h-3" />
-                                        </button>
-                                      )}
-                                    </div>
-                                  </th>
-                                ))}
-                                <th className="w-8"></th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-                              {rows.map((r, rIdx) => (
-                                <tr key={rIdx} className="hover:bg-slate-100/60 dark:hover:bg-slate-800/30 transition-colors">
-                                  <td className="p-2">
-                                    <input
-                                      type="text"
-                                      value={r.label}
-                                      onChange={(e) => {
-                                        const nextRows = [...rows];
-                                        nextRows[rIdx] = { ...nextRows[rIdx], label: e.target.value };
-                                        updateRows(nextRows);
-                                      }}
-                                      placeholder="Row Label..."
-                                      className="w-full text-xs font-semibold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-950 px-2 py-1 rounded border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
-                                    />
-                                  </td>
-                                  {headers.slice(1).map((_, vIdx) => (
-                                    <td key={vIdx} className="p-2">
-                                      <input
-                                        type="text"
-                                        value={r.values[vIdx] || ''}
-                                        onChange={(e) => {
-                                          const nextRows = [...rows];
-                                          const nextValues = [...(nextRows[rIdx].values || [])];
-                                          nextValues[vIdx] = e.target.value;
-                                          nextRows[rIdx] = { ...nextRows[rIdx], values: nextValues };
-                                          updateRows(nextRows);
-                                        }}
-                                        placeholder="Value..."
-                                        className="w-full text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-950 px-2 py-1 rounded border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
-                                      />
-                                    </td>
-                                  ))}
-                                  <td className="p-2 text-right">
-                                    {rows.length > 1 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const nextRows = rows.filter((_, i) => i !== rIdx);
-                                          updateRows(nextRows);
-                                        }}
-                                        className="text-slate-400 hover:text-red-500 p-1 cursor-pointer"
-                                        title="Delete row"
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </button>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* 6. MEDIA IMAGE BLOCK */}
-                  {block.blockType === 'image' && (
-                    <div className="space-y-3">
-                      {block.content?.url ? (
-                        <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-950">
-                          <img
-                            src={normalizeMediaUrl(block.content.url)}
-                            alt={block.content.alt || 'Asset'}
-                            className="w-full max-h-64 object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleBlockContentChange(index, { url: '' })}
-                            className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-black text-white rounded-full transition-colors shadow-md cursor-pointer"
-                            title="Remove image"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {/* File Upload Dropzone */}
-                          <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all text-center">
-                            {uploadingBlockIndex === index ? (
-                              <div className="flex items-center space-x-2 text-blue-600 dark:text-blue-400">
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                <span className="text-xs font-semibold">Processing via Sharp WebP...</span>
-                              </div>
-                            ) : (
-                              <>
-                                <UploadCloud className="w-6 h-6 text-blue-600 dark:text-blue-400 mb-1.5" />
-                                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Upload Manual Image</span>
-                                <span className="text-[10px] text-slate-500 dark:text-slate-400">JPG, PNG, WebP (Platform Independent)</span>
-                              </>
-                            )}
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png,image/webp,image/avif"
-                              onChange={(e) => {
-                                const f = e.target.files?.[0];
-                                if (f) handleBlockImageUpload(index, f);
-                                e.target.value = '';
-                              }}
-                              disabled={uploadingBlockIndex === index}
-                              className="hidden"
-                            />
-                          </label>
-
-                          {/* URL Input Fallback */}
-                          <div className="flex flex-col justify-center p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 space-y-2">
-                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Or Enter Direct Image URL</span>
-                            <input
-                              type="url"
-                              value={block.content?.url || ''}
-                              onChange={(e) => handleBlockContentChange(index, { url: e.target.value })}
-                              placeholder="https://... (Direct image URL)"
-                              className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Alt & Caption */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                        <input
-                          type="text"
-                          value={block.content?.caption || ''}
-                          onChange={(e) => handleBlockContentChange(index, { caption: e.target.value })}
-                          placeholder="Image Caption (e.g. Figure 1: Benchmark distribution)"
-                          className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
-                        />
-                        <input
-                          type="text"
-                          value={block.content?.alt || ''}
-                          onChange={(e) => handleBlockContentChange(index, { alt: e.target.value })}
-                          placeholder="Alt description for screen readers"
-                          className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 7. DIVIDER BLOCK */}
-                  {block.blockType === 'divider' && (
-                    <div className="py-4 text-center">
-                      <hr className="border-t border-slate-200 dark:border-slate-800 max-w-sm mx-auto" />
-                      <span className="text-[10px] text-slate-500 uppercase tracking-widest mt-1 block">
-                        Editorial Section Divider
-                      </span>
-                    </div>
-                  )}
-
-                  {/* 8. FAQ ACCORDION BLOCK (100% Dynamic) */}
-                  {block.blockType === 'faq' && (() => {
-                    const items = Array.isArray(block.content?.items) ? block.content.items : [];
-
-                    const updateItems = (nextItems) => {
-                      handleBlockContentChange(index, { items: nextItems });
-                    };
-
-                    const handleItemChange = (itemIdx, field, value) => {
-                      const next = items.map((it, i) => (i === itemIdx ? { ...it, [field]: value } : it));
-                      updateItems(next);
-                    };
-
-                    const addItem = () => {
-                      updateItems([
-                        ...items,
-                        { question: '', answer: '' }
-                      ]);
-                    };
-
-                    const removeItem = (itemIdx) => {
-                      updateItems(items.filter((_, i) => i !== itemIdx));
-                    };
-
-                    const moveItem = (itemIdx, direction) => {
-                      const targetIdx = itemIdx + direction;
-                      if (targetIdx < 0 || targetIdx >= items.length) return;
-                      const next = [...items];
-                      const temp = next[itemIdx];
-                      next[itemIdx] = next[targetIdx];
-                      next[targetIdx] = temp;
-                      updateItems(next);
-                    };
-
-                    return (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <HelpCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                              FAQ Accordion ({items.length} {items.length === 1 ? 'Question' : 'Questions'})
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={addItem}
-                            className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50/50 dark:bg-blue-950/30 transition-colors cursor-pointer"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            <span>Add Question</span>
-                          </button>
-                        </div>
-
-                        {items.length === 0 ? (
-                          <div className="p-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/60 dark:bg-slate-950/30">
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-                              No FAQ questions added yet to this accordion block.
-                            </p>
-                            <button
-                              type="button"
-                              onClick={addItem}
-                              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-                            >
-                              + Add First Question
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            {items.map((item, itemIdx) => (
-                              <div
-                                key={itemIdx}
-                                className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 space-y-2.5 transition-colors"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                    Question {itemIdx + 1}
-                                  </span>
-                                  <div className="flex items-center space-x-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => moveItem(itemIdx, -1)}
-                                      disabled={itemIdx === 0}
-                                      className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-25 transition-colors cursor-pointer"
-                                      title="Move Question Up"
-                                    >
-                                      <MoveUp className="w-3 h-3" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => moveItem(itemIdx, 1)}
-                                      disabled={itemIdx === items.length - 1}
-                                      className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-25 transition-colors cursor-pointer"
-                                      title="Move Question Down"
-                                    >
-                                      <MoveDown className="w-3 h-3" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => removeItem(itemIdx)}
-                                      className="p-1 text-slate-400 hover:text-red-500 transition-colors cursor-pointer ml-1"
-                                      title="Delete Question"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <input
-                                    type="text"
-                                    value={item.question || ''}
-                                    onChange={(e) => handleItemChange(itemIdx, 'question', e.target.value)}
-                                    placeholder="Question (e.g. When is a real estate investment considered a good idea?)"
-                                    className="w-full text-xs font-semibold p-2.5 rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500 placeholder-slate-400 dark:placeholder-slate-500"
-                                  />
-                                </div>
-
-                                <div>
-                                  <textarea
-                                    value={item.answer || ''}
-                                    onChange={(e) => handleItemChange(itemIdx, 'answer', e.target.value)}
-                                    placeholder="Detailed answer or response..."
-                                    rows={2}
-                                    className="w-full text-xs p-2.5 rounded-lg border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-blue-500 resize-y placeholder-slate-400 dark:placeholder-slate-500 leading-relaxed"
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              ))}
-            </div>
-
-            {/* Block Inserter Bar */}
-            <div className="p-6 bg-slate-100/70 dark:bg-slate-900/60 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-center transition-colors">
-              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-3">
-                Insert Research Content Block
-              </span>
-              <div className="flex items-center justify-center flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => addBlock('paragraph')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <AlignLeft className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>Paragraph</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => addBlock('heading')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <Heading className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>Heading</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => addBlock('comparison')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <TableIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>Comparison Matrix</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => addBlock('quote')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <Quote className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>Pull Quote</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => addBlock('callout')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Callout Box</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => addBlock('image')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <ImageIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Media Image</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => addBlock('divider')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <Minus className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Divider</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => addBlock('faq')}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-750 hover:border-blue-500 hover:text-blue-600 dark:hover:text-white bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer shadow-2xs"
-                >
-                  <HelpCircle className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                  <span>FAQ Accordion</span>
-                </button>
-              </div>
-            </div>
-
-            {/* 5. TOPIC TAGS SECTION (Rendered in normal readable form on Public Frontend) */}
-            <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800/80 shadow-xs space-y-4 transition-colors">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/80">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Topic Tags (Research Taxonomies)
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Index manuscript under domain topics (rendered in normal form as pill badges in article sidebar)
-                  </p>
-                </div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                  {(article.tags || []).length}/8 Tags
-                </span>
-              </div>
-
-              {/* Tag Chips in Normal Form */}
-              {(article.tags || []).length > 0 && (
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {article.tags.map((tag, idx) => {
-                    const raw = typeof tag === 'string' ? tag : (tag.name || tag.slug || '');
-                    const clean = String(raw).replace(/^#+/, '').trim();
-                    let displayName = (typeof tag === 'object' && tag.name) ? tag.name : clean;
-                    displayName = displayName.replace(/^#+/, '').trim();
-                    if (displayName.includes('_') || (displayName.includes('-') && !displayName.includes(' '))) {
-                      displayName = displayName.replace(/[-_]/g, ' ');
-                    }
-                    return (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium bg-[#eef5f6] dark:bg-[#152e35] text-[#0f5466] dark:text-[#5eead4] border border-[#d6e7eb] dark:border-[#1e444e] shadow-2xs"
-                      >
-                        <span>{displayName}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTag(idx)}
-                          className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors cursor-pointer"
-                          title="Remove tag"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Tag Input Field & Autocomplete */}
-              <div className="relative">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={tagInput}
-                    onChange={(e) => {
-                      setTagInput(e.target.value);
-                      setShowTagSuggestions(true);
-                    }}
-                    onFocus={() => setShowTagSuggestions(true)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ',') {
-                        e.preventDefault();
-                        if (tagInput.trim()) {
-                          handleAddTag(tagInput.trim());
-                        }
-                      }
-                    }}
-                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (tagInput.trim()) handleAddTag(tagInput.trim());
-                    }}
-                    disabled={!tagInput.trim() || (article.tags || []).length >= 8}
-                    className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors disabled:opacity-40 shrink-0 cursor-pointer shadow-xs"
-                  >
-                    Add Tag
-                  </button>
-                </div>
-
-                {/* Autocomplete Suggestions Dropdown */}
-                {showTagSuggestions && suggestedTags.length > 0 && (
-                  <div className="absolute top-full left-0 mt-1.5 w-full bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-750 py-1.5 z-30 max-h-48 overflow-y-auto">
-                    <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Suggested Platform Taxonomies
-                    </div>
-                    {suggestedTags.map(st => (
-                      <button
-                        key={st.id}
-                        type="button"
-                        onClick={() => handleAddTag(st)}
-                        className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
-                      >
-                        <span className="font-medium">{st.name}</span>
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
-                          {st.articlesCount || 0} {st.articlesCount === 1 ? 'article' : 'articles'}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 6. BRAND SPONSORSHIP SECTION (NO PLACEHOLDERS) */}
-            <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800/80 shadow-xs space-y-5 transition-colors">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/80">
-                <div className="flex items-center space-x-2">
-                  <Megaphone className="w-4 h-4 text-[#c25e34] dark:text-[#f87171]" />
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                      Brand Sponsorship & Commercial Underwriting
-                    </h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Disclose sponsoring organizations or commercial underwriting for this publication
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sponsorship Active Toggle */}
-              <div>
-                <label className="inline-flex items-center space-x-3 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(article.isSponsored)}
-                    onChange={(e) => handleChange('isSponsored', e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 cursor-pointer"
-                  />
-                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                    This article is sponsored or commercially underwritten
-                  </span>
-                </label>
-              </div>
-
-              {/* Conditional Sponsorship Input Fields (NO PLACEHOLDERS) */}
-              {article.isSponsored && (
-                <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Sponsor Name */}
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                        Sponsor / Brand Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={article.sponsorName || ''}
-                        onChange={(e) => handleChange('sponsorName', e.target.value)}
-                        className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
-                      />
-                    </div>
-
-                    {/* Sponsor Website / Action URL */}
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                        Sponsor Target Action URL (Website / Offer link)
-                      </label>
-                      <input
-                        type="url"
-                        value={article.sponsorUrl || ''}
-                        onChange={(e) => handleChange('sponsorUrl', e.target.value)}
-                        className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Sponsor Partnership Statement / Description */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Sponsor Partnership Statement / Description
-                    </label>
-                    <textarea
-                      value={article.sponsorDescription || ''}
-                      onChange={(e) => handleChange('sponsorDescription', e.target.value)}
-                      rows={3}
-                      className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
-                    />
-                  </div>
-
-                  {/* Sponsor Logo URL (Future use) */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Sponsor Logo URL (Optional, for future branding)
-                    </label>
-                    <input
-                      type="url"
-                      value={article.sponsorLogoUrl || ''}
-                      onChange={(e) => handleChange('sponsorLogoUrl', e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
-                    />
-                  </div>
-
-                  {/* Live Sponsorship Sidebar Preview Widget */}
-                  <div className="pt-3">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-2">
-                      Right Sidebar Card Preview
-                    </span>
-                    <div className="p-6 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-xs max-w-sm space-y-3">
-                      <span className="text-[11px] font-bold tracking-widest text-rfblue dark:text-[#f87171] uppercase block">
-                        SPONSORED
-                      </span>
-                      <h4 className="font-serif text-xl font-bold text-slate-900 dark:text-white leading-snug">
-                        {article.sponsorName || 'Sponsor Name'}
-                      </h4>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                        {article.sponsorDescription || 'Sponsor partnership statement and description will be displayed here.'}
-                      </p>
-                      <div className="pt-1">
-                        <span className="inline-flex items-center justify-center px-5 py-2.5 rounded-full text-xs font-semibold text-white bg-rfblue shadow-2xs">
-                          Visit Sponsor
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 7. EDITORIAL SEO & SOCIAL STUDIO */}
-            <ArticleSeoStudio
-              article={article}
-              onChange={handleChange}
-              seoMetadata={seoMetadata}
-              resolvedSeo={resolvedSeo}
-              onRegenerate={currentId ? handleRegenerateSeo : null}
-              isRegenerating={isRegeneratingSeo}
-            />
+            {/* Tab 6: Publishing & Lifecycle */}
+            {activeTab === 'publishing' && (
+              <ArticlePublishingTab
+                article={article}
+                currentId={currentId}
+                canPublish={canPublish}
+                canSubmit={canSubmit}
+                savingDraft={savingDraft}
+                submitting={submitting}
+                onSaveDraft={handleSaveDraft}
+                onSubmitForReview={handleSubmitForReview}
+                onDirectPublish={handleDirectPublish}
+                onUnpublish={handleUnpublish}
+                onPreviewLive={handlePreviewInNewTab}
+              />
+            )}
           </div>
         )}
       </div>

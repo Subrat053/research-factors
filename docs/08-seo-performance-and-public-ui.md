@@ -404,9 +404,9 @@ The article reading experience is organized into an editorial 2-column layout:
   - **"Related Articles" Section**:
     - Horizontal split cards containing strictly **cover image on the left** (`w-20 h-20 rounded-lg`) and **article heading on the right** (`font-serif font-bold text-sm sm:text-base`).
     - Dynamic data query pipeline: uses `article.related` array, enriched with a category fallback query if fewer than 4 items exist, deduplicating the active article.
-  - **Desktop Sticky Sponsorship Opportunity Banner**:
+  - **Desktop Sponsorship Opportunity Banner**:
     - Positioned as the final item in the desktop sidebar across all article pages (whether sponsored or not).
-    - Features `sticky top-24` positioning: scrolls naturally past the initial cards, then locks at `top-24` (below the fixed header) to stay continuously visible throughout long article manuscripts until the footer appears, when it smoothly flows upward out of view.
+    - Features natural document flow positioning: scrolls naturally along with the rest of the sidebar without artificial sticky locking, maintaining an uncluttered reading experience across varied viewport heights.
     - High-contrast midnight navy gradient (`from-[#060D1A] via-[#0F172A] to-[#1E3A8A]`), headline ("Want your organization to be part of the research?"), value proposition copy, and direct CTA linking to `/sponsorship`.
 
 ---
@@ -683,14 +683,17 @@ Research Factors provides an administrative interface for configuring commercial
   - Context-aware category clustering prioritizing the current article's topic.
   - 7-day cooldown on dismissal or submission.
 - **Personalized Recommendation Rails (`PersonalizedRecommendationRail.jsx`)**:
-  - Full-width editorial recommendation rail displaying a unified 3-column grid (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6`) under **Recommended Articles**.
+  - Full-width editorial recommendation rail displaying a **single-row responsive horizontal slider** (`w-full sm:w-[calc(50%-12px)] lg:w-[calc((100%-48px)/3)] shrink-0`) under **Recommended Articles**.
+  - **Left and Right Navigation Buttons**: Smooth horizontal scrolling controls appear in the section header whenever more than 3 recommendations are available, with automated bounds checking (`canScrollLeft`, `canScrollRight`) and touch swipe on mobile devices.
+  - **Match Score & Reasoning Transparency**: Each recommendation card prominently features an affinity badge (e.g. `96% Match`) and editorial reason subtitle (e.g. `More in-depth coverage in Automotive`) explaining why the research was selected.
   - **Dynamic Subcategory-Aware Hierarchical Logic**:
-    - **Tier 1 (Subcategory Priority)**: When viewing an article belonging to a subcategory (e.g. `Cricket`), candidate articles from the exact same subcategory are prioritized first (`categoryScore: 1.0`, "More in-depth coverage in {Subcategory}").
+    - **Tier 1 (Subcategory Priority)**: When viewing an article belonging to a subcategory (e.g. `Automotive` or `Cricket`), candidate articles from the exact same category are prioritized first (`categoryScore: 1.0`, +0.10 domain cohesion bonus, "More in-depth coverage in {Subcategory}").
     - **Tier 2 (Domain Family Fallback)**: If the subcategory has fewer than 6 articles, the rail dynamically backfills from sibling subcategories sharing the same parent domain (`categoryScore: 0.75`, "Related {Parent} research in {Sibling}") or the direct parent domain (`categoryScore: 0.65`, "Broader domain context from {Parent}").
     - **Tier 3 (Cross-Domain Discovery)**: Unrelated domains are only introduced if the entire domain family cannot fill the rail.
+    - **Test Fixture Guard & Title Deduplication**: `CandidateService` strictly filters out test artifacts (`/draft review test|test article/i`) and deduplicates near-identical titles to prevent cloned or synthetic items from entering public recommendations.
     - **100% Dynamic Architecture**: Works automatically for any parent-child vertical in the database without hardcoded category names or slugs.
   - Contextual dynamic subtitle adapting to current article category and reader preferences.
-  - Rich card presentation: Aspect-calibrated cover image with smooth zoom transition and fallback, category name, article title, 2-line excerpt, editorial format badge (`RESEARCH`, `GUIDE`, `REVIEW`), reading time, and "Read" link with hover micro-transitions.
+  - Rich card presentation: Aspect-calibrated cover image with smooth zoom transition and fallback, category name with link, article title, 2-line excerpt, editorial format badge (`RESEARCH`, `GUIDE`, `REVIEW`, `COMPARISON`, `ANALYSIS`), reading time, and "Read" link with hover micro-transitions.
   - Anonymous interaction telemetry tracking `RECOMMENDATION_CLICK` events with source article ID and intent metadata.
   - Rendered beneath article prose and comments on `ArticleDetailPage.jsx`.
 

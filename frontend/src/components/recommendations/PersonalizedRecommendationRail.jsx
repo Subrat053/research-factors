@@ -1,16 +1,16 @@
-import React from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, ArrowRight, Sparkles } from 'lucide-react';
+import { Clock, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { normalizeMediaUrl } from '../../services/media.api.js';
-import { resolveCategoryArt } from '../../utils/categoryTheme.js';
 import { recommendationsApi } from '../../services/recommendations.api.js';
 
 /**
  * Single Recommendation Card (Light Editorial Theme)
  * Displays:
  * - Cover Image with smooth zoom transition
- * - Category Name
+ * - Category Name & Match Percentage Badge
  * - Article Title & Excerpt
+ * - Recommendation Reasoning
  * - Format Type & Reading Time
  */
 function RecommendationCard({ item, currentArticle }) {
@@ -30,12 +30,11 @@ function RecommendationCard({ item, currentArticle }) {
     });
   };
 
-  const categoryArt = article.category ? resolveCategoryArt(article.category) : null;
   const categorySlug = article.category?.slug || 'research';
   const articleUrl = `/${categorySlug}/${article.slug}`;
 
   return (
-    <article className="group relative flex flex-col justify-between rounded-2xl bg-white border border-paper-border overflow-hidden shadow-xs hover:shadow-md hover:border-rfblue/50 transition-all duration-300">
+    <article className="group relative flex flex-col justify-between rounded-2xl bg-white border border-paper-border overflow-hidden shadow-xs hover:shadow-md hover:border-rfblue/50 transition-all duration-300 w-full sm:w-[calc(50%-12px)] lg:w-[calc((100%-48px)/3)] shrink-0">
       {/* Cover Image */}
       <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-100 shrink-0">
         <Link
@@ -60,23 +59,15 @@ function RecommendationCard({ item, currentArticle }) {
         </Link>
       </div>
 
-      <div className="p-5 sm:p-6 flex flex-col justify-between flex-1">
+      <div className="p-5 sm:p-6 flex flex-col justify-between flex-1 space-y-4">
         <div className="space-y-3">
-          {/* Top Meta: Category Flaticon & Match Reason / Affinity Badge */}
+          {/* Top Meta: Category & Match Percentage Badge */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
             {article.category && (
               <Link
                 to={`/categories/${categorySlug}`}
-                className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-ink-muted hover:text-rfblue transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-ink-muted hover:text-rfblue transition-colors"
               >
-                {/* {categoryArt && (
-                  <img
-                    src={categoryArt}
-                    alt=""
-                    className="w-5 h-5 object-contain"
-                    loading="lazy"
-                  />
-                )} */}
                 <span className="truncate">{article.category.name}</span>
               </Link>
             )}
@@ -99,10 +90,17 @@ function RecommendationCard({ item, currentArticle }) {
               {article.excerpt}
             </p>
           )}
+
+          {/* Recommendation Reason Context */}
+          {reason && (
+            <p className="text-xs text-rfblue font-medium line-clamp-1">
+              {reason}
+            </p>
+          )}
         </div>
 
         {/* Card Footer: Format Type & Reading Time */}
-        <div className="pt-4 mt-4 border-t border-paper-border/80 flex items-center justify-between text-xs sm:text-sm text-ink-muted">
+        <div className="pt-4 border-t border-paper-border/80 flex items-center justify-between text-xs sm:text-sm text-ink-muted">
           <div className="flex items-center gap-2">
             {article.type && (
               <span className="px-2.5 py-0.5 rounded-md bg-paper border border-paper-border font-semibold text-xs tracking-wider uppercase text-ink-muted">
@@ -134,7 +132,7 @@ function RecommendationCard({ item, currentArticle }) {
 
 /**
  * Unified Contextual Article Recommendations Rail
- * Renders all top scored recommendation items in a clean, unified 3-column responsive grid
+ * Renders recommendation items in a clean, single-row responsive slider with left/right navigation controls
  */
 export function PersonalizedRecommendationRail({
   journeys,
@@ -142,6 +140,76 @@ export function PersonalizedRecommendationRail({
   isLoading = false,
   className = ''
 }) {
+  const scrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // Extract candidate items from journeys.recommendations or aggregate from clusters
+  let items = [];
+  if (journeys) {
+    if (Array.isArray(journeys.recommendations) && journeys.recommendations.length > 0) {
+      items = journeys.recommendations;
+    } else {
+      const seen = new Set();
+      const clusters = [
+        journeys.completeYourResearch?.items,
+        journeys.deepTopicDive?.items,
+        journeys.trendingInInterests?.items,
+        journeys.discoverSomethingNew?.items
+      ];
+      for (const cluster of clusters) {
+        if (Array.isArray(cluster)) {
+          for (const it of cluster) {
+            if (it?.article?.id && !seen.has(it.article.id)) {
+              seen.add(it.article.id);
+              items.push(it);
+            }
+          }
+        }
+      }
+    }
+
+    // Filter out current active article
+    if (currentArticle?.id) {
+      items = items.filter((it) => it.article?.id !== currentArticle.id);
+    }
+  }
+
+  const checkScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+    setCanScrollLeft(scrollLeft > 6);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 6);
+  }, []);
+
+  useEffect(() => {
+    checkScroll();
+    const container = scrollRef.current;
+    if (!container) return;
+
+    container.addEventListener('scroll', checkScroll, { passive: true });
+    window.addEventListener('resize', checkScroll);
+
+    // Initial check after paint/layout
+    const timer = setTimeout(checkScroll, 100);
+
+    return () => {
+      container.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+      clearTimeout(timer);
+    };
+  }, [items, checkScroll]);
+
+  const handleScroll = (direction) => {
+    if (!scrollRef.current) return;
+    const container = scrollRef.current;
+    const firstCard = container.querySelector('article');
+    // Scroll advance by 1 card plus gap or container visible width
+    const cardStep = firstCard ? firstCard.offsetWidth + 24 : container.clientWidth * 0.8;
+    const scrollAmount = direction === 'left' ? -cardStep : cardStep;
+    container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+  };
+
   if (isLoading) {
     return (
       <div className={`space-y-6 animate-pulse ${className}`}>
@@ -149,9 +217,12 @@ export function PersonalizedRecommendationRail({
           <div className="h-6 w-56 bg-paper-border/60 rounded-md" />
           <div className="h-4 w-96 bg-paper-border/40 rounded-md" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="flex gap-6 overflow-hidden py-1">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white border border-paper-border rounded-2xl overflow-hidden flex flex-col">
+            <div
+              key={i}
+              className="bg-white border border-paper-border rounded-2xl overflow-hidden flex flex-col w-full sm:w-[calc(50%-12px)] lg:w-[calc((100%-48px)/3)] shrink-0"
+            >
               <div className="aspect-[16/10] sm:aspect-[16/9] bg-paper-border/50 w-full" />
               <div className="p-5 sm:p-6 space-y-3 flex-1 flex flex-col justify-between">
                 <div className="space-y-3">
@@ -171,43 +242,11 @@ export function PersonalizedRecommendationRail({
     );
   }
 
-  if (!journeys) return null;
-
-  // Extract candidate items from journeys.recommendations or aggregate from clusters
-  let items = [];
-  if (Array.isArray(journeys.recommendations) && journeys.recommendations.length > 0) {
-    items = journeys.recommendations;
-  } else {
-    // Fallback aggregation
-    const seen = new Set();
-    const clusters = [
-      journeys.completeYourResearch?.items,
-      journeys.deepTopicDive?.items,
-      journeys.trendingInInterests?.items,
-      journeys.discoverSomethingNew?.items
-    ];
-    for (const cluster of clusters) {
-      if (Array.isArray(cluster)) {
-        for (const it of cluster) {
-          if (it?.article?.id && !seen.has(it.article.id)) {
-            seen.add(it.article.id);
-            items.push(it);
-          }
-        }
-      }
-    }
-  }
-
-  // Filter out the article currently being viewed
-  if (currentArticle?.id) {
-    items = items.filter((it) => it.article?.id !== currentArticle.id);
-  }
-
-  if (items.length === 0) return null;
+  if (!journeys || items.length === 0) return null;
 
   const categoryName = currentArticle?.category?.name;
   const subtitle = categoryName
-    ? `Explore more of ${categoryName} that matches your interests.`
+    ? `Explore more of ${categoryName} that matches your reading interests.`
     : 'Recommended research based on your reading preferences and contextual affinity.';
 
   return (
@@ -215,21 +254,55 @@ export function PersonalizedRecommendationRail({
       aria-label="Recommended Research"
       className={`space-y-6 ${className}`}
     >
-      {/* Unified Section Header */}
-      <div className="space-y-1 pb-4 border-b border-paper-border">
-        <div className="flex items-center gap-2">
-          {/* <Sparkles className="w-5 h-5 text-rfblue" /> */}
+      {/* Unified Section Header with Slider Navigation Controls */}
+      <div className="flex items-center justify-between gap-4 pb-4 border-b border-paper-border">
+        <div className="space-y-1">
           <h3 className="font-serif text-2xl sm:text-3xl font-bold text-ink-darkest tracking-tight">
             Recommended Articles
           </h3>
+          <p className="text-sm text-ink-muted">
+            {subtitle}
+          </p>
         </div>
-        <p className="text-sm text-ink-muted">
-          {subtitle}
-        </p>
+
+        {/* Left and Right Slide Controls (Shown when more than 3 items exist or scrolling is possible) */}
+        {items.length > 3 && (
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleScroll('left')}
+              disabled={!canScrollLeft}
+              aria-label="Previous recommended articles"
+              className={`p-2 sm:p-2.5 rounded-full border transition-all duration-200 ${
+                canScrollLeft
+                  ? 'bg-white border-paper-border text-ink-darkest hover:border-rfblue hover:text-rfblue hover:shadow-xs active:scale-95 cursor-pointer'
+                  : 'bg-paper border-paper-border/50 text-ink-light cursor-not-allowed opacity-40'
+              }`}
+            >
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleScroll('right')}
+              disabled={!canScrollRight}
+              aria-label="Next recommended articles"
+              className={`p-2 sm:p-2.5 rounded-full border transition-all duration-200 ${
+                canScrollRight
+                  ? 'bg-white border-paper-border text-ink-darkest hover:border-rfblue hover:text-rfblue hover:shadow-xs active:scale-95 cursor-pointer'
+                  : 'bg-paper border-paper-border/50 text-ink-light cursor-not-allowed opacity-40'
+              }`}
+            >
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Unified 3-Column Responsive Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Single-Row Horizontal Scroll Track Slider */}
+      <div
+        ref={scrollRef}
+        className="flex gap-6 overflow-x-auto no-scrollbar scroll-smooth py-1 -mx-1 px-1"
+      >
         {items.map((item) => (
           <RecommendationCard
             key={item.article.id}

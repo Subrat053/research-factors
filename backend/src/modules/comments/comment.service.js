@@ -1,6 +1,7 @@
 import sanitizeHtml from 'sanitize-html';
 import { prisma } from '../../config/db.js';
 import { AppError } from '../../middleware/errorHandler.js';
+import { EventService } from '../recommendations/event.service.js';
 
 const SANITIZE_OPTIONS = {
   allowedTags: ['b', 'i', 'em', 'strong', 'a', 'code', 'p', 'br'],
@@ -248,6 +249,15 @@ export class CommentService {
       }
     } catch {
       // Non-blocking notification dispatch
+    }
+
+    // Record engagement signal for recommendation system if comment meets quality bar (>= 15 chars)
+    if (cleanContent.replace(/<[^>]*>?/gm, '').trim().length >= 15) {
+      EventService.recordCommentEngagement({
+        articleId,
+        userId,
+        isReply: Boolean(parentId)
+      }).catch(() => {});
     }
 
     return {

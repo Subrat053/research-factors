@@ -22,6 +22,7 @@ import { recommendationsApi } from '../../services/recommendations.api.js';
 import { useReadingTracker } from '../../hooks/useReadingTracker.js';
 import { InterestExplorerPopup } from '../../components/recommendations/InterestExplorerPopup.jsx';
 import { PersonalizedRecommendationRail } from '../../components/recommendations/PersonalizedRecommendationRail.jsx';
+import { ArticleFeedbackButtons } from '../../components/article/ArticleFeedbackButtons.jsx';
 
 // Helper for formatting tags in clean, human-readable normal form
 function formatNormalTag(tag) {
@@ -250,7 +251,7 @@ export default function ArticleDetailPage() {
       <Header />
 
       <main className="flex-1">
-        {/* 2-Column Article Layout: Left Content & Right Sticky Sidebar */}
+        {/* 2-Column Article Layout: Left Content & Right Sidebar */}
         <article className="pt-6 sm:pt-10 pb-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
@@ -378,6 +379,13 @@ export default function ArticleDetailPage() {
                 <div className="w-full">
                   <BlockRenderer blocks={article.blocks} />
                 </div>
+
+                {/* 7B. Post-Article Research Feedback Section (Like / Dislike) */}
+                <ArticleFeedbackButtons
+                  articleId={article.id}
+                  initialState={journeys?.articleFeedback?.state || 'NONE'}
+                  variant="card"
+                />
 
                 {/* 8. MOBILE ONLY: Topic Tags (On desktop, prominently rendered at top of right sidebar) */}
                 {article.tags && article.tags.length > 0 && (
@@ -588,8 +596,8 @@ export default function ArticleDetailPage() {
                   </div>
                 )}
 
-                {/* 4 & 5. Sticky Lower Sidebar Cluster (Related Articles + Sponsorship Opportunity Banner) */}
-                <div className="sticky top-24 space-y-6">
+                {/* 4 & 5. Lower Sidebar Cluster (Related Articles + Sponsorship Opportunity Banner) */}
+                <div className="space-y-6">
                   {/* Curated Journey or Related Articles Card */}
                   {journeyItems.length > 0 ? (
                     <div className="bg-white dark:bg-paper-card rounded-2xl border border-paper-border p-5 shadow-xs space-y-3">

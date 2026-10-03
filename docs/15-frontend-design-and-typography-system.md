@@ -410,10 +410,10 @@ The article detail page (`/rf/research/:slug`) utilizes a 12-column responsive g
    - Action Button: "Visit Sponsor" pill button with `rel="noopener noreferrer sponsored"`.
 4. **Related Publications Card**:
    - Horizontal publication preview cards.
-5. **Sticky Sponsorship Opportunity Banner** (Available on all article pages):
+5. **Sponsorship Opportunity Banner** (Available on all article pages):
    - Displayed on all article publications as the final sidebar item.
    - Elegant dark editorial card (`bg-gradient-to-br from-[#060D1A] via-[#0F172A] to-[#1E3A8A]`) with targeted headline and direct CTA linking to `/sponsorship`.
-   - Uses `sticky top-24` to lock in place during long manuscript reading and flows out when the footer arrives. Also mirrors in mobile view before comments.
+   - Follows natural document flow without sticky locking, scrolling smoothly alongside the article text. Also mirrors in mobile view before comments.
 
 ---
 

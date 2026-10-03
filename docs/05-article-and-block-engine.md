@@ -331,11 +331,48 @@ The form controls in [`ArticleEditorPage.jsx`](file:///d:/Wizmonk/ResearchFactor
 - Top navigation bar and sidebar footer in [`AdminLayout.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/components/admin/AdminLayout.jsx) feature an instant Sun / Moon theme toggle button.
 - Full high-contrast styling across all admin portals, layout chrome, block containers, and inputs in both Light Mode (crisp editorial slate/white) and Dark Mode (sleek dark slate).
 
+---
+
+## 4. Redesigned Article Authoring Workspace Architecture
+
+The Research Factors authoring environment (`ArticleEditorPage.jsx`) provides a focused, high-productivity workspace tailored for long-form research manuscripts, technical comparisons, and reviews without the cognitive fatigue of monolithic forms.
+
+### 1. Workspace Navigation & Sticky Command Bar (`ArticleWorkspaceHeader.jsx`)
+- **Sticky Top Bar**: Permanent access to title, article format badge, draft status, real-time word count, estimated reading time, save status (`Saved`, `Saving...`, `Unsaved`), live simulation preview (`/research/preview/:id`), manual Save Draft, and role-appropriate submission/publishing actions.
+- **Tabbed Workspace Architecture**:
+  1. **Overview Tab** (`ArticleOverviewTab.jsx`): Article Title, Subtitle, Abstract/Executive Excerpt, Primary Category & Format/Genre, Hero Cover Image (Sharp WebP upload or direct URL), Topic Tags (autocomplete + normal pill format), and real-time **Publication Readiness Checklist** (asserting title, category, excerpt, cover asset, blocks, and tags).
+  2. **Content Tab** (`ArticleContentTab.jsx`): Primary manuscript editor hosting two synchronized editing modes sharing the exact same underlying `ArticleBlock[]` schema:
+     - **Mode A: Section Builder** (`SectionBuilder.jsx`): Chapter-based outline demarcated by H2 heading boundaries using `articleSections.js`. Offers collapsible sections, drag/up-down reordering, section duplication (`duplicateSection`), delete protection, and focused in-place block editing across all 9 block types (including interactive bullet/numbered `list` editors with item reordering, insertion, and deletion).
+     - **Mode B: Full Article Document Editor** (`FullArticleEditor.jsx`): Continuous document editing stream with Tiptap v2 for paragraphs, and dedicated inline cards for headings, pull quotes, callouts, comparison tables, images, dividers, FAQ accordions, and bullet/numbered lists.
+     - **One-Click Paste / Import Modal** (`ArticleImportModal.jsx`, `articleImportParser.js`): Ingests pasted text from ChatGPT, Claude, Word, Google Docs, or raw Markdown. Automatically detects headings, markdown tables, callout blocks (`> [!NOTE]`), blockquotes, and lists (`list`), offering "Append" or "Replace All" options with live element metric previews.
+  3. **Research Data Tab** (`ArticleResearchDataTab.jsx`): Dedicated empirical metadata:
+     - Testing Environment / Hardware Baseline (e.g. GPU, runtime, framework versions).
+     - Sample Size / Observation Trials ($N$).
+     - Open Access Dataset Repository URL (HuggingFace, Zenodo, GitHub).
+     - Methodology notes & limitation statements.
+     - Brand Sponsorship & Commercial Underwriting disclosure (sponsor name, target URL, description, logo, and live sidebar card preview).
+  4. **Sources & Citations Tab** (`ArticleSourcesTab.jsx`): Structured bibliographic citation manager for academic references, journal citations, year, and DOI links.
+  5. **SEO & Social Tab** (`ArticleSeoTab.jsx`): Houses `ArticleSeoStudio.jsx` for SERP and social card customization.
+     - **Strict RBAC SEO Access Control**: Standard authors (`AUTHOR` role without `article.publish` or `article.update_any`) **never see the SEO tab or SEO fields**. Search metadata is generated and optimized automatically from article title, abstract, and headings. Only privileged editors and administrators can access and manually customize technical indexation directives and metadata overrides.
+  6. **Publishing & Lifecycle Tab** (`ArticlePublishingTab.jsx`): Manuscript status lifecycle pipeline (`DRAFT` → `PENDING_REVIEW` → `PUBLISHED` / `REJECTED` / `ARCHIVED`), editorial revision feedback banner, and direct publish / submit / unpublish triggers.
+
+---
+
 ### 9. Editorial Production Seed Manuscripts
 - **Real Estate Comprehensive Guide** (`backend/scripts/seed-real-estate-article.js`):
   - Ingests *"When Is Investing in Real Estate a Wise Decision in 2026? A Comprehensive Guide"* (`slug: 'when-is-investing-in-real-estate-a-wise-decision-in-2026-a-comprehensive-guide'`) under the `Real Estate` subcategory (`slug: 'real-estate'`, parent: `Business`).
   - Features 18 structured blocks including H2 chapters, card subsections, commercial & residential property breakdowns, risk mitigation matrices, sponsored partner profile for **Gharabadi Realty** (`https://gharabadi.com`), and an interactive collapsible FAQ accordion (`blockType: 'faq'`).
   - Associated with 8 topic tags (`real-estate-investment`, `commercial-real-estate`, `residential-real-estate`, `reits`, etc.).
+
+- **Mobile Games Worldwide Benchmark** (`backend/scripts/seed-mobile-games-article.js`):
+  - Ingests *"Top Mobile Games Worldwide in 2026: Player Retention, Monetization Models, and Market Dominance"* (`slug: 'top-mobile-games-worldwide-2026-player-retention-monetization-market-dominance'`) under the `Gaming` subcategory (`slug: 'gaming'`, parent: `Sports`).
+  - Features structured blocks covering live-service metrics, revenue tier analysis, cross-platform synergy, and an interactive FAQ accordion.
+
+- **Tata Nexon Powertrain Benchmark (EV vs Petrol vs Diesel vs CNG)** (`backend/src/data/articles/tata-nexon-ev-petrol-diesel-cng-2026.json`, `backend/scripts/seed-tata-nexon-article.js`):
+  - Ingests *"EV vs Petrol vs Diesel vs CNG: Which Tata Nexon Should You Buy in 2026?"* (`slug: 'ev-vs-petrol-vs-diesel-vs-cng-which-tata-nexon-should-you-buy-in-2026'`) under the `Automotive` category (`slug: 'automotive'`).
+  - Features 56 structured semantic blocks including H2 chapters, H3 sub-chapters, comparative pricing & efficiency matrices (`table`), running cost calculations (`callout`), break-even mileage formulas, ordered recommendation lists (`list`), and editorial citations (`quote`).
+  - Associated with 8 topic tags (`tata-nexon`, `electric-vehicles`, `cng`, `diesel`, `petrol-cars`, `total-cost-of-ownership`, `fuel-efficiency`, `automotive-technology`).
+  - Standalone JSON data stored in both `backend/src/data/articles/` and `frontend/src/data/articles/`, with automatic ingestion supported during `npm run prisma:seed` and via `node scripts/seed-tata-nexon-article.js`.
 
 ---
 

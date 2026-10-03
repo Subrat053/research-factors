@@ -4,22 +4,8 @@ import { ScoringService } from './scoring.service.js';
 import { DiversityService } from './diversity.service.js';
 import { EventService } from './event.service.js';
 import { RecommendationDTO } from './recommendation.dto.js';
+import { RECOMMENDATION_CONFIG } from './recommendation.config.js';
 import { AppError } from '../../middleware/errorHandler.js';
-
-export const DEFAULT_RECOMMENDATION_CONFIG = {
-  popupEnabled: true,
-  dwellTimeSeconds: 30,
-  scrollThresholdPercent: 50,
-  cooldownDays: 7,
-  maxCategoryPills: 8,
-  weights: {
-    interest: 0.30,
-    tag: 0.25,
-    category: 0.20,
-    complementarity: 0.15,
-    recency: 0.10
-  }
-};
 
 export class RecommendationService {
   /**
@@ -30,9 +16,9 @@ export class RecommendationService {
       const setting = await prisma.systemSetting.findUnique({
         where: { key: 'recommendation_settings' }
       });
-      return setting?.value ? { ...DEFAULT_RECOMMENDATION_CONFIG, ...setting.value } : DEFAULT_RECOMMENDATION_CONFIG;
+      return setting?.value ? { ...RECOMMENDATION_CONFIG, ...setting.value } : RECOMMENDATION_CONFIG;
     } catch {
-      return DEFAULT_RECOMMENDATION_CONFIG;
+      return RECOMMENDATION_CONFIG;
     }
   }
 
@@ -52,6 +38,50 @@ export class RecommendationService {
       }
     });
     return updated.value;
+  }
+
+  /**
+   * Sets or toggles user feedback on an article (LIKE / DISLIKE / NONE)
+   */
+  static async setArticleFeedback({ visitorId, userId = null, sessionId = null, articleId, feedbackType }) {
+    return EventService.setArticleFeedback({
+      visitorId,
+      userId,
+      sessionId,
+      articleId,
+      feedbackType
+    });
+  }
+
+  /**
+   * Retrieves active feedback state for an article
+   */
+  static async getArticleFeedbackState({ visitorId, userId = null, articleId }) {
+    return EventService.getArticleFeedbackState({
+      visitorId,
+      userId,
+      articleId
+    });
+  }
+
+  /**
+   * Removes active feedback for an article
+   */
+  static async removeArticleFeedback({ visitorId, userId = null, sessionId = null, articleId }) {
+    return EventService.removeArticleFeedback({
+      visitorId,
+      userId,
+      sessionId,
+      articleId
+    });
+  }
+
+  /**
+   * Synchronizes anonymous visitor data to an authenticated user
+   */
+  static async syncVisitorToUser(visitorId, userId) {
+    if (!visitorId || !userId) return;
+    return EventService.mergeVisitorToUser(visitorId, userId);
   }
 
   /**
@@ -106,30 +136,52 @@ export class RecommendationService {
     };
 
     const currentTagIds = currentArticle.tags.map((t) => t.tagId);
-    const [interestProfileMap, { viewedArticleIds, sessionArticleIds }, config] = await Promise.all([
+
+    // Parallel multi-dimensional context resolution
+    const [
+      interestProfileMap,
+      typePreferenceMap,
+      feedbackMap,
+      currentFeedbackState,
+      { viewedArticleIds, sessionArticleIds },
+      config
+    ] = await Promise.all([
       EventService.getVisitorInterestMap(visitorId, userId),
+      EventService.getUserTypePreferenceMap(visitorId, userId),
+      EventService.getVisitorFeedbackMap(visitorId, userId),
+      EventService.getArticleFeedbackState({ visitorId, userId, articleId }),
       EventService.getVisitorHistory(visitorId, sessionId),
       this.getConfig()
     ]);
 
     const interestCategoryIds = Array.from(interestProfileMap.keys());
 
-    // Pull candidate pool with dynamic category hierarchy
+    // Extract user preferred article types for candidate generation
+    const preferredArticleTypes = Array.from(typePreferenceMap.entries())
+      .filter(([_, pref]) => pref.netScore > 0)
+      .sort((a, b) => b[1].netScore - a[1].netScore)
+      .map(([type]) => type);
+
+    // Pull candidate pool with dynamic category hierarchy and hard dislike suppression
     const candidates = await CandidateService.getCandidates({
       currentArticleId: articleId,
       currentCategoryId: currentArticle.categoryId,
       taxonomyContext,
       currentTagIds,
       interestCategoryIds,
+      preferredArticleTypes,
+      dislikedArticleIds: Array.from(feedbackMap.dislikedArticleIds),
       excludeArticleIds: Array.from(viewedArticleIds),
-      limit: 36
+      limit: config.thresholds?.candidatePoolSizes?.totalPreScoreCap || 100
     });
 
-    // Score candidates with dynamic hierarchical affinity
+    // Score candidates across all 10 normalized dimensions
     const scoredCandidates = ScoringService.scoreCandidates(candidates, {
       currentArticle,
       taxonomyContext,
       interestProfileMap,
+      typePreferenceMap,
+      feedbackMap,
       viewedArticleIds,
       sessionArticleIds,
       weights: config.weights
@@ -155,10 +207,7 @@ export class RecommendationService {
       }
     }
 
-    // Top recommendations:
-    // 1. All available from exact subcategory
-    // 2. Supplement from domain family (parent and sibling subcategories) if subcategory has < 6
-    // 3. Supplement from other high-scoring candidates if domain family has < 6
+    // Top recommendations: exact subcategory -> domain family -> diverse high-scoring items
     const topRecommendations = [
       ...exactSubcategoryItems,
       ...domainFamilyItems,
@@ -173,16 +222,25 @@ export class RecommendationService {
 
     const allocatedIds = new Set();
 
-    // 1. Complete Your Research: cross-format complementary articles
+    // 1. Complete Your Research: cross-format complementary articles with topical alignment
     for (const item of scoredCandidates) {
       if (completeYourResearch.length >= 3) break;
-      if (item.candidate.type !== currentArticle.type) {
+      if (allocatedIds.has(item.candidate.id)) continue;
+
+      const isDiffType = item.candidate.type !== currentArticle.type;
+      const isTopicallyRelated =
+        item.candidate.categoryId === currentArticle.categoryId ||
+        item.candidate.categoryId === parentCategoryId ||
+        siblingCategoryIds.includes(item.candidate.categoryId) ||
+        item.candidate.tags?.some((t) => currentTagIds.includes(t.tagId));
+
+      if (isDiffType && isTopicallyRelated && item.score >= 0.25) {
         completeYourResearch.push(item);
         allocatedIds.add(item.candidate.id);
       }
     }
 
-    // 2. Deep Topic Dive: same category or matching tag
+    // 2. Deep Topic Dive: same category or matching tag deepening topical coverage
     for (const item of scoredCandidates) {
       if (deepTopicDive.length >= 3) break;
       if (allocatedIds.has(item.candidate.id)) continue;
@@ -201,7 +259,8 @@ export class RecommendationService {
       if (allocatedIds.has(item.candidate.id)) continue;
 
       const matchesInterest = interestCategoryIds.includes(item.candidate.categoryId);
-      if (matchesInterest || item.candidate.isFeatured || (item.candidate.viewCount || 0) > 10) {
+      const matchesPreferredType = preferredArticleTypes.includes(item.candidate.type);
+      if (matchesInterest || matchesPreferredType || item.candidate.isFeatured || (item.candidate.viewCount || 0) > 10) {
         trendingInInterests.push(item);
         allocatedIds.add(item.candidate.id);
       }
@@ -218,7 +277,7 @@ export class RecommendationService {
       }
     }
 
-    // Backfill any empty clusters from remaining candidates to ensure rich content
+    // Backfill any empty clusters from remaining high-scoring candidates
     const remaining = scoredCandidates.filter((i) => !allocatedIds.has(i.candidate.id));
     let remIdx = 0;
     while (completeYourResearch.length < 2 && remIdx < remaining.length) {
@@ -229,6 +288,7 @@ export class RecommendationService {
     }
 
     return RecommendationDTO.toArticleJourneys({
+      articleFeedbackState: currentFeedbackState.feedbackState,
       recommendations: topRecommendations,
       completeYourResearch,
       deepTopicDive,
@@ -241,31 +301,46 @@ export class RecommendationService {
    * Generates a personalized feed for home/browse pages
    */
   static async getPersonalizedFeed({ visitorId, userId = null, sessionId = null, limit = 8 } = {}) {
-    const [interestProfileMap, { viewedArticleIds, sessionArticleIds }, config] = await Promise.all([
+    const [
+      interestProfileMap,
+      typePreferenceMap,
+      feedbackMap,
+      { viewedArticleIds, sessionArticleIds },
+      config
+    ] = await Promise.all([
       EventService.getVisitorInterestMap(visitorId, userId),
+      EventService.getUserTypePreferenceMap(visitorId, userId),
+      EventService.getVisitorFeedbackMap(visitorId, userId),
       EventService.getVisitorHistory(visitorId, sessionId),
       this.getConfig()
     ]);
 
     const interestCategoryIds = Array.from(interestProfileMap.keys());
+    const preferredArticleTypes = Array.from(typePreferenceMap.entries())
+      .filter(([_, pref]) => pref.netScore > 0)
+      .map(([type]) => type);
 
     const candidates = await CandidateService.getCandidates({
       interestCategoryIds,
+      preferredArticleTypes,
+      dislikedArticleIds: Array.from(feedbackMap.dislikedArticleIds),
       excludeArticleIds: Array.from(viewedArticleIds),
-      limit: 30
+      limit: 60
     });
 
     const scoredCandidates = ScoringService.scoreCandidates(candidates, {
       currentArticle: null,
       interestProfileMap,
+      typePreferenceMap,
+      feedbackMap,
       viewedArticleIds,
       sessionArticleIds,
       weights: config.weights
     });
 
     const diverseRecommendations = DiversityService.applyDiversity(scoredCandidates, {
-      maxPerCategory: 2,
-      maxPerType: 2,
+      maxPerCategory: config.thresholds?.diversity?.maxPerCategory || 2,
+      maxPerType: config.thresholds?.diversity?.maxPerType || 2,
       limit
     });
 

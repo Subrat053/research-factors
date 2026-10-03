@@ -3,7 +3,7 @@ import { EventService } from './event.service.js';
 
 export class RecommendationController {
   /**
-   * Records a user reading event
+   * Records a user reading or engagement event
    */
   static async recordEvent(req, res, next) {
     try {
@@ -16,6 +16,108 @@ export class RecommendationController {
       res.status(201).json({
         success: true,
         data: { id: event.id, eventType: event.eventType }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Sets or toggles explicit article feedback (LIKE / DISLIKE / NONE)
+   */
+  static async setArticleFeedback(req, res, next) {
+    try {
+      const userId = req.user?.id || null;
+      const visitorId = req.body.visitorId || req.headers['x-visitor-id'] || null;
+      const sessionId = req.body.sessionId || req.headers['x-session-id'] || null;
+      const { articleId, feedbackType } = req.body;
+
+      const result = await RecommendationService.setArticleFeedback({
+        visitorId,
+        userId,
+        sessionId,
+        articleId,
+        feedbackType
+      });
+
+      res.status(200).json({
+        success: true,
+        message: result.feedbackState === 'NONE' ? 'Feedback removed' : `Article ${result.feedbackState.toLowerCase()}d`,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Gets active feedback state for an article
+   */
+  static async getArticleFeedback(req, res, next) {
+    try {
+      const { articleId } = req.params;
+      const userId = req.user?.id || null;
+      const visitorId = req.query.visitorId || req.headers['x-visitor-id'] || null;
+
+      const result = await RecommendationService.getArticleFeedbackState({
+        visitorId,
+        userId,
+        articleId
+      });
+
+      res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Removes explicit article feedback
+   */
+  static async removeArticleFeedback(req, res, next) {
+    try {
+      const { articleId } = req.params;
+      const userId = req.user?.id || null;
+      const visitorId = req.query.visitorId || req.headers['x-visitor-id'] || null;
+      const sessionId = req.query.sessionId || req.headers['x-session-id'] || null;
+
+      const result = await RecommendationService.removeArticleFeedback({
+        visitorId,
+        userId,
+        sessionId,
+        articleId
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Feedback cleared',
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Synchronizes anonymous visitor data to an authenticated user
+   */
+  static async syncVisitor(req, res, next) {
+    try {
+      const userId = req.user?.id;
+      const { visitorId } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Authentication required' });
+      }
+
+      await RecommendationService.syncVisitorToUser(visitorId, userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Visitor preferences merged successfully'
       });
     } catch (error) {
       next(error);

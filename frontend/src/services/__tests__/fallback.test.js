@@ -14,16 +14,16 @@ describe('Offline Fallback Data & Even-Count Verification', () => {
     expect(Object.keys(fallbackData.siteStats).length % 2).toBe(0);
   });
 
-  it('should contain expected counts: 6 categories, 18 articles, 6 trending, 4 comments, 4 testimonials, 4 stats', () => {
+  it('should contain expected counts: 6 categories, 20 articles, 6 trending, 4 comments, 4 testimonials, 4 stats', () => {
     expect(fallbackData.categories.length).toBe(6);
-    expect(fallbackData.articles.length).toBe(18);
+    expect(fallbackData.articles.length).toBe(20);
     expect(fallbackData.trendingArticles.length).toBe(6);
     expect(fallbackData.comments.length).toBe(4);
     expect(fallbackData.testimonials.length).toBe(4);
     expect(Object.keys(fallbackData.siteStats).length).toBe(4);
   });
 
-  it('should have at least 3 fallback articles for every category', () => {
+  it('should have at least 3 fallback articles for every core category', () => {
     fallbackData.categories.forEach((cat) => {
       const matching = fallbackData.articles.filter((a) => a.category.slug === cat.slug);
       expect(matching.length).toBeGreaterThanOrEqual(3);
@@ -45,7 +45,26 @@ describe('Offline Fallback Data & Even-Count Verification', () => {
       expect(res.success).toBe(true);
       expect(res._isFallback).toBe(true);
       expect(res.data.items.length).toBe(4);
-      expect(res.data.pagination.total).toBe(18);
+      expect(res.data.pagination.total).toBe(20);
+    });
+
+    it('should serve Tata Nexon comparison article by slug on network failure', async () => {
+      vi.spyOn(apiClient, 'get').mockRejectedValueOnce({
+        code: 'NETWORK_ERROR',
+        message: 'Network Error'
+      });
+
+      const res = await articlesApi.getArticleBySlug(
+        'ev-vs-petrol-vs-diesel-vs-cng-which-tata-nexon-should-you-buy-in-2026'
+      );
+      expect(res.success).toBe(true);
+      expect(res._isFallback).toBe(true);
+      expect(res.data.title).toBe(
+        'EV vs Petrol vs Diesel vs CNG: Which Tata Nexon Should You Buy in 2026?'
+      );
+      expect(res.data.type).toBe('COMPARISON');
+      expect(res.data.category.slug).toBe('automotive');
+      expect(res.data.blocks.length).toBe(56);
     });
 
     it('should serve 6 trending articles on network failure', async () => {

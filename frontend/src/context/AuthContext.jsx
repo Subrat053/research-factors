@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authApi } from '../services/auth.api.js';
+import { recommendationsApi } from '../services/recommendations.api.js';
 
 const AuthContext = createContext(null);
 
@@ -25,12 +26,14 @@ export function AuthProvider({ children }) {
   const login = async (credentials) => {
     const response = await authApi.login(credentials);
     setUser(response.data?.user);
+    recommendationsApi.syncVisitor().catch(() => {});
     return response.data?.user;
   };
 
   const register = async (data) => {
     const response = await authApi.register(data);
     setUser(response.data?.user);
+    recommendationsApi.syncVisitor().catch(() => {});
     return response.data?.user;
   };
 

@@ -6,12 +6,14 @@ import { requirePermission } from '../../middleware/authorize.js';
 import {
   trackEventSchema,
   setInterestsSchema,
-  recommendationFeedQuerySchema
+  recommendationFeedQuerySchema,
+  articleFeedbackSchema,
+  syncVisitorSchema
 } from './recommendation.validator.js';
 
 export const recommendationRoutes = Router();
 
-// 1. Reading Event Ingestion
+// 1. Reading & Telemetry Event Ingestion
 recommendationRoutes.post(
   '/events',
   optionalAuthenticate,
@@ -39,7 +41,35 @@ recommendationRoutes.delete(
   RecommendationController.removeInterest
 );
 
-// 3. Multi-Intent Recommendations
+// 3. Explicit Article Feedback (Like / Dislike / None)
+recommendationRoutes.post(
+  '/feedback',
+  optionalAuthenticate,
+  validateRequest(articleFeedbackSchema),
+  RecommendationController.setArticleFeedback
+);
+
+recommendationRoutes.get(
+  '/feedback/:articleId',
+  optionalAuthenticate,
+  RecommendationController.getArticleFeedback
+);
+
+recommendationRoutes.delete(
+  '/feedback/:articleId',
+  optionalAuthenticate,
+  RecommendationController.removeArticleFeedback
+);
+
+// 4. Anonymous Visitor to User Account Synchronization
+recommendationRoutes.post(
+  '/sync-visitor',
+  authenticate,
+  validateRequest(syncVisitorSchema),
+  RecommendationController.syncVisitor
+);
+
+// 5. Multi-Intent Recommendations
 recommendationRoutes.get(
   '/article/:articleId',
   optionalAuthenticate,
@@ -53,7 +83,7 @@ recommendationRoutes.get(
   RecommendationController.getPersonalizedFeed
 );
 
-// 4. Governance Configuration
+// 6. Governance Configuration
 recommendationRoutes.get('/config', RecommendationController.getConfig);
 
 recommendationRoutes.patch(

@@ -20,9 +20,9 @@ frontend/src/data/fallbackData.json
 In adherence to project UI design standards and grid symmetry, all collections in the fallback registry strictly maintain **even counts**:
 
 | Collection | Count | Description |
-| :--- | :---: | :--- |
-| `categories` | **6** | Technology, Business, Science, Economics, Policy, Lifestyle |
-| `articles` | **18** | In-depth natural empirical articles across all 6 fields (minimum 3 articles per topic/category) with full BlockRenderer blocks (paragraphs, callouts, tables, quotes) |
+| :--- | :---: | :---: |
+| `categories` | **6** | Technology, Business, Science, Economics, Policy, Lifestyle (with dynamic category resolution for Automotive) |
+| `articles` | **20** | In-depth empirical articles across core domains plus Automotive (including the 2026 Tata Nexon Powertrain Benchmark with full 56 blocks) |
 | `trendingArticles` | **6** | Ranked 1 to 6 with engagement scores and view counts |
 | `comments` | **4** | Top-level peer-review discussions with nested replies |
 | `testimonials` | **4** | Editorial reader & CTO testimonials |
@@ -224,4 +224,7 @@ The fallback dataset is fully integrated into the backend PostgreSQL database vi
 - **Author Synchronization**: Maps and provisions `User`, `UserRole` (`AUTHOR`), and `AuthorProfile` records with biographies and avatars for every contributing author.
 - **Article & Block Ingestion**: Ingests all 18 fallback articles with exact content blocks (`paragraph`, `heading`, `callout`, `table`, `quote`), taxonomy tags, and slug histories.
 - **Expansion Articles**: Includes dedicated empirical research articles for the Automotive and Fashion categories to ensure complete category readiness.
+- **Standalone Article JSON Registry (`backend/src/data/articles/` and `frontend/src/data/articles/`)**:
+  - Provides modular, standalone JSON article specifications (such as `tata-nexon-ev-petrol-diesel-cng-2026.json`) decoupling individual article seed definitions from monolithic fallback files.
+  - Automatically ingested into PostgreSQL during `npm run prisma:seed` or directly executed via dedicated scripts (e.g. `node scripts/seed-tata-nexon-article.js`).
 

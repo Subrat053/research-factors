@@ -793,6 +793,101 @@ async function main() {
   }
   console.log('✅ Seeded default platform system configuration.');
 
+  // 12. Seed Standalone Article JSONs (e.g. Tata Nexon Powertrain Benchmark)
+  const articlesJsonDir = path.resolve(__dirname, '../src/data/articles');
+  if (fs.existsSync(articlesJsonDir)) {
+    const jsonFiles = fs.readdirSync(articlesJsonDir).filter((f) => f.endsWith('.json'));
+    for (const jFile of jsonFiles) {
+      try {
+        const artData = JSON.parse(fs.readFileSync(path.join(articlesJsonDir, jFile), 'utf8'));
+        const catSlug = artData.categorySlug || 'automotive';
+        const targetCategory = categories[catSlug] || await prisma.category.findUnique({ where: { slug: catSlug } });
+        if (!targetCategory) continue;
+
+        const artRecord = await prisma.article.upsert({
+          where: { slug: artData.slug },
+          update: {
+            title: artData.title,
+            subtitle: artData.subtitle,
+            excerpt: artData.excerpt,
+            type: artData.type,
+            status: artData.status || 'PUBLISHED',
+            readingTimeMin: artData.readingTimeMin || 8,
+            coverImageUrl: artData.coverImageUrl,
+            coverImageAlt: artData.coverImageAlt,
+            isFeatured: artData.isFeatured ?? true,
+            categoryId: targetCategory.id,
+            authorId: defaultAuthor.id,
+            createdById: defaultAuthor.id,
+            publishedById: defaultEditor.id,
+            publishedAt: new Date('2026-10-03T10:00:00.000Z'),
+            seoTitle: artData.seoTitle,
+            seoDescription: artData.seoDescription,
+            canonicalUrl: artData.canonicalUrl
+          },
+          create: {
+            title: artData.title,
+            slug: artData.slug,
+            subtitle: artData.subtitle,
+            excerpt: artData.excerpt,
+            type: artData.type,
+            status: artData.status || 'PUBLISHED',
+            readingTimeMin: artData.readingTimeMin || 8,
+            viewCount: 420,
+            coverImageUrl: artData.coverImageUrl,
+            coverImageAlt: artData.coverImageAlt,
+            isFeatured: artData.isFeatured ?? true,
+            categoryId: targetCategory.id,
+            authorId: defaultAuthor.id,
+            createdById: defaultAuthor.id,
+            publishedById: defaultEditor.id,
+            publishedAt: new Date('2026-10-03T10:00:00.000Z'),
+            seoTitle: artData.seoTitle,
+            seoDescription: artData.seoDescription,
+            canonicalUrl: artData.canonicalUrl
+          }
+        });
+
+        if (Array.isArray(artData.blocks) && artData.blocks.length > 0) {
+          await prisma.articleBlock.deleteMany({ where: { articleId: artRecord.id } });
+          await prisma.articleBlock.createMany({
+            data: artData.blocks.map((b, idx) => ({
+              articleId: artRecord.id,
+              blockType: b.blockType,
+              position: b.position ?? idx,
+              content: b.content,
+              metadata: b.metadata || null
+            }))
+          });
+        }
+
+        if (Array.isArray(artData.tags) && artData.tags.length > 0) {
+          await prisma.articleTag.deleteMany({ where: { articleId: artRecord.id } });
+          for (const t of artData.tags) {
+            const tagRec = await prisma.tag.upsert({
+              where: { slug: t.slug },
+              update: { name: t.name },
+              create: { name: t.name, slug: t.slug }
+            });
+            await prisma.articleTag.create({
+              data: { articleId: artRecord.id, tagId: tagRec.id }
+            });
+          }
+        }
+
+        await prisma.articleSlugHistory.upsert({
+          where: { slug: artRecord.slug },
+          update: {},
+          create: { slug: artRecord.slug, articleId: artRecord.id }
+        });
+
+        console.log(`✅ Loaded and seeded standalone article JSON: ${artRecord.title}`);
+      } catch (err) {
+        console.warn(`⚠️ Could not process ${jFile}:`, err.message);
+      }
+    }
+  }
+
   console.log('🎉 Database seeding completed successfully!');
 }
 

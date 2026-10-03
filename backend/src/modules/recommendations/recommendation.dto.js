@@ -7,12 +7,21 @@ export class RecommendationDTO {
   static toItem(scoredItem, intent = null) {
     if (!scoredItem || !scoredItem.candidate) return null;
 
-    return {
+    const feedbackState = scoredItem.feedbackState || scoredItem.candidate?.feedbacks?.[0]?.feedbackType || 'NONE';
+
+    const item = {
       article: ArticleDTO.toPublicSummary(scoredItem.candidate),
       matchPercentage: scoredItem.matchPercentage || 85,
       reason: scoredItem.reason || 'Curated for your research interests',
-      intent: intent || scoredItem.intent || 'RECOMMENDED'
+      intent: intent || scoredItem.intent || 'RECOMMENDED',
+      feedback: { state: feedbackState }
     };
+
+    if (scoredItem.debug) {
+      item.debug = scoredItem.debug;
+    }
+
+    return item;
   }
 
   /**
@@ -29,6 +38,7 @@ export class RecommendationDTO {
    * Serializes grouped multi-intent journeys for the article detail page
    */
   static toArticleJourneys({
+    articleFeedbackState = 'NONE',
     recommendations = [],
     completeYourResearch = [],
     deepTopicDive = [],
@@ -36,6 +46,7 @@ export class RecommendationDTO {
     discoverSomethingNew = []
   }) {
     return {
+      articleFeedback: { state: articleFeedbackState },
       recommendations: this.toItemList(recommendations, 'TOP_MATCH'),
       completeYourResearch: {
         title: 'Complete Your Research',

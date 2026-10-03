@@ -3216,6 +3216,760 @@
           }
         }
       ]
+    },
+    {
+      "id": "art-fb-nexon-01",
+      "title": "EV vs Petrol vs Diesel vs CNG: Which Tata Nexon Should You Buy in 2026?",
+      "slug": "ev-vs-petrol-vs-diesel-vs-cng-which-tata-nexon-should-you-buy-in-2026",
+      "subtitle": "A data-driven 5-year total cost of ownership and real-world efficiency comparison across all four powertrains of India's most versatile compact SUV.",
+      "excerpt": "Choosing a new car in India is no longer simply a question of petrol versus diesel. We compare real-world mileage, purchase price, running cost, and 5-year ownership economics across Petrol, CNG, Diesel, and EV powertrains of the 2026 Tata Nexon.",
+      "type": "COMPARISON",
+      "status": "PUBLISHED",
+      "isFeatured": true,
+      "readingTimeMin": 8,
+      "coverImageUrl": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80",
+      "coverImageAlt": "Modern compact SUV driving along a highway comparison benchmark",
+      "publishedAt": "2026-10-03T10:00:00.000Z",
+      "viewCount": 420,
+      "commentCount": 6,
+      "category": {
+        "id": "cat-auto",
+        "name": "Automotive",
+        "slug": "automotive"
+      },
+      "author": {
+        "id": "usr-fb-chen",
+        "fullName": "Dr. Marcus Chen",
+        "firstName": "Marcus",
+        "lastName": "Chen",
+        "role": "AUTHOR",
+        "authorProfile": {
+          "headline": "Senior Powertrain & Battery Systems Research Analyst",
+          "bio": "Dr. Chen specializes in automotive powertrain benchmarking, EV lifecycle efficiency, and comparative mobility economics.",
+          "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
+        },
+        "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
+      },
+      "tags": [
+        {
+          "id": "tag-nexon-1",
+          "name": "Tata Nexon",
+          "slug": "tata-nexon"
+        },
+        {
+          "id": "tag-nexon-2",
+          "name": "Electric Vehicles",
+          "slug": "electric-vehicles"
+        },
+        {
+          "id": "tag-nexon-3",
+          "name": "CNG",
+          "slug": "cng"
+        },
+        {
+          "id": "tag-nexon-4",
+          "name": "Diesel",
+          "slug": "diesel"
+        },
+        {
+          "id": "tag-nexon-5",
+          "name": "Petrol Cars",
+          "slug": "petrol-cars"
+        },
+        {
+          "id": "tag-nexon-6",
+          "name": "Total Cost of Ownership",
+          "slug": "total-cost-of-ownership"
+        },
+        {
+          "id": "tag-nexon-7",
+          "name": "Fuel Efficiency",
+          "slug": "fuel-efficiency"
+        },
+        {
+          "id": "tag-nexon-8",
+          "name": "Automotive Technology",
+          "slug": "automotive-technology"
+        }
+      ],
+      "blocks": [
+        {
+          "id": "b-nexon-01",
+          "blockType": "paragraph",
+          "content": {
+            "text": "Choosing a new car in India is no longer simply a question of petrol versus diesel.\n\nToday, buyers can choose between petrol, diesel, CNG and electric powertrains, and each one changes the economics of ownership in a different way."
+          }
+        },
+        {
+          "id": "b-nexon-02",
+          "blockType": "paragraph",
+          "content": {
+            "text": "The Tata Nexon makes this comparison particularly interesting because it is available with all four options: turbo-petrol, diesel, factory-fitted CNG and electric powertrains. That makes it possible to compare not only mileage, but also purchase price, running cost, driving pattern and long-term ownership economics."
+          }
+        },
+        {
+          "id": "b-nexon-03",
+          "blockType": "callout",
+          "content": {
+            "variant": "info",
+            "title": "The Essential Question",
+            "text": "Which one actually makes sense for you?\n\nThe answer depends less on which fuel is cheapest per kilometre and more on how many kilometres you drive, where you drive, whether you can charge or refuel conveniently, and how long you intend to keep the car."
+          }
+        },
+        {
+          "id": "b-nexon-04",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "The Four Choices at a Glance"
+          }
+        },
+        {
+          "id": "b-nexon-05",
+          "blockType": "paragraph",
+          "content": {
+            "text": "For this comparison, we are evaluating the 2026 Tata Nexon range across representative Creative specifications:"
+          }
+        },
+        {
+          "id": "b-nexon-06",
+          "blockType": "table",
+          "content": {
+            "headers": [
+              "Powertrain",
+              "Representative version",
+              "Ex-showroom price*",
+              "Real-world efficiency/range",
+              "Approx. energy/fuel cost"
+            ],
+            "rows": [
+              {
+                "label": "Petrol",
+                "values": [
+                  "Creative MT",
+                  "₹11.56 lakh",
+                  "~16.03 km/l",
+                  "₹6.80/km"
+                ]
+              },
+              {
+                "label": "CNG",
+                "values": [
+                  "Creative MT",
+                  "₹12.80 lakh",
+                  "~18.55 km/kg",
+                  "₹5.04/km"
+                ]
+              },
+              {
+                "label": "Diesel",
+                "values": [
+                  "Creative MT",
+                  "₹13.65 lakh",
+                  "~17.95 km/l",
+                  "₹5.61/km"
+                ]
+              },
+              {
+                "label": "EV",
+                "values": [
+                  "Creative 45",
+                  "₹15.21 lakh",
+                  "~350 km real-world range",
+                  "~₹0.78/km"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "b-nexon-07",
+          "blockType": "paragraph",
+          "content": {
+            "text": "*Ex-showroom prices; actual on-road price varies by city, registration, insurance, taxes and dealer charges.\n\nThe petrol, CNG and diesel prices and efficiency figures are based on current 2026 Nexon data, while the EV price/range is based on the current Nexon EV 45.\n\nFor fuel prices, this calculation uses Bhubaneswar figures of approximately ₹108.97/litre petrol, ₹100.68/litre diesel and ₹93.50/kg CNG.\n\nFor home EV charging, ₹6.10/kWh is used as a conservative electricity assumption based on Odisha's highest domestic consumption slab for 2026-27. Actual charging cost can be lower depending on the household's electricity consumption and charging arrangement."
+          }
+        },
+        {
+          "id": "b-nexon-08",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "1. Petrol: The Flexible All-Rounder"
+          }
+        },
+        {
+          "id": "b-nexon-09",
+          "blockType": "paragraph",
+          "content": {
+            "text": "The Nexon petrol uses a 1.2-litre turbo-petrol engine producing 120hp and 170Nm. It is also the most flexible powertrain in terms of transmission choices, with manual, AMT and DCT options.\n\nThe real-world petrol efficiency used here is approximately 16.03 km/l, based on Autocar India's reported user/testing data."
+          }
+        },
+        {
+          "id": "b-nexon-10",
+          "blockType": "callout",
+          "content": {
+            "variant": "info",
+            "title": "Petrol Running Cost Calculation",
+            "text": "• Per Kilometre Cost: ₹108.97 ÷ 16.03 = approximately ₹6.80/km\n• Annual Cost at 15,000 km/year: 15,000 × ₹6.80 = approximately ₹1.02 lakh/year\n• Over 5 years and 75,000 km: approximately ₹5.10 lakh in petrol"
+          }
+        },
+        {
+          "id": "b-nexon-11",
+          "blockType": "heading",
+          "content": {
+            "level": 3,
+            "text": "Who Should Consider Petrol?"
+          }
+        },
+        {
+          "id": "b-nexon-12",
+          "blockType": "list",
+          "content": {
+            "ordered": false,
+            "items": [
+              "Your annual driving is relatively low (under 10,000–12,000 km/year).",
+              "You want the lowest initial purchase price.",
+              "You want an automatic option.",
+              "Your driving is a mixture of city and highway.",
+              "You don't have convenient CNG access.",
+              "You don't have reliable home charging.",
+              "You want the flexibility to travel long distances without planning charging stops."
+            ]
+          }
+        },
+        {
+          "id": "b-nexon-13",
+          "blockType": "paragraph",
+          "content": {
+            "text": "Petrol's biggest advantage is not its running cost. It is flexibility."
+          }
+        },
+        {
+          "id": "b-nexon-14",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "2. CNG: The City Mileage Specialist"
+          }
+        },
+        {
+          "id": "b-nexon-15",
+          "blockType": "paragraph",
+          "content": {
+            "text": "The Nexon CNG uses the 1.2-litre turbo engine in a CNG configuration and is available with a 6-speed manual transmission. Its ARAI efficiency is 24 km/kg, while Autocar's real-world combined test recorded approximately 18.55 km/kg.\n\nUsing Bhubaneswar's CNG price of approximately ₹93.50/kg:\n₹93.50 ÷ 18.55 = approximately ₹5.04/km\n\nAt 15,000 km/year: 15,000 × ₹5.04 = approximately ₹75,600/year\nOver 75,000 km: approximately ₹3.78 lakh in CNG\n\nThat is around ₹1.32 lakh less than petrol over 75,000 km."
+          }
+        },
+        {
+          "id": "b-nexon-16",
+          "blockType": "callout",
+          "content": {
+            "variant": "tip",
+            "title": "CNG Upfront Premium Recovery",
+            "text": "The comparable Nexon Creative CNG costs around ₹12.80 lakh versus approximately ₹11.56 lakh for the Creative petrol manual—an approximate ₹1.24 lakh upfront premium.\n\nBased only on energy savings, recovering that additional purchase cost takes roughly:\n₹1.24 lakh ÷ ₹1.76/km savings ≈ 70,600 km to break even versus petrol.\n\nCNG becomes particularly interesting for someone who drives a lot."
+          }
+        },
+        {
+          "id": "b-nexon-17",
+          "blockType": "heading",
+          "content": {
+            "level": 3,
+            "text": "Who Should Consider CNG?"
+          }
+        },
+        {
+          "id": "b-nexon-18",
+          "blockType": "list",
+          "content": {
+            "ordered": false,
+            "items": [
+              "Drives extensively inside a city.",
+              "Has a CNG station conveniently available.",
+              "Drives around 15,000+ km annually.",
+              "Wants lower running costs without moving to an EV.",
+              "Is comfortable with a manual gearbox.",
+              "Wants to avoid EV charging planning."
+            ]
+          }
+        },
+        {
+          "id": "b-nexon-19",
+          "blockType": "callout",
+          "content": {
+            "variant": "warning",
+            "title": "Important CNG Limitation",
+            "text": "The Nexon CNG is not available with an automatic transmission. Someone who spends hours in traffic and specifically wants an automatic may find petrol or EV more convenient."
+          }
+        },
+        {
+          "id": "b-nexon-20",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "3. Diesel: The Long-Distance Option"
+          }
+        },
+        {
+          "id": "b-nexon-21",
+          "blockType": "paragraph",
+          "content": {
+            "text": "Diesel is still relevant for a particular type of buyer. The Nexon diesel uses a 1.5-litre turbo-diesel producing 115hp and 260Nm. It is available with both manual and AMT transmissions.\n\nAutocar's real-world testing recorded approximately 17.95 km/l for the diesel manual. Using Bhubaneswar diesel at approximately ₹100.68/litre:\n₹100.68 ÷ 17.95 = approximately ₹5.61/km\n\nAt 15,000 km/year: approximately ₹84,100/year\nOver 75,000 km: approximately ₹4.21 lakh (~₹89,000 cheaper in fuel than petrol)."
+          }
+        },
+        {
+          "id": "b-nexon-22",
+          "blockType": "callout",
+          "content": {
+            "variant": "warning",
+            "title": "Diesel Break-Even Analysis",
+            "text": "The diesel Creative costs around ₹13.65 lakh, roughly ₹2.09 lakh above the comparable petrol Creative.\n\nAt the calculated fuel savings of ₹1.19/km, recovering that upfront premium takes roughly:\n₹2.09 lakh ÷ ₹1.19/km ≈ 1.76 lakh km.\n\nDiesel is not automatically the economical choice anymore. If you drive only 10,000–12,000 km a year, the additional purchase cost takes a very long time to recover purely through fuel savings."
+          }
+        },
+        {
+          "id": "b-nexon-23",
+          "blockType": "heading",
+          "content": {
+            "level": 3,
+            "text": "Who Should Consider Diesel?"
+          }
+        },
+        {
+          "id": "b-nexon-24",
+          "blockType": "list",
+          "content": {
+            "ordered": false,
+            "items": [
+              "Drives a lot every year (high annual mileage).",
+              "Regularly travels between cities.",
+              "Drives long highway distances.",
+              "Wants strong low-end torque for quick overtaking.",
+              "Frequently carries full passenger or luggage payloads.",
+              "Wants an automatic but does not want an EV.",
+              "Plans to keep the vehicle for a long period."
+            ]
+          }
+        },
+        {
+          "id": "b-nexon-25",
+          "blockType": "paragraph",
+          "content": {
+            "text": "For a low-mileage city driver, the financial case for diesel is much weaker."
+          }
+        },
+        {
+          "id": "b-nexon-26",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "4. EV: The Lowest Energy Cost"
+          }
+        },
+        {
+          "id": "b-nexon-27",
+          "blockType": "paragraph",
+          "content": {
+            "text": "The Nexon EV is fundamentally different. There is no engine, no conventional gearbox and no fuel tank. The current Nexon EV is available with 30kWh and 45kWh battery configurations, with the 45kWh version offering a claimed MIDC range of up to 489km. Real-world range is substantially lower, and practical testing has shown roughly 350km for the 45kWh version under test conditions.\n\nAutocar's real-world testing of the Nexon EV 45 recorded approximately 7.79 km/kWh. Using an electricity assumption of ₹6.10/kWh:\n₹6.10 ÷ 7.79 = approximately ₹0.78/km\n\nAt 15,000 km/year: approximately ₹11,700/year\nAt 75,000 km: approximately ₹58,700 in electricity—dramatically lower than combustion alternatives."
+          }
+        },
+        {
+          "id": "b-nexon-28",
+          "blockType": "callout",
+          "content": {
+            "variant": "tip",
+            "title": "EV Upfront Cost vs Energy Savings",
+            "text": "The Nexon EV Creative 45 is listed at approximately ₹15.21 lakh ex-showroom—an approximate ₹3.65 lakh additional upfront cost over the ₹11.56 lakh petrol Creative.\n\nThe energy savings recover that difference at roughly:\n₹3.65 lakh ÷ ₹6.02/km ≈ 60,700 km.\n\nThis is why EV economics become increasingly attractive as annual driving increases."
+          }
+        },
+        {
+          "id": "b-nexon-29",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "The Real 5-Year Calculation"
+          }
+        },
+        {
+          "id": "b-nexon-30",
+          "blockType": "paragraph",
+          "content": {
+            "text": "Now let's remove some of the marketing language and simply calculate the numbers over a controlled 5-year, 75,000 km lifecycle (assuming Bhubaneswar fuel prices, ₹6.10/kWh electricity, real-world efficiency, ex-showroom purchase prices, and excluding financing, insurance, resale, and maintenance differences):"
+          }
+        },
+        {
+          "id": "b-nexon-31",
+          "blockType": "table",
+          "content": {
+            "headers": [
+              "Powertrain",
+              "Approx. purchase price",
+              "5-year energy/fuel",
+              "Purchase + energy"
+            ],
+            "rows": [
+              {
+                "label": "Petrol",
+                "values": [
+                  "₹11.56 lakh",
+                  "₹5.10 lakh",
+                  "₹16.66 lakh"
+                ]
+              },
+              {
+                "label": "CNG",
+                "values": [
+                  "₹12.80 lakh",
+                  "₹3.78 lakh",
+                  "₹16.58 lakh"
+                ]
+              },
+              {
+                "label": "Diesel",
+                "values": [
+                  "₹13.65 lakh",
+                  "₹4.21 lakh",
+                  "₹17.86 lakh"
+                ]
+              },
+              {
+                "label": "EV",
+                "values": [
+                  "₹15.21 lakh",
+                  "₹0.59 lakh",
+                  "₹15.80 lakh"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "b-nexon-32",
+          "blockType": "callout",
+          "content": {
+            "variant": "info",
+            "title": "Purchase Price + Fuel Cost Is Not Total Cost of Ownership",
+            "text": "These are not complete five-year ownership costs. They are a controlled comparison of purchase price plus energy/fuel expenditure. That distinction matters because insurance, maintenance, financing, taxes, charging equipment, resale value and unexpected repairs can materially change the final ownership equation."
+          }
+        },
+        {
+          "id": "b-nexon-33",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "What Happens at Different Annual Driving Distances?"
+          }
+        },
+        {
+          "id": "b-nexon-34",
+          "blockType": "heading",
+          "content": {
+            "level": 3,
+            "text": "If You Drive Only ~5,000 km/year"
+          }
+        },
+        {
+          "id": "b-nexon-35",
+          "blockType": "paragraph",
+          "content": {
+            "text": "Your fuel savings are relatively small. The additional purchase price of CNG, diesel or EV becomes harder to recover. For this user, the lower upfront cost and flexibility of petrol can make more sense."
+          }
+        },
+        {
+          "id": "b-nexon-36",
+          "blockType": "heading",
+          "content": {
+            "level": 3,
+            "text": "If You Drive Around ~10,000 km/year"
+          }
+        },
+        {
+          "id": "b-nexon-37",
+          "blockType": "paragraph",
+          "content": {
+            "text": "CNG begins to become interesting, especially for city driving. EV also starts making sense if home charging is available and the vehicle will be retained for several years. Diesel needs a stronger justification because its initial price premium is significant."
+          }
+        },
+        {
+          "id": "b-nexon-38",
+          "blockType": "heading",
+          "content": {
+            "level": 3,
+            "text": "If You Drive Around ~15,000 km/year"
+          }
+        },
+        {
+          "id": "b-nexon-39",
+          "blockType": "paragraph",
+          "content": {
+            "text": "The calculation starts becoming much more interesting. CNG can recover its additional purchase cost over time. EV's low energy cost becomes significant. Diesel becomes more dependent on how much of the driving is highway-oriented."
+          }
+        },
+        {
+          "id": "b-nexon-40",
+          "blockType": "heading",
+          "content": {
+            "level": 3,
+            "text": "If You Drive 20,000–25,000+ km/year"
+          }
+        },
+        {
+          "id": "b-nexon-41",
+          "blockType": "paragraph",
+          "content": {
+            "text": "Running cost becomes a major part of ownership. At this point, CNG and EV can produce substantial energy savings. Diesel can also make sense if the majority of those kilometres are highway kilometres and long-distance travel is important."
+          }
+        },
+        {
+          "id": "b-nexon-42",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "Cost Per Kilometre Is Not the Whole Story: Buyer A vs Buyer B"
+          }
+        },
+        {
+          "id": "b-nexon-43",
+          "blockType": "callout",
+          "content": {
+            "variant": "info",
+            "title": "Comparing Two Real-World Buyer Profiles",
+            "text": "• Buyer A (6,000 km/year, mostly city short trips): Saving ₹3–5 per kilometre may not justify spending several lakh rupees more upfront.\n\n• Buyer B (25,000 km/year, mostly highway & intercity commute): Even a ₹2/km difference saves 25,000 × ₹2 = ₹50,000/year (₹2.5 lakh over 5 years).\n\nThe same powertrain can therefore make completely different financial sense for these two buyers."
+          }
+        },
+        {
+          "id": "b-nexon-44",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "Petrol vs CNG vs Diesel vs EV: The Practical Difference"
+          }
+        },
+        {
+          "id": "b-nexon-45",
+          "blockType": "table",
+          "content": {
+            "headers": [
+              "Powertrain",
+              "Advantages",
+              "Limitations",
+              "Best Suited To"
+            ],
+            "rows": [
+              {
+                "label": "Petrol",
+                "values": [
+                  "Lowest entry price; multiple transmission choices (manual, AMT, DCT); easy refuelling; no charging dependency; good for mixed usage.",
+                  "Highest running cost in this comparison (~₹6.80/km); fuel price exposure; long-term running cost adds up for high-mileage drivers.",
+                  "Low-to-medium annual mileage + mixed usage + maximum flexibility."
+                ]
+              },
+              {
+                "label": "CNG",
+                "values": [
+                  "Low running cost (~₹5.04/km); much cheaper energy than petrol; factory-fitted system; particularly attractive for high city mileage.",
+                  "Manual-only in the Nexon; CNG availability depends on local infrastructure; refuelling queues; higher initial purchase price than petrol.",
+                  "High city usage + reliable CNG access + cost-conscious ownership."
+                ]
+              },
+              {
+                "label": "Diesel",
+                "values": [
+                  "Strong low-end torque (260Nm); good highway efficiency (~17.95 km/l); long-distance capability; available with automatic.",
+                  "Higher purchase price; fuel savings take ~1.76 lakh km to recover against petrol in this comparison; less compelling for low mileage.",
+                  "High annual mileage + frequent highway/intercity driving."
+                ]
+              },
+              {
+                "label": "EV",
+                "values": [
+                  "Lowest energy cost (~₹0.78/km); smooth and quiet; automatic by nature; excellent for city traffic; convenient overnight home charging.",
+                  "Highest upfront price; requires convenient charging; long-distance planning matters; public charging costs higher than home charging.",
+                  "High city usage + home charging + long ownership period."
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "b-nexon-46",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "The Most Important Question: Can You Charge at Home?"
+          }
+        },
+        {
+          "id": "b-nexon-47",
+          "blockType": "paragraph",
+          "content": {
+            "text": "For an EV buyer, this question can be more important than the advertised range.\n\nIf you have dedicated home parking, reliable electricity, and overnight charging, the EV becomes much easier to live with.\n\nIf you park on the street, cannot install a charger, and frequently travel long distances, the economics may look attractive on paper, but the ownership experience can become more complicated. This is why an EV should not be selected purely because its calculated running cost is the lowest."
+          }
+        },
+        {
+          "id": "b-nexon-48",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "What About Resale Value and Maintenance?"
+          }
+        },
+        {
+          "id": "b-nexon-49",
+          "blockType": "paragraph",
+          "content": {
+            "text": "Resale value is deliberately excluded from the direct calculation because it varies significantly with model, age, kilometres, condition, battery warranty, local demand, fuel regulations, and used-car market conditions. This omission can materially change the five-year ownership result. For example, if one vehicle retains ₹2 lakh more value after five years, that directly affects total cost of ownership. Purchase price plus fuel cost is not the same as total cost of ownership.\n\nMaintenance should also be considered separately. An EV has fewer conventional mechanical components than an internal-combustion vehicle, while petrol, diesel and CNG cars require engine-related maintenance. But because the exact maintenance advantage varies by manufacturer schedule and usage, this comparison does not assign an arbitrary maintenance saving to the EV, avoiding false precision."
+          }
+        },
+        {
+          "id": "b-nexon-50",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "So, Which One Should You Buy?"
+          }
+        },
+        {
+          "id": "b-nexon-51",
+          "blockType": "list",
+          "content": {
+            "ordered": true,
+            "items": [
+              "Buy Petrol If: You drive relatively little (5,000–12,000 km/year), want a lower initial purchase price, need maximum flexibility and do not want to depend on CNG or charging infrastructure.",
+              "Buy CNG If: You drive heavily in the city (12,000–20,000+ km/year), have a reliable CNG station nearby and are comfortable with a manual transmission.",
+              "Buy Diesel If: Your car is primarily a highway/intercity machine (20,000+ km/year) where you need strong torque, long range, or an automatic gearbox.",
+              "Buy EV If: You have reliable home charging, expect to drive 15,000+ km/year over several years to benefit from its much lower energy cost, and value smooth, quiet driving."
+            ]
+          }
+        },
+        {
+          "id": "b-nexon-52",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "The Bottom Line"
+          }
+        },
+        {
+          "id": "b-nexon-53",
+          "blockType": "paragraph",
+          "content": {
+            "text": "The petrol, diesel, CNG and EV Nexon are not really competing for exactly the same buyer. They solve different ownership problems:\n\n• Petrol is about flexibility.\n• CNG is about economical high-mileage city driving.\n• Diesel is about long-distance and high-mileage use.\n• EV is about low running cost and convenient home charging.\n\nAnd the most interesting finding from the calculation is this: At 15,000 km/year over five years, using the assumptions in this analysis, the energy savings are large enough that the EV's higher upfront price can be offset substantially. The CNG also gets close to petrol on purchase-plus-energy cost despite its higher initial price.\n\nBut that does not mean every buyer should choose an EV. If you cannot charge at home, regularly drive hundreds of kilometres in a day, or value effortless refuelling on long journeys, the practical calculation changes."
+          }
+        },
+        {
+          "id": "b-nexon-54",
+          "blockType": "quote",
+          "content": {
+            "quote": "The right question is therefore not 'Which fuel is cheapest?' It is: 'Which powertrain matches the way I actually drive?'",
+            "author": "Research Factors Editorial Benchmark",
+            "citation": "Tata Nexon 2026 Multi-Powertrain Lifecycle Study"
+          }
+        },
+        {
+          "id": "b-nexon-55",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "Research Notes & Calculation Method"
+          }
+        },
+        {
+          "id": "b-nexon-56",
+          "blockType": "callout",
+          "content": {
+            "variant": "info",
+            "title": "Empirical Assumptions & Limitations",
+            "text": "• Fuel prices used: Bhubaneswar, October 2026 — petrol ₹108.97/litre, diesel ₹100.68/litre, and CNG approximately ₹93.50/kg.\n• Petrol real-world efficiency: approximately 16.03 km/l (Autocar India testing data).\n• Diesel real-world efficiency: approximately 17.95 km/l.\n• CNG real-world efficiency: approximately 18.55 km/kg.\n• Nexon EV 45 real-world efficiency: approximately 7.79 km/kWh from Autocar testing (~350 km real-world range on 45 kWh pack).\n• Electricity assumption: ₹6.10/kWh, corresponding to Odisha's 2026-27 domestic tariff above 400 units; actual household charging cost can differ depending on consumption slab.\n• Representative ex-showroom prices: Nexon Creative petrol ₹11.56 lakh, Creative CNG ₹12.80 lakh, Creative diesel ₹13.65 lakh and Nexon EV Creative 45 approximately ₹15.21 lakh.\n• Important limitation: These calculations are designed to make powertrain economics understandable, not to represent a guaranteed five-year ownership bill. Actual costs will vary with driving conditions, fuel prices, electricity tariffs, charging losses, insurance, maintenance, financing, taxes, discounts, and resale value."
+          }
+        }
+      ]
+    },
+    {
+      "id": "art-fb-auto-02",
+      "title": "Electric Vehicles in India 2026: Battery Costs, Subsidies, and Charging Infrastructure Compared",
+      "slug": "electric-vehicles-in-india-2026-battery-costs-subsidies-and-charging-infrastructure",
+      "subtitle": "A comprehensive evaluation of India's EV ecosystem in 2026, analyzing cell chemistry pricing trajectories, revised incentives, and highway fast-charging grid reliability.",
+      "excerpt": "Analyzing battery cost reductions, revised subsidy frameworks, and highway charging accessibility across major Indian transit corridors in 2026.",
+      "type": "RESEARCH",
+      "status": "PUBLISHED",
+      "isFeatured": false,
+      "readingTimeMin": 7,
+      "coverImageUrl": "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=1200&q=80",
+      "coverImageAlt": "Modern electric vehicle charging station with digital interface",
+      "publishedAt": "2026-09-28T08:00:00.000Z",
+      "viewCount": 380,
+      "commentCount": 4,
+      "category": {
+        "id": "cat-auto",
+        "name": "Automotive",
+        "slug": "automotive"
+      },
+      "author": {
+        "id": "usr-fb-chen",
+        "fullName": "Dr. Marcus Chen",
+        "firstName": "Marcus",
+        "lastName": "Chen",
+        "role": "AUTHOR",
+        "authorProfile": {
+          "headline": "Senior Powertrain & Battery Systems Research Analyst",
+          "bio": "Dr. Chen specializes in automotive powertrain benchmarking, EV lifecycle efficiency, and comparative mobility economics.",
+          "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
+        },
+        "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
+      },
+      "tags": [
+        {
+          "id": "tag-ev-1",
+          "name": "Electric Vehicles",
+          "slug": "electric-vehicles"
+        },
+        {
+          "id": "tag-ev-2",
+          "name": "EV Charging",
+          "slug": "ev-charging"
+        },
+        {
+          "id": "tag-ev-3",
+          "name": "Battery Technology",
+          "slug": "battery-technology"
+        },
+        {
+          "id": "tag-ev-4",
+          "name": "Automotive Technology",
+          "slug": "automotive-technology"
+        }
+      ],
+      "blocks": [
+        {
+          "id": "b-ev-01",
+          "blockType": "paragraph",
+          "content": {
+            "text": "India's electric mobility landscape in 2026 has reached a pivotal tipping point. With LFP (Lithium Iron Phosphate) pack costs dropping below $82 per kWh globally and domestic pack assembly scaling across Tamil Nadu, Gujarat, and Maharashtra, vehicle price parity with internal combustion engines (ICE) is arriving across mass-market segments."
+          }
+        },
+        {
+          "id": "b-ev-02",
+          "blockType": "heading",
+          "content": {
+            "level": 2,
+            "text": "Cell Chemistry Economics & Domestic Assembly Milestones"
+          }
+        },
+        {
+          "id": "b-ev-03",
+          "blockType": "paragraph",
+          "content": {
+            "text": "The transition from imported NMC cylindrical cells to localized prismatic LFP architectures has reduced thermal runaway vulnerability during extreme 45°C summer ambients while slashing warranty replacement provisions for fleet operators by 38% year-over-year."
+          }
+        },
+        {
+          "id": "b-ev-04",
+          "blockType": "callout",
+          "content": {
+            "variant": "tip",
+            "title": "Highway Fast-Charging Density Milestone",
+            "text": "Over 68% of national highways now feature DC fast-charging stations spaced within 60 km intervals, decreasing intercity range anxiety by 42% compared to 2024 survey baselines."
+          }
+        }
+      ]
     }
   ],
   "trendingArticles": [

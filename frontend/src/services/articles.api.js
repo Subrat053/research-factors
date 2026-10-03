@@ -124,10 +124,18 @@ export const articlesApi = {
     withFallback(
       () => apiClient.get(`/categories/${slug}`),
       () => {
-        return (
-          fallbackData.categories.find((c) => c.slug === slug) ||
-          null
-        );
+        const found = fallbackData.categories.find((c) => c.slug === slug);
+        if (found) return found;
+        const matchingArticle = fallbackData.articles.find((a) => a.category?.slug === slug);
+        if (matchingArticle?.category) {
+          return {
+            id: matchingArticle.category.id || `cat-${slug}`,
+            name: matchingArticle.category.name || slug,
+            slug: slug,
+            description: `${matchingArticle.category.name || slug} research, comparative benchmarks, and engineering analyses.`
+          };
+        }
+        return null;
       }
     ),
 

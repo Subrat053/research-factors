@@ -37,12 +37,14 @@ erDiagram
     User ||--o{ CommentLike : likes
     Comment ||--o{ CommentLike : receives
     User ||--o{ CommentReport : flags
-    Comment ||--o{ CommentReport : flagged_by
     User ||--o{ Bookmark : saves
     Article ||--o{ Bookmark : saved_in
     User ||--o{ Notification : receives
     User ||--o{ Media : uploads
     User ||--o{ AuditLog : acts_in
+    User ||--o{ ArticleFeedback : gives
+    Article ||--o{ ArticleFeedback : receives
+    User ||--o{ UserArticleTypePreference : has
 ```
 
 ---
@@ -466,4 +468,54 @@ model AuditLog {
   @@index([actorId, createdAt])
   @@map("audit_logs")
 }
+
+// ================= RECOMMENDATION & PERSONALIZATION =================
+
+enum ArticleFeedbackType {
+  LIKE
+  DISLIKE
+}
+
+model ArticleFeedback {
+  id           String              @id @default(uuid()) @db.Uuid
+  canonicalId  String              @map("canonical_id")
+  visitorId    String              @map("visitor_id")
+  userId       String?             @map("user_id") @db.Uuid
+  articleId    String              @map("article_id") @db.Uuid
+  feedbackType ArticleFeedbackType @map("feedback_type")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  user         User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article      Article             @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([canonicalId, articleId])
+  @@index([visitorId, articleId])
+  @@index([userId, articleId])
+  @@index([articleId, feedbackType])
+  @@map("article_feedbacks")
+}
+
+model UserArticleTypePreference {
+  id               String       @id @default(uuid()) @db.Uuid
+  canonicalId      String       @map("canonical_id")
+  visitorId        String       @map("visitor_id")
+  userId           String?      @map("user_id") @db.Uuid
+  articleType      ArticleType  @map("article_type")
+  positiveScore    Float        @default(0) @map("positive_score")
+  negativeScore    Float        @default(0) @map("negative_score")
+  interactionCount Int          @default(1) @map("interaction_count")
+  lastInteractedAt DateTime     @default(now()) @map("last_interacted_at")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  user             User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([canonicalId, articleType])
+  @@index([visitorId])
+  @@index([userId])
+  @@index([articleType])
+  @@map("user_article_type_preferences")
+}
 ```
+

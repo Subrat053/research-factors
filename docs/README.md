@@ -23,6 +23,7 @@ Welcome to the definitive engineering and product documentation for **Research F
 | [13. PRD Compliance & Gap Analysis](./13-prd-checklist-and-gap-analysis.md) | Audit of all 147 PRD requirements: Applied vs Left to Implement, Phase map, and edge cases. | Product Owners & Lead Architects |
 | [14. Offline Fallback Data Registry](./14-offline-fallback-data-registry.md) | Zero-blank-screen offline dataset registry, even-count rules, component mapping, and decoupling guide. | Frontend & Full-Stack Engineers |
 | [15. Frontend Design & Typography System](./15-frontend-design-and-typography-system.md) | Pure native system UI typography, root-first type scale, heading/body hierarchy, and legacy cleanup. | Frontend & UI/UX Engineers |
+| [16. Recommendation Engine & Personalization](./16-recommendation-engine-and-personalization.md) | 10-dimension normalized scoring, candidate pooling, Like/Dislike feedback, format affinity, and journeys. | Machine Learning & Recommendation Engineers |
 
 ---
 

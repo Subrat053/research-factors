@@ -10,7 +10,12 @@ export const trackEventSchema = z.object({
     'CATEGORY_CLICK',
     'INTEREST_SELECTED',
     'RECOMMENDATION_CLICK',
-    'SEARCH'
+    'SEARCH',
+    'ARTICLE_LIKE',
+    'ARTICLE_DISLIKE',
+    'ARTICLE_FEEDBACK_REMOVED',
+    'COMMENT_SUBMITTED',
+    'COMMENT_REPLY'
   ]),
   articleId: z.string().uuid().optional().nullable(),
   categoryId: z.string().uuid().optional().nullable(),
@@ -27,4 +32,15 @@ export const recommendationFeedQuerySchema = z.object({
   visitorId: z.string().trim().optional(),
   sessionId: z.string().trim().optional(),
   limit: z.coerce.number().int().min(1).max(24).optional().default(8)
+});
+
+export const articleFeedbackSchema = z.object({
+  visitorId: z.string().trim().optional(),
+  sessionId: z.string().trim().optional(),
+  articleId: z.string().uuid('Valid articleId UUID is required'),
+  feedbackType: z.enum(['LIKE', 'DISLIKE'])
+});
+
+export const syncVisitorSchema = z.object({
+  visitorId: z.string().trim().min(1, 'visitorId is required')
 });
