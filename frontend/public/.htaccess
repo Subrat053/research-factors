@@ -9,13 +9,21 @@
   RewriteRule \.(log|sql|md|sh)$ - [F,L]
 
   # ====================================================================
-  # 2. APACHE MOD_PROXY (Proxies API & uploads to Node.js on port 5005)
+  # 2. PHP BACKEND GATEWAY: Forward API/uploads/health to Node.js on 5005
+  #    This avoids Apache/Nginx reverse-proxy requirements in FASTPANEL.
   # ====================================================================
-  <IfModule mod_proxy.c>
-    RewriteRule ^api/(.*)$ http://127.0.0.1:5005/api/$1 [P,L]
-    RewriteRule ^uploads/(.*)$ http://127.0.0.1:5005/uploads/$1 [P,L]
-    RewriteRule ^health/(.*)$ http://127.0.0.1:5005/health/$1 [P,L]
-  </IfModule>
+  RewriteRule ^api/?$ rf-proxy.php?__rf_path=/api [QSA,L]
+  RewriteRule ^api/(.*)$ rf-proxy.php?__rf_path=/api/$1 [QSA,L]
+  # Existing local media files are served directly by Apache. If a file is not
+  # present, fall back to the PHP gateway so Node can return the correct 404.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^uploads/?$ rf-proxy.php?__rf_path=/uploads [QSA,L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^uploads/(.*)$ rf-proxy.php?__rf_path=/uploads/$1 [QSA,L]
+  RewriteRule ^health/?$ rf-proxy.php?__rf_path=/health [QSA,L]
+  RewriteRule ^health/(.*)$ rf-proxy.php?__rf_path=/health/$1 [QSA,L]
 
   # ====================================================================
   # 3. SPA ROUTING: Route all other client requests to /rf/index.html

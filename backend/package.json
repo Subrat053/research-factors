@@ -14,6 +14,7 @@
     "prisma:seed": "node prisma/seed.js",
     "prisma:studio": "prisma studio",
     "db:normalize-media": "node scripts/normalize-db-media-urls.js",
+    "verify:production": "node scripts/verify-production-rf.js",
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",

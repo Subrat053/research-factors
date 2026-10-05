@@ -52,10 +52,19 @@ console.log('📦 Copying backend source code, schema, and configuration...');
 copyDir(path.join(backendDir, 'src'), path.join(outputDir, 'src'));
 copyDir(path.join(backendDir, 'prisma'), path.join(outputDir, 'prisma'));
 copyDir(path.join(backendDir, 'scripts'), path.join(outputDir, 'scripts'));
-fs.mkdirSync(path.join(outputDir, 'uploads/media'), { recursive: true });
+const backendUploadsDir = path.join(backendDir, 'uploads');
+if (fs.existsSync(backendUploadsDir)) {
+  copyDir(backendUploadsDir, path.join(outputDir, 'uploads'));
+} else {
+  fs.mkdirSync(path.join(outputDir, 'uploads/media'), { recursive: true });
+}
 
-// Copy backend package.json
+// Copy backend package manifest and lockfile for deterministic production installs
 fs.copyFileSync(path.join(backendDir, 'package.json'), path.join(outputDir, 'package.json'));
+const packageLockPath = path.join(backendDir, 'package-lock.json');
+if (fs.existsSync(packageLockPath)) {
+  fs.copyFileSync(packageLockPath, path.join(outputDir, 'package-lock.json'));
+}
 
 // Copy .htaccess (protects backend files & handles SPA)
 const htaccessPath = path.join(rootDir, 'frontend/public/.htaccess');
@@ -70,7 +79,8 @@ const envProductionContent = `# ================================================
 # ===================================================================
 
 NODE_ENV=production
-# FASTPANEL auto-assigns SERVICE_PORT, or specify internal port:
+# Internal Node port. Public /rf/api, /rf/health, and /rf/uploads
+# are forwarded through rf-proxy.php because the domain backend type stays PHP.
 PORT=5005
 
 # Origins allowed to connect via CORS (supports comma-separated):
@@ -123,11 +133,14 @@ const readmeDeploy = `# Quick FastPanel Deployment Guide for demo.wizmonk.com/rf
 
 This directory contains the production-ready build for Research Factors (Frontend + Backend).
 
+Existing local media from \`backend/uploads\` is included under \`uploads/\`. On repeat deployments, do not delete production-only media from \`/rf/uploads\`.
+
 ### Steps to Deploy in FASTPANEL:
 
 1. **Upload Files**:
    Upload the contents of this folder into:
    \`/var/www/demo_wizmonk_usr/data/www/demo.wizmonk.com/rf/\`
+   Keep existing production \`uploads/\` files if the server has media that is not present in this package.
 
 2. **Configure Environment**:
    Inside \`/var/www/demo_wizmonk_usr/data/www/demo.wizmonk.com/rf/\`:
@@ -137,21 +150,24 @@ This directory contains the production-ready build for Research Factors (Fronten
    # Update DATABASE_URL and JWT_SECRET
    \`\`\`
 
-3. **Install Dependencies & Generate Prisma**:
+3. **Install Dependencies & Apply Migrations**:
    \`\`\`bash
    cd /var/www/demo_wizmonk_usr/data/www/demo.wizmonk.com/rf
-   npm install --omit=dev
-   npx prisma db push
+   npm ci --omit=dev
+   npx prisma migrate deploy
    \`\`\`
 
 4. **FASTPANEL Backend Setting & Running Node**:
    - In **FASTPANEL -> Site Settings -> Backend**: **Keep "Backend type: PHP"**!
      *(Do NOT change it to Reverse proxy on demo.wizmonk.com, as that would redirect your other sites like gharabadi and hotelior to a single port and break them).*
-   - The \`.htaccess\` file inside \`/rf\` will automatically reverse-proxy \`/rf/api/*\` and \`/rf/uploads/*\` to port 5005.
+   - The \`.htaccess\` file inside \`/rf\` routes \`/rf/api/*\` and \`/rf/health/*\` to \`rf-proxy.php\`.
+   - Existing \`/rf/uploads/*\` files are served directly by Apache. Missing upload files fall back to \`rf-proxy.php\` so Node returns the correct response.
+   - \`rf-proxy.php\` forwards gateway requests to the Node backend on \`http://127.0.0.1:5005\`.
+   - PHP cURL extension must be enabled on the site.
    - Start the backend via PM2 (SSH):
    \`\`\`bash
    cd /var/www/demo_wizmonk_usr/data/www/demo.wizmonk.com/rf
-   pm2 start src/server.js --name rf-backend --cwd /var/www/demo_wizmonk_usr/data/www/demo.wizmonk.com/rf
+   pm2 start src/server.js --name rf-backend --cwd /var/www/demo_wizmonk_usr/data/www/demo.wizmonk.com/rf --update-env
    pm2 save
    pm2 startup
    \`\`\`
@@ -160,6 +176,19 @@ This directory contains the production-ready build for Research Factors (Fronten
    - Public Website: \`https://demo.wizmonk.com/rf/\`
    - Health Check: \`https://demo.wizmonk.com/rf/health/ready\`
    - API v1: \`https://demo.wizmonk.com/rf/api/v1\`
+   - Local Node Check: \`curl -i http://127.0.0.1:5005/health/ready\`
+   - PHP Gateway Check: \`curl -i https://demo.wizmonk.com/rf/health/ready\`
+   - Full Smoke Test:
+   \`\`\`bash
+   npm run verify:production -- https://demo.wizmonk.com/rf
+   \`\`\`
+
+6. **Media & Upload Requirements**:
+   - Existing media must exist under \`/var/www/demo_wizmonk_usr/data/www/demo.wizmonk.com/rf/uploads/media\`.
+   - Keep production-only files in \`uploads/\` during repeat deployments.
+   - PHP cURL must be enabled.
+   - PHP upload limits must be large enough for media uploads:
+     \`upload_max_filesize=20M\`, \`post_max_size=25M\`, \`max_execution_time=60\`.
 `;
 
 fs.writeFileSync(path.join(outputDir, 'README_DEPLOY.md'), readmeDeploy.trim());
