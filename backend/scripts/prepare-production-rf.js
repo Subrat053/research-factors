@@ -144,17 +144,16 @@ This directory contains the production-ready build for Research Factors (Fronten
    npx prisma db push
    \`\`\`
 
-4. **FASTPANEL Node.js Configuration**:
-   - Go to FASTPANEL -> Site Settings for \`demo.wizmonk.com\`
-   - Select **Backend** -> **NodeJS** (or PM2)
-   - Working subdirectory: \`rf\`
-   - Launch command: \`npm start\`
-   - Restart service!
-
-   *(Alternatively using PM2 over SSH)*:
+4. **FASTPANEL Backend Setting & Running Node**:
+   - In **FASTPANEL -> Site Settings -> Backend**: **Keep "Backend type: PHP"**!
+     *(Do NOT change it to Reverse proxy on demo.wizmonk.com, as that would redirect your other sites like gharabadi and hotelior to a single port and break them).*
+   - The \`.htaccess\` file inside \`/rf\` will automatically reverse-proxy \`/rf/api/*\` and \`/rf/uploads/*\` to port 5005.
+   - Start the backend via PM2 (SSH):
    \`\`\`bash
+   cd /var/www/demo_wizmonk_usr/data/www/demo.wizmonk.com/rf
    pm2 start src/server.js --name rf-backend --cwd /var/www/demo_wizmonk_usr/data/www/demo.wizmonk.com/rf
    pm2 save
+   pm2 startup
    \`\`\`
 
 5. **Verify**:

@@ -1,9 +1,24 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005/api/v1';
+export function getApiBaseUrl() {
+  const configuredUrl = import.meta.env.VITE_API_URL;
+  const isBrowser = typeof window !== 'undefined';
+  const isRemote = isBrowser && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+  const basePath = (import.meta.env.BASE_URL || '/rf/').replace(/\/+$/, '');
+
+  // If on a remote production domain, rewrite any accidental loopback/localhost address to same-origin
+  if (isRemote) {
+    if (!configuredUrl || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(configuredUrl)) {
+      return `${window.location.origin}${basePath}/api/v1`;
+    }
+    return configuredUrl;
+  }
+
+  return configuredUrl || 'http://localhost:5005/api/v1';
+}
 
 export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: getApiBaseUrl(),
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'

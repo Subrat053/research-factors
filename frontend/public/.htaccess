@@ -9,14 +9,13 @@
   RewriteRule \.(log|sql|md|sh)$ - [F,L]
 
   # ====================================================================
-  # 2. APACHE MOD_PROXY (If Apache is proxying to Node.js on port 5005)
-  # Uncomment the following rules if you choose Option B (Apache proxy)
+  # 2. APACHE MOD_PROXY (Proxies API & uploads to Node.js on port 5005)
   # ====================================================================
-  # <IfModule mod_proxy.c>
-  #   RewriteRule ^api/(.*)$ http://127.0.0.1:5005/api/$1 [P,L]
-  #   RewriteRule ^uploads/(.*)$ http://127.0.0.1:5005/uploads/$1 [P,L]
-  #   RewriteRule ^health/(.*)$ http://127.0.0.1:5005/health/$1 [P,L]
-  # </IfModule>
+  <IfModule mod_proxy.c>
+    RewriteRule ^api/(.*)$ http://127.0.0.1:5005/api/$1 [P,L]
+    RewriteRule ^uploads/(.*)$ http://127.0.0.1:5005/uploads/$1 [P,L]
+    RewriteRule ^health/(.*)$ http://127.0.0.1:5005/health/$1 [P,L]
+  </IfModule>
 
   # ====================================================================
   # 3. SPA ROUTING: Route all other client requests to /rf/index.html

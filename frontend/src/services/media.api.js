@@ -58,6 +58,27 @@ export const LOGO_ICON_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$/
  * Falls back to deriving /uploads from VITE_API_URL if VITE_STORAGE_URL is omitted.
  */
 export function getStorageBaseUrl() {
+  const isBrowser = typeof window !== 'undefined';
+  const isRemote = isBrowser && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+  const basePath = (import.meta.env.BASE_URL || '/rf/').replace(/\/+$/, '');
+
+  // If on a remote production domain, rewrite any loopback/localhost address to same-origin
+  if (isRemote) {
+    const configuredStorage = import.meta.env.VITE_STORAGE_URL;
+    if (configuredStorage && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(configuredStorage)) {
+      return configuredStorage.replace(/\/+$/, '');
+    }
+    const configuredApi = import.meta.env.VITE_API_URL;
+    if (configuredApi && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(configuredApi)) {
+      const apiBase = configuredApi.replace(/\/+$/, '');
+      if (apiBase.endsWith('/api/v1')) {
+        return apiBase.replace(/\/api\/v1$/, '/uploads');
+      }
+      return `${apiBase}/uploads`;
+    }
+    return `${window.location.origin}${basePath}/uploads`;
+  }
+
   if (import.meta.env.VITE_STORAGE_URL) {
     return import.meta.env.VITE_STORAGE_URL.replace(/\/+$/, '');
   }

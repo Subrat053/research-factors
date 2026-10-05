@@ -152,22 +152,26 @@ npx prisma db push
 
 ### Step 5: Start the Application Service
 
-#### Method A: Using FASTPANEL Backend Settings (Recommended)
-1. Open **FASTPANEL** -> Navigate to **Site settings** for `demo.wizmonk.com`.
-2. Go to the **Backend** tab.
-3. Select **NodeJS** (or **PM2**).
-4. In **Working subdirectory**, enter: `rf`.
-5. In **Launch command**, enter: `npm start` (or `node src/server.js`).
-6. Click **Save** and restart the service from the dashboard.
+#### FASTPANEL Setting: Keep "Backend type: PHP"
+In **FASTPANEL -> Site Settings -> Backend**:
+- **Leave Backend type as `PHP`**.
+- **Do NOT change it to `Reverse proxy` or `Systemd`** on `demo.wizmonk.com`. Because `demo.wizmonk.com` also hosts other projects (`/gharabadi`, `/hotelior`, `/wizmonk`), changing the domain's global backend type to Reverse proxy would redirect all traffic from those other projects to a single port and break them.
+- Keeping `PHP` active allows Apache to continue serving all other directories normally and allows Apache to execute the reverse proxy rules inside `/rf/.htaccess`!
 
-#### Method B: Using PM2 via SSH
-If managing via PM2 directly:
+#### Starting the Node.js Backend with PM2 (via SSH)
+Connect via SSH to your server and launch the Node.js backend:
 ```bash
 cd /var/www/demo_wizmonk_usr/data/www/demo.wizmonk.com/rf
+
+# Start backend using PM2 on port 5005
 pm2 start src/server.js --name rf-backend --cwd /var/www/demo_wizmonk_usr/data/www/demo.wizmonk.com/rf
+
+# Save PM2 process list to auto-start on server reboot
 pm2 save
 pm2 startup
 ```
+
+The `.htaccess` file inside `/rf/` will automatically intercept any requests to `/rf/api/*` and `/rf/uploads/*` and reverse-proxy them directly to Node.js on `http://127.0.0.1:5005`, while Apache serves all frontend static assets (`.js`, `.css`, `index.html`) at maximum speed!
 
 ---
 
