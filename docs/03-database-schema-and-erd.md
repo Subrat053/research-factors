@@ -264,7 +264,9 @@ model Article {
   scheduledAt    DateTime?       @map("scheduled_at")
   publishedAt    DateTime?       @map("published_at")
   rejectionReason String?        @map("rejection_reason")
-  authorId       String          @map("author_id") @db.Uuid
+  hasUnpublishedChanges Boolean        @default(false) @map("has_unpublished_changes")
+  draftData       Json?                @map("draft_data")
+  authorId        String          @map("author_id") @db.Uuid
   categoryId     String          @map("category_id") @db.Uuid
   createdById    String          @map("created_by_id") @db.Uuid
   publishedById  String?         @map("published_by_id") @db.Uuid
@@ -519,3 +521,52 @@ model UserArticleTypePreference {
 }
 ```
 
+---
+
+## 4. Staged Draft Revision Buffer Architecture (`hasUnpublishedChanges` & `draftData`)
+
+### 1. Architectural Problem & Live Isolation Guarantee
+In digital journalism and research publishing, editing an already live, peer-reviewed, published article must **never** auto-publish incomplete sentences, temporary drafts, or unapproved revisions to readers or search engine crawlers.
+
+To eliminate this vulnerability while preserving the convenience of debounced autosave:
+1. The `Article` model incorporates a dedicated JSON staging buffer:
+   - `hasUnpublishedChanges` (`has_unpublished_changes`): Boolean flag default `false`.
+   - `draftData` (`draft_data`): Nullable JSON column storing pending manuscript changes.
+2. **Public Isolation**:
+   - `ArticleService.getPublishedArticles` and `ArticleService.getArticleBySlug` strictly read the normalized, live `Article` columns and relational `article_blocks` rows. They ignore `draftData`.
+   - Public readers and search engine scrapers will never encounter partial or unapproved edits while an author is actively typing.
+
+### 2. Lifecycle Database Invariants
+
+```
+                             [ Author edits PUBLISHED article ]
+                                             │
+                                             ▼
+                                  [ Autosave Triggered ]
+                                             │
+                                             ▼
+                             [ PATCH /articles/:id/draft ]
+                                             │
+                         ┌───────────────────┴───────────────────┐
+                         ▼                                       ▼
+               If status === 'DRAFT'                   If status === 'PUBLISHED'
+              Direct transactional write:             Safe staged buffer write:
+              - tx.article.update(fields)             - tx.article.update({
+              - tx.articleBlock.deleteMany()              draftData: payload,
+              - tx.articleBlock.createMany(blocks)        hasUnpublishedChanges: true,
+              - tx.articleTag.sync()                      updatedAt: new Date()
+                                                        })
+                                                      - Zero modification to live blocks!
+```
+
+### 3. State Commitment & Discard Flow
+- **Direct Commit & Live Publication** (`POST /api/v1/articles/:id/modify-changes` with `article.publish`):
+  - Commits `draftData` inside an interactive Prisma transaction (`prisma.$transaction`).
+  - Updates normalized `Article` columns, replaces `article_blocks` rows, synchronizes `article_tags`, and updates `seo_metadata`.
+  - Sets `hasUnpublishedChanges = false` and `draftData = null`.
+- **Editorial Review Submission** (`POST /api/v1/articles/:id/modify-changes` without `article.publish`):
+  - Stages modifications into `draftData`, sets `hasUnpublishedChanges = true`, transitions status to `PENDING_REVIEW`, and logs audit trail.
+  - Live article blocks remain untouched on the public site until an editor approves and publishes the review queue item.
+- **Draft Discard** (`POST /api/v1/articles/:id/discard-draft`):
+  - Transactionally clears `draftData = null` and resets `hasUnpublishedChanges = false`.
+  - Reverts the author workspace back to the active live published version with zero data loss or orphan blocks.

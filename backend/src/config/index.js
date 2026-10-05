@@ -5,9 +5,12 @@ dotenv.config();
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.coerce.number().default(5000),
-  APP_URL: z.string().url().default('http://localhost:5173'),
-  API_URL: z.string().url().default('http://localhost:5000'),
+  PORT: z.coerce.number().default(process.env.SERVICE_PORT ? Number(process.env.SERVICE_PORT) : (process.env.PORT ? Number(process.env.PORT) : 5000)),
+  APP_URL: z.string().default('http://localhost:5173'),
+  API_URL: z.string().default('http://localhost:5000'),
+
+  SERVE_STATIC_CLIENT: z.coerce.boolean().default(false),
+  CLIENT_DIST_PATH: z.string().default('../frontend/dist'),
 
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
 

@@ -413,7 +413,7 @@ export function AdminLayout({ children, title, subtitle, actions }) {
           <div className="px-4 sm:px-8 pt-6 pb-4 border-b border-slate-200 dark:border-slate-800/40 bg-slate-100/50 dark:bg-slate-900/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-colors">
             <div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{title}</h1>
-              {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{subtitle}</p>}
+              {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{subtitle}</p>}
             </div>
             {actions && <div className="flex items-center space-x-3">{actions}</div>}
           </div>

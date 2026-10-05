@@ -63,7 +63,7 @@ export default function ArticlePreviewPage() {
             <h2 className="text-2xl font-bold text-ink-darkest mb-2">
               Preview Unavailable
             </h2>
-            <p className="text-sm text-ink-muted mb-6">{error || 'Draft manuscript could not be retrieved.'}</p>
+            <p className="text-sm text-ink-muted mb-6">{error || 'Draft article could not be retrieved.'}</p>
             <div className="flex justify-center gap-3">
               <button
                 onClick={() => window.close()}
@@ -269,7 +269,7 @@ export default function ArticlePreviewPage() {
                 {/* 10. Preview Notice for Comments */}
                 <div className="p-6 rounded-2xl bg-slate-50 border border-paper-border text-center text-ink-muted text-sm">
                   <p className="font-semibold text-ink-darkest mb-1">Peer Review & Discourse</p>
-                  <p className="text-xs">Community feedback and academic comments are enabled once the manuscript is approved and published.</p>
+                  <p className="text-xs">Community feedback and academic comments are enabled once the article is approved and published.</p>
                 </div>
               </div>
 

@@ -339,8 +339,8 @@ export default function CategoryPage() {
                     key={t.slug}
                     onClick={() => updateParam('tag', isActive ? '' : t.slug)}
                     className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${isActive
-                        ? 'bg-rfblue text-white font-medium'
-                        : 'bg-paper text-ink-muted hover:text-ink hover:bg-slate-200/60 border border-paper-border'
+                      ? 'bg-rfblue text-white font-medium'
+                      : 'bg-paper text-ink-muted hover:text-ink hover:bg-slate-200/60 border border-paper-border'
                       }`}
                   >
                     {t.name}
@@ -397,8 +397,8 @@ export default function CategoryPage() {
                       key={p}
                       onClick={() => updateParam('page', p.toString())}
                       className={`w-9 h-9 rounded-xl text-xs sm:text-sm font-semibold transition-colors ${p === page
-                          ? 'bg-rfblue text-white shadow-xs'
-                          : 'border border-paper-border bg-white text-ink hover:bg-paper shadow-2xs'
+                        ? 'bg-rfblue text-white shadow-xs'
+                        : 'border border-paper-border bg-white text-ink hover:bg-paper shadow-2xs'
                         }`}
                     >
                       {p}
@@ -424,7 +424,7 @@ export default function CategoryPage() {
               description={
                 hasActiveFilters
                   ? 'No publications match your current filters. Try resetting your search or format selections.'
-                  : 'Our editors and fellows are currently reviewing manuscripts for this category.'
+                  : 'Our editors and fellows are currently reviewing articles for this category.'
               }
             />
             {hasActiveFilters && (

@@ -24,15 +24,15 @@ The platform enforces 34 atomic permissions organized across 9 architectural dom
 | Domain | Action / Permission | Description |
 | :--- | :--- | :--- |
 | **Article** | `article.create` | Author article draft creation |
-| | `article.read_draft` | Access unpublished manuscripts |
+| | `article.read_draft` | Access unpublished articles |
 | | `article.update_own` | Edit authored drafts |
 | | `article.update_any` | Administrative editorial modifications |
 | | `article.delete_own` | Author draft removal |
-| | `article.delete_any` | Force deletion of any manuscript |
+| | `article.delete_any` | Force deletion of any article |
 | | `article.submit` | Submit draft to editorial review desk |
-| | `article.approve` | Accept/approve manuscript for publication |
-| | `article.reject` | Return manuscript with feedback notes |
-| | `article.publish` | Set approved manuscript live to public |
+| | `article.approve` | Accept/approve article for publication |
+| | `article.reject` | Return article with feedback notes |
+| | `article.publish` | Set approved article live to public |
 | | `article.unpublish` | Revert live article to draft |
 | | `article.schedule` | Set timestamp for automated release |
 | **Comment** | `comment.create` | Post peer responses |
@@ -61,7 +61,7 @@ The platform enforces 34 atomic permissions organized across 9 architectural dom
 ### Role Hierarchy & Assignment Matrix
 1. **`SUPER_ADMIN`**: Full platform authority with lockdown protection on core governance permissions (`role.manage`, `admin.manage`, `user.assign_role`, `audit.read`).
 2. **`ADMIN`**: Editorial management staff. Can manage articles, authors, taxonomy, media, and triage reports. **Cannot** promote users to `ADMIN`/`SUPER_ADMIN` and **cannot** alter `SUPER_ADMIN` accounts.
-3. **`EDITOR`**: Focused manuscript curation (`article.approve`, `article.reject`, `comment.moderate`).
+3. **`EDITOR`**: Focused article curation (`article.approve`, `article.reject`, `comment.moderate`).
 4. **`AUTHOR`**: Accredited researchers (`article.create`, `article.update_own`, `article.submit`, `media.upload`).
 5. **`USER`**: Registered community readers (`comment.create`, `comment.like`, `comment.report`).
 6. **`GUEST`**: Public anonymous readers (read-only access to published content).
@@ -121,7 +121,7 @@ To prevent privilege escalation attacks and administrative accidents:
 - `Reject`: Captures editorial rationale and sends structured feedback.
 
 ### 5.3 Full Manuscript Lifecycle (`/admin/articles`)
-- Manage manuscripts across all statuses: `DRAFT`, `PENDING_REVIEW`, `APPROVED`, `PUBLISHED`, `ARCHIVED`, `REJECTED`.
+- Manage articles across all statuses: `DRAFT`, `PENDING_REVIEW`, `APPROVED`, `PUBLISHED`, `ARCHIVED`, `REJECTED`.
 - `Schedule Publication`: Set future release date/time (`scheduledFor`).
 - `Archive`: Transition live articles to `ARCHIVED` status.
 - `Force Delete`: Prisma transaction with cascade deletion across tags, comments, bookmarks, and block content.
@@ -209,6 +209,6 @@ As required by Rule 10 of `AGENTS.md`, the following operational extensions are 
 3. **IP & Subnet Range Blacklisting**:
    - Introduce an administrative IP ban table with Express middleware filtering for malicious actors.
 4. **Granular Revision History Diff Viewer**:
-   - Provide visual side-by-side block diffs for manuscript revision history in the editorial review modal.
+   - Provide visual side-by-side block diffs for article revision history in the editorial review modal.
 5. **Webhook Dispatch System**:
    - Allow Super Admins to configure outbound HTTP webhooks on publication events (e.g., notifying RSS aggregators, Discord/Slack newsrooms).

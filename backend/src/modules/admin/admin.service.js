@@ -1,6 +1,7 @@
 import { prisma } from '../../config/db.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { ArticleDTO } from '../articles/article.dto.js';
+import { ArticleService, PRISMA_TX_OPTIONS } from '../articles/article.service.js';
 import { AuditEnricherService } from './audit-enricher.service.js';
 
 export class AdminService {
@@ -220,8 +221,11 @@ export class AdminService {
         status: newStatus,
         publishedAt
       };
-      if (typeof isFeatured === 'boolean') {
-        updateData.isFeatured = isFeatured;
+      // If publishing an article with staged draft modifications, commit the draft data
+      if (newStatus === 'PUBLISHED' && article.hasUnpublishedChanges && article.draftData) {
+        await ArticleService.applyModificationsToArticle(tx, articleId, article.draftData);
+        updateData.hasUnpublishedChanges = false;
+        updateData.draftData = null;
       }
 
       const art = await tx.article.update({
@@ -271,7 +275,7 @@ export class AdminService {
       });
 
       return art;
-    });
+    }, PRISMA_TX_OPTIONS);
 
     return ArticleDTO.toPublicDetail(updated);
   }

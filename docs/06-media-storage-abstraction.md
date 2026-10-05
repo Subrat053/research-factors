@@ -203,7 +203,7 @@ Administrators can toggle seamlessly between three presentation formats (persist
 ### Content Usage & Reference Tracking (`GET /api/v1/admin/media/:id/usages`)
 Every media asset is cross-referenced in real-time across all publication models to determine exactly where it is utilized:
 - **Articles**: Checked against `coverImageUrl` (Article Cover) and `sponsorLogoUrl` (Sponsor Logo).
-- **Article Blocks**: Scanned across `article_blocks` content JSON (e.g. `blockType: 'image'` at specific manuscript positions).
+- **Article Blocks**: Scanned across `article_blocks` content JSON (e.g. `blockType: 'image'` at specific article positions).
 - **Categories**: Checked against `Category.imageUrl` (Category Header / Illustration).
 - **User Profiles**: Checked against `User.avatarUrl` (Profile Avatar).
 - **SEO Metadata**: Checked against `customOgImage`, `customTwitterImage`, and `generatedOgImage` (Social Share Cards).

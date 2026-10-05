@@ -151,6 +151,14 @@ export const requireArticleOwnership = async (req, res, next) => {
 };
 ```
 
+### 4. Staged Revision & Live Modification Governance (`modifyChanges`)
+Modifying an already `PUBLISHED` article requires distinct permission branching:
+- **Ownership Verification**: Requester must own the article (`article.authorId === req.user.id`) or possess `article.update_any`.
+- **Live Commit vs Review Queue Branching**:
+  - If the user holds `article.publish` (or is `SUPER_ADMIN`): `POST /api/v1/articles/:id/modify-changes` transactionally applies the staged draft changes directly to the live published article (`status: 'PUBLISHED'`), clearing the buffer.
+  - If the user lacks `article.publish` (e.g. an `AUTHOR` possessing `article.submit`): Staged draft modifications are preserved in `draftData`, and the article transitions to `PENDING_REVIEW`, entering the editorial triage queue. The live public publication remains completely protected and unmutated until an editor approves and publishes it.
+- **Discard Draft**: Discarding staged uncommitted edits (`POST /api/v1/articles/:id/discard-draft`) requires article ownership or `article.update_any`.
+
 ---
 
 ## 5. Privilege Escalation Defenses
@@ -187,7 +195,7 @@ Rather than fragmenting the user experience across separate portals (e.g. `/auth
      - If no: automatically injects `where: { authorId: req.user.id }`. Authors only receive their own drafts, pending reviews, rejections with feedback, and published works.
    - **Dashboard Telemetry (`GET /api/v1/admin/stats`)**:
      - If staff: returns system-wide metrics (total users, review queues, reported comments, categories, tags).
-     - If author: returns author-specific KPIs (total manuscripts, articles in review, published articles, and cumulative reader view counts).
+     - If author: returns author-specific KPIs (total articles, articles in review, published articles, and cumulative reader view counts).
 
 3. **Self-Service Profile & Credentials Management (`/admin/profile`)**:
    - Exposed to all authenticated dashboard users.
@@ -271,7 +279,7 @@ Audit records must be intelligible and directly actionable for administrative pe
   - **Staff Actor**: Avatar initial, actor full name, and actor email.
   - **Action & Narrative**: Semantic action badge with an explanatory narrative subtitle.
   - **Entity**: Domain icon (`User`, `FileText`, `MessageSquare`, `FolderTree`, `Tag`, `Mail`, `Image`, `ShieldCheck`, `Settings`) with entity badge.
-  - **Target Resource**: Friendly title/name with direct navigation link (e.g., jump to user directory or manuscript view). Bulk operations display count badges (`"12 User Accounts"`).
+  - **Target Resource**: Friendly title/name with direct navigation link (e.g., jump to user directory or article view). Bulk operations display count badges (`"12 User Accounts"`).
   - **Inspect Action**: Triggers the comprehensive modal inspector.
 - **Inspector Modal**:
   - **Narrative Banner**: High-priority plain-English summary of the event.
@@ -297,7 +305,7 @@ Upon successful authentication via `/login` or account registration via `/regist
 1. **Dynamic Custom Role Builder**: Allow Super Admins to define custom staff roles with granular, multi-select checkboxes for arbitrary combinations of permissions.
 2. **Audit Log CSV/JSON Export**: Provide single-click export of filtered audit logs for SOC2 and institutional compliance reporting.
 3. **Session Timeout & Inactivity Guards**: Enforce automated session invalidation for administrative consoles after 30 minutes of inactivity.
-4. **Author Co-authorship & Collaborative Editing**: Extend manuscript ownership from a single `authorId` to a `many-to-many` co-author association.
+4. **Author Co-authorship & Collaborative Editing**: Extend article ownership from a single `authorId` to a `many-to-many` co-author association.
 
 
 

@@ -177,11 +177,10 @@ export default function EditorialGuidelinesPage() {
                   key={sec.id}
                   type="button"
                   onClick={() => scrollToSection(null, sec.id)}
-                  className={`px-3 py-1 rounded-full text-xs shrink-0 transition-colors whitespace-nowrap ${
-                    activeSection === sec.id
+                  className={`px-3 py-1 rounded-full text-xs shrink-0 transition-colors whitespace-nowrap ${activeSection === sec.id
                       ? 'bg-rfblue text-white font-semibold shadow-2xs'
                       : 'bg-paper-warm hover:bg-slate-100 text-ink-muted hover:text-ink-darkest border border-paper-border/60'
-                  }`}
+                    }`}
                 >
                   {sec.number}. {sec.heading.split('&')[0].trim()}
                 </button>
@@ -212,11 +211,10 @@ export default function EditorialGuidelinesPage() {
                         key={sec.id}
                         href={`#${sec.id}`}
                         onClick={(e) => scrollToSection(e, sec.id)}
-                        className={`block py-1.5 px-2.5 rounded-lg transition-colors truncate ${
-                          activeSection === sec.id
+                        className={`block py-1.5 px-2.5 rounded-lg transition-colors truncate ${activeSection === sec.id
                             ? 'bg-rfblue-50 text-rfblue font-semibold border-l-2 border-rfblue'
                             : 'text-ink-muted hover:text-ink-darkest hover:bg-paper'
-                        }`}
+                          }`}
                         title={`${sec.number}. ${sec.heading}`}
                       >
                         {sec.number}. {sec.heading}
@@ -331,7 +329,7 @@ export default function EditorialGuidelinesPage() {
                     Reporting Corrections or Inaccuracies
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-2xl">
-                    If you detect a factual error, distorted citation, uncredited attribution, or conflicting benchmark in any Research Factors manuscript, please notify our independent editorial ombudsman with supporting primary documentation.
+                    If you detect a factual error, distorted citation, uncredited attribution, or conflicting benchmark in any Research Factors article, please notify our independent editorial ombudsman with supporting primary documentation.
                   </p>
                   <div className="pt-2 flex flex-col sm:flex-row gap-3">
                     <a

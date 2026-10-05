@@ -6,6 +6,11 @@ import { CategoryService } from '../categories/category.service.js';
 import { SeoGeneratorService } from '../seo/seo-generator.service.js';
 import { SeoResolverService } from '../seo/seo-resolver.service.js';
 
+export const PRISMA_TX_OPTIONS = {
+  maxWait: 10000,
+  timeout: 25000
+};
+
 const RICH_BLOCK_SANITIZE_OPTIONS = {
   allowedTags: [
     'p', 'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'code', 'pre',
@@ -263,7 +268,7 @@ export class ArticleService {
     prisma.article.update({
       where: { id: article.id },
       data: { viewCount: { increment: 1 } }
-    }).catch(() => {});
+    }).catch(() => { });
 
     // Fetch related articles
     const related = await prisma.article.findMany({
@@ -410,6 +415,29 @@ export class ArticleService {
     article.seoMetadata = seoMetadata;
     article.seo = resolvedSeo;
 
+    if (article.hasUnpublishedChanges && article.draftData && typeof article.draftData === 'object') {
+      const draft = article.draftData;
+      return {
+        ...article,
+        ...draft,
+        id: article.id,
+        status: article.status,
+        authorId: article.authorId,
+        author: article.author,
+        category: draft.category || article.category,
+        categoryId: draft.categoryId || article.categoryId,
+        tags: draft.tags !== undefined ? draft.tags : article.tags,
+        blocks: draft.blocks !== undefined ? draft.blocks : article.blocks,
+        hasUnpublishedChanges: true,
+        draftData: article.draftData,
+        createdAt: article.createdAt,
+        updatedAt: article.updatedAt,
+        publishedAt: article.publishedAt,
+        seoMetadata,
+        seo: resolvedSeo
+      };
+    }
+
     return article;
   }
 
@@ -420,7 +448,7 @@ export class ArticleService {
   static async resolveTags(tx, tagsInput = []) {
     if (!Array.isArray(tagsInput) || tagsInput.length === 0) return [];
 
-    const resolvedTagIds = [];
+    const parsedTags = [];
     const seenSlugs = new Set();
 
     for (const raw of tagsInput) {
@@ -452,23 +480,31 @@ export class ArticleService {
         name = clean.replace(/\b\w/g, c => c.toUpperCase());
       }
 
-      // 4. Find or Create tag in interactive transaction
-      let tag = await tx.tag.findFirst({
-        where: {
-          OR: [
-            { slug },
-            { name: { equals: name, mode: 'insensitive' } }
-          ]
-        }
-      });
+      parsedTags.push({ name, slug });
+    }
 
-      if (!tag) {
-        tag = await tx.tag.create({
-          data: { name, slug }
-        });
+    if (parsedTags.length === 0) return [];
+
+    // Batch query existing tags in a single round-trip
+    const existingTags = await tx.tag.findMany({
+      where: {
+        slug: { in: parsedTags.map(p => p.slug) }
       }
+    });
 
-      resolvedTagIds.push(tag.id);
+    const existingMap = new Map(existingTags.map(t => [t.slug, t.id]));
+    const resolvedTagIds = [];
+
+    for (const item of parsedTags) {
+      if (existingMap.has(item.slug)) {
+        resolvedTagIds.push(existingMap.get(item.slug));
+      } else {
+        const created = await tx.tag.create({
+          data: { name: item.name, slug: item.slug }
+        });
+        existingMap.set(item.slug, created.id);
+        resolvedTagIds.push(created.id);
+      }
     }
 
     return resolvedTagIds;
@@ -492,7 +528,7 @@ export class ArticleService {
     }
 
     if (!resolvedCategory) {
-      throw new AppError('Please select or specify a primary category for your manuscript', 400, 'CATEGORY_REQUIRED');
+      throw new AppError('Please select or specify a primary category for your article', 400, 'CATEGORY_REQUIRED');
     }
 
     const slug = await this.generateUniqueSlug(data.title);
@@ -586,203 +622,241 @@ export class ArticleService {
           tags: { include: { tag: true } }
         }
       });
-    });
+    }, PRISMA_TX_OPTIONS);
   }
 
   /**
-   * Debounced update of draft content, blocks, category, and tags
+   * Commits and applies article field modifications, blocks, taxonomies, and SEO inside a transaction
    */
-  static async updateDraft(articleId, data) {
+  static async applyModificationsToArticle(tx, articleId, data) {
     const readingTimeMin = this.calculateReadingTime([
       data.title || '',
       data.excerpt || '',
       ...(data.blocks || [])
     ]);
 
-    return prisma.$transaction(async (tx) => {
-      const updateData = {
-        updatedAt: new Date(),
-        readingTimeMin
-      };
+    const updateData = {
+      updatedAt: new Date(),
+      readingTimeMin,
+      hasUnpublishedChanges: data.hasUnpublishedChanges !== undefined ? data.hasUnpublishedChanges : false,
+      draftData: data.draftData !== undefined ? data.draftData : null
+    };
 
-      if (data.title) updateData.title = data.title.trim();
-      if (data.subtitle !== undefined) updateData.subtitle = data.subtitle ? data.subtitle.trim() : null;
-      if (data.excerpt !== undefined) updateData.excerpt = data.excerpt ? data.excerpt.trim() : null;
-      if (data.coverImageUrl !== undefined) updateData.coverImageUrl = data.coverImageUrl;
-      if (data.coverImageAlt !== undefined) updateData.coverImageAlt = data.coverImageAlt;
-      if (data.type) {
-        const candidate = String(data.type).toUpperCase();
-        if (VALID_ARTICLE_TYPES.has(candidate)) {
-          updateData.type = candidate;
-        }
+    if (data.status) updateData.status = data.status;
+    if (data.publishedAt !== undefined) updateData.publishedAt = data.publishedAt;
+    if (data.publishedById !== undefined) updateData.publishedById = data.publishedById;
+
+    if (data.title) updateData.title = data.title.trim();
+    if (data.subtitle !== undefined) updateData.subtitle = data.subtitle ? data.subtitle.trim() : null;
+    if (data.excerpt !== undefined) updateData.excerpt = data.excerpt ? data.excerpt.trim() : null;
+    if (data.coverImageUrl !== undefined) updateData.coverImageUrl = data.coverImageUrl;
+    if (data.coverImageAlt !== undefined) updateData.coverImageAlt = data.coverImageAlt;
+    if (data.type) {
+      const candidate = String(data.type).toUpperCase();
+      if (VALID_ARTICLE_TYPES.has(candidate)) {
+        updateData.type = candidate;
       }
-      if (data.seoTitle !== undefined) updateData.seoTitle = data.seoTitle ? data.seoTitle.trim() : null;
-      if (data.seoDescription !== undefined) updateData.seoDescription = data.seoDescription ? data.seoDescription.trim() : null;
-      if (data.canonicalUrl !== undefined) updateData.canonicalUrl = data.canonicalUrl ? data.canonicalUrl.trim() : null;
+    }
+    if (data.seoTitle !== undefined) updateData.seoTitle = data.seoTitle ? data.seoTitle.trim() : null;
+    if (data.seoDescription !== undefined) updateData.seoDescription = data.seoDescription ? data.seoDescription.trim() : null;
+    if (data.canonicalUrl !== undefined) updateData.canonicalUrl = data.canonicalUrl ? data.canonicalUrl.trim() : null;
 
-      // Sponsorship handling
-      if (data.isSponsored !== undefined) {
-        updateData.isSponsored = Boolean(data.isSponsored);
-        if (!data.isSponsored) {
-          updateData.sponsorName = null;
-          updateData.sponsorDescription = null;
-          updateData.sponsorUrl = null;
-          updateData.sponsorLogoUrl = null;
-        }
+    // Sponsorship handling
+    if (data.isSponsored !== undefined) {
+      updateData.isSponsored = Boolean(data.isSponsored);
+      if (!data.isSponsored) {
+        updateData.sponsorName = null;
+        updateData.sponsorDescription = null;
+        updateData.sponsorUrl = null;
+        updateData.sponsorLogoUrl = null;
       }
-      if (data.sponsorName !== undefined) updateData.sponsorName = data.sponsorName ? data.sponsorName.trim() : null;
-      if (data.sponsorDescription !== undefined) updateData.sponsorDescription = data.sponsorDescription ? data.sponsorDescription.trim() : null;
-      if (data.sponsorUrl !== undefined) updateData.sponsorUrl = data.sponsorUrl ? data.sponsorUrl.trim() : null;
-      if (data.sponsorLogoUrl !== undefined) updateData.sponsorLogoUrl = data.sponsorLogoUrl ? data.sponsorLogoUrl.trim() : null;
+    }
+    if (data.sponsorName !== undefined) updateData.sponsorName = data.sponsorName ? data.sponsorName.trim() : null;
+    if (data.sponsorDescription !== undefined) updateData.sponsorDescription = data.sponsorDescription ? data.sponsorDescription.trim() : null;
+    if (data.sponsorUrl !== undefined) updateData.sponsorUrl = data.sponsorUrl ? data.sponsorUrl.trim() : null;
+    if (data.sponsorLogoUrl !== undefined) updateData.sponsorLogoUrl = data.sponsorLogoUrl ? data.sponsorLogoUrl.trim() : null;
 
-      // Dynamic category resolution on update
-      if (data.categoryName || data.categoryId) {
-        const resolvedCategory = await CategoryService.findOrCreateCategory(
-          data.categoryName || data.categoryId
-        );
-        if (resolvedCategory) {
-          updateData.categoryId = resolvedCategory.id;
-        }
+    // Dynamic category resolution on update
+    if (data.categoryName || data.categoryId) {
+      const resolvedCategory = await CategoryService.findOrCreateCategory(
+        data.categoryName || data.categoryId
+      );
+      if (resolvedCategory) {
+        updateData.categoryId = resolvedCategory.id;
       }
+    }
 
-      await tx.article.update({
-        where: { id: articleId },
-        data: updateData
+    // Track 301 slug redirect history if slug changed on a published article
+    const currentArticle = await tx.article.findUnique({
+      where: { id: articleId },
+      select: { slug: true, status: true }
+    });
+
+    if (data.slug && data.slug.trim() !== currentArticle.slug && currentArticle.status === 'PUBLISHED') {
+      const newSlug = data.slug.trim();
+      updateData.slug = newSlug;
+      await tx.articleSlugHistory.upsert({
+        where: { slug: currentArticle.slug },
+        update: { articleId },
+        create: { slug: currentArticle.slug, articleId }
       });
+    }
 
-      if (data.blocks) {
-        await tx.articleBlock.deleteMany({ where: { articleId } });
-        const sanitizedBlocks = sanitizeBlocks(data.blocks);
-        if (sanitizedBlocks.length > 0) {
-          await tx.articleBlock.createMany({
-            data: sanitizedBlocks.map(b => ({
+    await tx.article.update({
+      where: { id: articleId },
+      data: updateData
+    });
+
+    if (data.blocks) {
+      await tx.articleBlock.deleteMany({ where: { articleId } });
+      const sanitizedBlocks = sanitizeBlocks(data.blocks);
+      if (sanitizedBlocks.length > 0) {
+        await tx.articleBlock.createMany({
+          data: sanitizedBlocks.map(b => ({
+            articleId,
+            ...b
+          }))
+        });
+      }
+    }
+
+    // Dynamic tags synchronization on update
+    if (data.tags !== undefined || data.tagIds !== undefined) {
+      const tagsToProcess = data.tags !== undefined ? data.tags : data.tagIds;
+      await tx.articleTag.deleteMany({ where: { articleId } });
+
+      if (Array.isArray(tagsToProcess) && tagsToProcess.length > 0) {
+        const tagIds = await this.resolveTags(tx, tagsToProcess);
+        if (tagIds.length > 0) {
+          await tx.articleTag.createMany({
+            data: tagIds.map(tagId => ({
               articleId,
-              ...b
+              tagId
             }))
           });
         }
       }
+    }
 
-      // Dynamic tags synchronization on update
-      if (data.tags !== undefined || data.tagIds !== undefined) {
-        const tagsToProcess = data.tags !== undefined ? data.tags : data.tagIds;
-        await tx.articleTag.deleteMany({ where: { articleId } });
-
-        if (Array.isArray(tagsToProcess) && tagsToProcess.length > 0) {
-          const tagIds = await this.resolveTags(tx, tagsToProcess);
-          if (tagIds.length > 0) {
-            await tx.articleTag.createMany({
-              data: tagIds.map(tagId => ({
-                articleId,
-                tagId
-              }))
-            });
-          }
-        }
-      }
-
-      // Track 301 slug redirect history if slug changed on a published article
-      const currentArticle = await tx.article.findUnique({
-        where: { id: articleId },
-        select: { slug: true, status: true }
+    // Update or create SeoMetadata without wiping custom overrides
+    try {
+      const existingSeo = await tx.seoMetadata.findUnique({
+        where: { entityType_entityId: { entityType: 'ARTICLE', entityId: articleId } }
       });
 
-      if (data.slug && data.slug.trim() !== currentArticle.slug && currentArticle.status === 'PUBLISHED') {
-        const newSlug = data.slug.trim();
-        updateData.slug = newSlug;
-        await tx.articleSlugHistory.upsert({
-          where: { slug: currentArticle.slug },
-          update: { articleId },
-          create: { slug: currentArticle.slug, articleId }
-        });
+      const generatedSeo = SeoGeneratorService.generateArticleSeo(
+        { ...currentArticle, ...updateData, blocks: data.blocks || [] },
+        null,
+        data.tags || []
+      );
+
+      const seoData = {
+        generatedTitle: generatedSeo.generatedTitle,
+        generatedDescription: generatedSeo.generatedDescription,
+        generatedCanonicalUrl: generatedSeo.generatedCanonicalUrl,
+        generatedOgTitle: generatedSeo.generatedOgTitle,
+        generatedOgDescription: generatedSeo.generatedOgDescription,
+        generatedOgImage: generatedSeo.generatedOgImage,
+        generatedTwitterTitle: generatedSeo.generatedTwitterTitle,
+        generatedTwitterDescription: generatedSeo.generatedTwitterDescription
+      };
+
+      if (data.isSeoTitleCustom === false || (data.seoTitle && data.seoTitle === generatedSeo.generatedTitle)) {
+        seoData.customTitle = null;
+      } else if (data.seoTitle !== undefined) {
+        seoData.customTitle = data.seoTitle ? data.seoTitle.trim() : null;
       }
 
-      // Update or create SeoMetadata without wiping custom overrides
-      try {
-        const existingSeo = await tx.seoMetadata.findUnique({
-          where: { entityType_entityId: { entityType: 'ARTICLE', entityId: articleId } }
-        });
-
-        const generatedSeo = SeoGeneratorService.generateArticleSeo(
-          { ...currentArticle, ...updateData, blocks: data.blocks || [] },
-          null,
-          data.tags || []
-        );
-
-        const seoData = {
-          generatedTitle: generatedSeo.generatedTitle,
-          generatedDescription: generatedSeo.generatedDescription,
-          generatedCanonicalUrl: generatedSeo.generatedCanonicalUrl,
-          generatedOgTitle: generatedSeo.generatedOgTitle,
-          generatedOgDescription: generatedSeo.generatedOgDescription,
-          generatedOgImage: generatedSeo.generatedOgImage,
-          generatedTwitterTitle: generatedSeo.generatedTwitterTitle,
-          generatedTwitterDescription: generatedSeo.generatedTwitterDescription
-        };
-
-        if (data.isSeoTitleCustom === false || (data.seoTitle && data.seoTitle === generatedSeo.generatedTitle)) {
-          seoData.customTitle = null;
-        } else if (data.seoTitle !== undefined) {
-          seoData.customTitle = data.seoTitle ? data.seoTitle.trim() : null;
-        }
-
-        if (data.isSeoDescCustom === false || (data.seoDescription && data.seoDescription === generatedSeo.generatedDescription)) {
-          seoData.customDescription = null;
-        } else if (data.seoDescription !== undefined) {
-          seoData.customDescription = data.seoDescription ? data.seoDescription.trim() : null;
-        }
-
-        if (data.isCanonicalCustom === false || (data.canonicalUrl && data.canonicalUrl === generatedSeo.generatedCanonicalUrl)) {
-          seoData.customCanonicalUrl = null;
-        } else if (data.canonicalUrl !== undefined) {
-          seoData.customCanonicalUrl = data.canonicalUrl ? data.canonicalUrl.trim() : null;
-        }
-
-        if (data.isOgTitleCustom === false || (data.customOgTitle && data.customOgTitle === generatedSeo.generatedOgTitle)) {
-          seoData.customOgTitle = null;
-        } else if (data.customOgTitle !== undefined) {
-          seoData.customOgTitle = data.customOgTitle ? data.customOgTitle.trim() : null;
-        }
-
-        if (data.isOgDescCustom === false || (data.customOgDescription && data.customOgDescription === generatedSeo.generatedOgDescription)) {
-          seoData.customOgDescription = null;
-        } else if (data.customOgDescription !== undefined) {
-          seoData.customOgDescription = data.customOgDescription ? data.customOgDescription.trim() : null;
-        }
-
-        if (data.isOgImageCustom === false || (data.customOgImage && data.customOgImage === generatedSeo.generatedOgImage)) {
-          seoData.customOgImage = null;
-        } else if (data.customOgImage !== undefined) {
-          seoData.customOgImage = data.customOgImage ? data.customOgImage.trim() : null;
-        }
-
-        if (data.isNoIndex !== undefined) seoData.isNoIndex = Boolean(data.isNoIndex);
-        if (data.isNoFollow !== undefined) seoData.isNoFollow = Boolean(data.isNoFollow);
-        if (data.focusKeyword !== undefined) seoData.focusKeyword = data.focusKeyword ? data.focusKeyword.trim() : null;
-        if (data.secondaryKeywords !== undefined) seoData.secondaryKeywords = data.secondaryKeywords;
-        if (data.schemaType !== undefined) seoData.schemaType = data.schemaType;
-
-        if (existingSeo) {
-          await tx.seoMetadata.update({
-            where: { id: existingSeo.id },
-            data: seoData
-          });
-        } else {
-          await tx.seoMetadata.create({
-            data: {
-              entityType: 'ARTICLE',
-              entityId: articleId,
-              ...generatedSeo,
-              ...seoData
-            }
-          });
-        }
-      } catch {
-        // Do not fail manuscript update if SEO sync fails
+      if (data.isSeoDescCustom === false || (data.seoDescription && data.seoDescription === generatedSeo.generatedDescription)) {
+        seoData.customDescription = null;
+      } else if (data.seoDescription !== undefined) {
+        seoData.customDescription = data.seoDescription ? data.seoDescription.trim() : null;
       }
 
-      const updatedArticle = await tx.article.findUnique({
+      if (data.isCanonicalCustom === false || (data.canonicalUrl && data.canonicalUrl === generatedSeo.generatedCanonicalUrl)) {
+        seoData.customCanonicalUrl = null;
+      } else if (data.canonicalUrl !== undefined) {
+        seoData.customCanonicalUrl = data.canonicalUrl ? data.canonicalUrl.trim() : null;
+      }
+
+      if (data.isOgTitleCustom === false || (data.customOgTitle && data.customOgTitle === generatedSeo.generatedOgTitle)) {
+        seoData.customOgTitle = null;
+      } else if (data.customOgTitle !== undefined) {
+        seoData.customOgTitle = data.customOgTitle ? data.customOgTitle.trim() : null;
+      }
+
+      if (data.isOgDescCustom === false || (data.customOgDescription && data.customOgDescription === generatedSeo.generatedOgDescription)) {
+        seoData.customOgDescription = null;
+      } else if (data.customOgDescription !== undefined) {
+        seoData.customOgDescription = data.customOgDescription ? data.customOgDescription.trim() : null;
+      }
+
+      if (data.isOgImageCustom === false || (data.customOgImage && data.customOgImage === generatedSeo.generatedOgImage)) {
+        seoData.customOgImage = null;
+      } else if (data.customOgImage !== undefined) {
+        seoData.customOgImage = data.customOgImage ? data.customOgImage.trim() : null;
+      }
+
+      if (data.isNoIndex !== undefined) seoData.isNoIndex = Boolean(data.isNoIndex);
+      if (data.isNoFollow !== undefined) seoData.isNoFollow = Boolean(data.isNoFollow);
+      if (data.focusKeyword !== undefined) seoData.focusKeyword = data.focusKeyword ? data.focusKeyword.trim() : null;
+      if (data.secondaryKeywords !== undefined) seoData.secondaryKeywords = data.secondaryKeywords;
+      if (data.schemaType !== undefined) seoData.schemaType = data.schemaType;
+
+      if (existingSeo) {
+        await tx.seoMetadata.update({
+          where: { id: existingSeo.id },
+          data: seoData
+        });
+      } else {
+        await tx.seoMetadata.create({
+          data: {
+            entityType: 'ARTICLE',
+            entityId: articleId,
+            ...generatedSeo,
+            ...seoData
+          }
+        });
+      }
+    } catch {
+      // Do not fail article update if SEO sync fails
+    }
+
+    return { id: articleId, success: true };
+  }
+
+  /**
+   * Saves updates to draft. For published articles, stages changes in draftData
+   * so live published readers never see unapproved/half-written modifications.
+   */
+  static async updateDraft(articleId, data) {
+    const existing = await prisma.article.findUnique({
+      where: { id: articleId },
+      select: { id: true, status: true, authorId: true }
+    });
+    if (!existing) throw new AppError('Manuscript not found', 404, 'ARTICLE_NOT_FOUND');
+
+    if (existing.status === 'PUBLISHED') {
+      // Stage modifications into draftData without touching live Article columns or blocks
+      const readingTimeMin = this.calculateReadingTime([
+        data.title || '',
+        data.excerpt || '',
+        ...(data.blocks || [])
+      ]);
+      const sanitizedBlocks = data.blocks ? sanitizeBlocks(data.blocks) : undefined;
+      const draftPayload = {
+        ...data,
+        ...(sanitizedBlocks ? { blocks: sanitizedBlocks } : {}),
+        readingTimeMin
+      };
+
+      const updated = await prisma.article.update({
         where: { id: articleId },
+        data: {
+          draftData: draftPayload,
+          hasUnpublishedChanges: true,
+          updatedAt: new Date()
+        },
         include: {
           category: true,
           blocks: { orderBy: { position: 'asc' } },
@@ -790,23 +864,142 @@ export class ArticleService {
         }
       });
 
-      if (updatedArticle) {
-        const [seoMeta, resolved] = await Promise.all([
-          tx.seoMetadata.findUnique({
-            where: { entityType_entityId: { entityType: 'ARTICLE', entityId: articleId } }
-          }).catch(() => null),
-          SeoResolverService.resolveSEO({
-            entityType: 'ARTICLE',
-            entityId: articleId,
-            entityData: updatedArticle
-          }).catch(() => null)
-        ]);
-        updatedArticle.seoMetadata = seoMeta;
-        updatedArticle.seo = resolved;
-      }
+      return {
+        ...updated,
+        ...draftPayload,
+        id: updated.id,
+        status: updated.status,
+        hasUnpublishedChanges: true,
+        draftData: updated.draftData,
+        category: updated.category,
+        authorId: updated.authorId,
+        createdAt: updated.createdAt,
+        updatedAt: updated.updatedAt,
+        publishedAt: updated.publishedAt
+      };
+    }
 
-      return updatedArticle;
+    // For non-published articles (DRAFT, REJECTED, PENDING_REVIEW), update directly
+    await prisma.$transaction(async (tx) => {
+      await this.applyModificationsToArticle(tx, articleId, data);
+    }, PRISMA_TX_OPTIONS);
+
+    return this.getDraftById(articleId);
+  }
+
+  /**
+   * Applies modifications to an article based on centralized RBAC permissions.
+   * - Users with article.publish permission (Admin/Editor): modifies and publishes live immediately.
+   * - Users without article.publish permission (Author): stages changes and transitions status to PENDING_REVIEW.
+   */
+  static async modifyChanges(articleId, userId, canPublish, data = null) {
+    const article = await prisma.article.findUnique({
+      where: { id: articleId },
+      include: {
+        category: true,
+        blocks: { orderBy: { position: 'asc' } },
+        tags: { include: { tag: true } }
+      }
     });
+    if (!article) throw new AppError('Manuscript not found', 404, 'ARTICLE_NOT_FOUND');
+
+    // Use passed data, staged draftData, or fallback to current article
+    const payload = (data && Object.keys(data).length > 0)
+      ? data
+      : (article.draftData || article);
+
+    if (!payload.title || payload.title.trim().length < 3) {
+      throw new AppError('Article must have a title with at least 3 characters before applying modifications', 400);
+    }
+
+    if (canPublish) {
+      // Direct modify & publish live inside interactive transaction with safety timeout
+      await prisma.$transaction(async (tx) => {
+        await this.applyModificationsToArticle(tx, articleId, {
+          ...payload,
+          status: 'PUBLISHED',
+          hasUnpublishedChanges: false,
+          draftData: null,
+          publishedAt: article.publishedAt || new Date(),
+          publishedById: userId
+        });
+
+        await tx.auditLog.create({
+          data: {
+            actorId: userId,
+            action: 'ARTICLE_MODIFIED_AND_PUBLISHED',
+            entityType: 'Article',
+            entityId: articleId
+          }
+        });
+      }, PRISMA_TX_OPTIONS);
+
+      const updated = await this.getDraftById(articleId);
+      return { article: updated, publishedLive: true };
+    } else {
+      // Author submission: stage modifications and move to PENDING_REVIEW
+      const readingTimeMin = this.calculateReadingTime([
+        payload.title || '',
+        payload.excerpt || '',
+        ...(payload.blocks || [])
+      ]);
+      const sanitizedBlocks = payload.blocks ? sanitizeBlocks(payload.blocks) : undefined;
+      const draftPayload = {
+        ...payload,
+        ...(sanitizedBlocks ? { blocks: sanitizedBlocks } : {}),
+        readingTimeMin
+      };
+
+      await prisma.$transaction(async (tx) => {
+        await tx.article.update({
+          where: { id: articleId },
+          data: {
+            draftData: draftPayload,
+            hasUnpublishedChanges: true,
+            status: 'PENDING_REVIEW',
+            rejectionReason: null,
+            updatedAt: new Date()
+          }
+        });
+
+        await tx.auditLog.create({
+          data: {
+            actorId: userId,
+            action: 'ARTICLE_MODIFICATIONS_SUBMITTED_FOR_REVIEW',
+            entityType: 'Article',
+            entityId: articleId
+          }
+        });
+      }, PRISMA_TX_OPTIONS);
+
+      const updated = await this.getDraftById(articleId);
+      return {
+        article: updated,
+        publishedLive: false
+      };
+    }
+  }
+
+  /**
+   * Discards staged draft modifications and reverts back to live published article
+   */
+  static async discardDraft(articleId, userId) {
+    const article = await prisma.article.findUnique({
+      where: { id: articleId },
+      select: { id: true }
+    });
+    if (!article) throw new AppError('Manuscript not found', 404, 'ARTICLE_NOT_FOUND');
+
+    await prisma.article.update({
+      where: { id: articleId },
+      data: {
+        draftData: null,
+        hasUnpublishedChanges: false,
+        updatedAt: new Date()
+      }
+    });
+
+    return this.getDraftById(articleId);
   }
 
   /**
@@ -865,7 +1058,7 @@ export class ArticleService {
       });
 
       return updated;
-    });
+    }, PRISMA_TX_OPTIONS);
   }
 
   static async rejectArticle(articleId, editorId, reason) {
@@ -889,7 +1082,7 @@ export class ArticleService {
       });
 
       return updated;
-    });
+    }, PRISMA_TX_OPTIONS);
   }
 
   static async publishArticle(articleId, publisherId) {
@@ -969,6 +1162,6 @@ export class ArticleService {
       });
 
       return updated;
-    });
+    }, PRISMA_TX_OPTIONS);
   }
 }

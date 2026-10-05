@@ -252,7 +252,7 @@ export class CategoryService {
 
   /**
    * Dynamically resolves or creates a category by ID or Name
-   * Enables authors to assign or introduce new categories during manuscript authoring
+   * Enables authors to assign or introduce new categories during article authoring
    */
   static async findOrCreateCategory(categoryInput, actorId = null) {
     if (!categoryInput) return null;

@@ -97,10 +97,10 @@ export function ArticleOverviewTab({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800/80">
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              Publication Readiness
+              Pre-Submission Checklist
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Key manuscript requirements before submitting for editorial review
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Key requirements before submitting for editorial review
             </p>
           </div>
           <div className="flex items-center space-x-2">
@@ -109,9 +109,8 @@ export function ArticleOverviewTab({
             </span>
             <div className="w-24 h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
               <div
-                className={`h-full transition-all duration-300 ${
-                  passedCount === checks.length ? 'bg-emerald-500' : 'bg-blue-600'
-                }`}
+                className={`h-full transition-all duration-300 ${passedCount === checks.length ? 'bg-emerald-500' : 'bg-blue-600'
+                  }`}
                 style={{ width: `${(passedCount / checks.length) * 100}%` }}
               />
             </div>
@@ -122,18 +121,17 @@ export function ArticleOverviewTab({
           {checks.map((chk, i) => (
             <div
               key={i}
-              className={`p-2.5 rounded-xl border text-xs flex items-center space-x-1.5 ${
-                chk.ok
+              className={`p-2.5 rounded-xl border text-xs flex items-center space-x-1.5 ${chk.ok
                   ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-300'
                   : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400'
-              }`}
+                }`}
             >
               {chk.ok ? (
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
               ) : (
                 <div className="w-3.5 h-3.5 rounded-full border border-slate-300 dark:border-slate-700 shrink-0" />
               )}
-              <span className="text-[11px] font-medium truncate">{chk.label}</span>
+              <span className="text-sm font-medium truncate">{chk.label}</span>
             </div>
           ))}
         </div>
@@ -145,7 +143,7 @@ export function ArticleOverviewTab({
           {/* Primary Research Category */}
           <div className="md:col-span-5">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
                 Article Category <span className="text-red-500">*</span>
               </label>
               <button
@@ -158,7 +156,7 @@ export function ArticleOverviewTab({
                     setCustomCategoryName('');
                   }
                 }}
-                className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
                 {isCustomCategory ? 'Select Existing' : '+ Custom Category'}
               </button>
@@ -178,7 +176,7 @@ export function ArticleOverviewTab({
               <select
                 value={article.categoryId}
                 onChange={(e) => onChange('categoryId', e.target.value)}
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
+                className="w-full text-sm p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
               >
                 <option value="">Select Field of Study...</option>
                 {categories.map(cat => (
@@ -193,15 +191,15 @@ export function ArticleOverviewTab({
           {/* Article Format / Genre */}
           <div className="md:col-span-4">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
                 Article Format / Type <span className="text-red-500">*</span>
               </label>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400">Editorial genre</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Editorial genre</span>
             </div>
             <select
               value={article.type || 'RESEARCH'}
               onChange={(e) => onChange('type', e.target.value)}
-              className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
+              className="w-full text-sm p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
             >
               <option value="RESEARCH">Research (Empirical / Experimental)</option>
               <option value="REVIEW">Review (Literature / Technology)</option>
@@ -216,9 +214,9 @@ export function ArticleOverviewTab({
           <div className="md:col-span-3 flex md:justify-end items-end pt-2 md:pt-0">
             <div className="inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs text-slate-600 dark:text-slate-400 font-medium shadow-2xs">
               <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
-              <span>~{estimatedReadingTime} min read</span>
+              <span className='text-sm'>~{estimatedReadingTime} min read</span>
               <span className="text-slate-300 dark:text-slate-700">•</span>
-              <span className="text-[11px] text-slate-500">{totalWords} words</span>
+              <span className="text-sm text-slate-500">{totalWords} words</span>
             </div>
           </div>
         </div>
@@ -284,9 +282,8 @@ export function ArticleOverviewTab({
             <button
               type="button"
               onClick={() => setCoverInputMode('upload')}
-              className={`font-semibold cursor-pointer ${
-                coverInputMode === 'upload' ? 'text-blue-600 dark:text-blue-400 underline' : 'text-slate-500'
-              }`}
+              className={`font-semibold cursor-pointer ${coverInputMode === 'upload' ? 'text-blue-600 dark:text-blue-400 underline' : 'text-slate-500'
+                }`}
             >
               Upload File
             </button>
@@ -294,9 +291,8 @@ export function ArticleOverviewTab({
             <button
               type="button"
               onClick={() => setCoverInputMode('url')}
-              className={`font-semibold cursor-pointer ${
-                coverInputMode === 'url' ? 'text-blue-600 dark:text-blue-400 underline' : 'text-slate-500'
-              }`}
+              className={`font-semibold cursor-pointer ${coverInputMode === 'url' ? 'text-blue-600 dark:text-blue-400 underline' : 'text-slate-500'
+                }`}
             >
               Enter Direct URL
             </button>
@@ -374,14 +370,14 @@ export function ArticleOverviewTab({
       <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800/80 shadow-xs space-y-4 transition-colors">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/80">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
               Topic Tags (Taxonomies)
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Tag your manuscript to appear in topic feeds and recommendation rails (max 8 tags)
+            <p className="text-[11px] sm:text-sm text-slate-500 dark:text-slate-400">
+              Tag your article to appear in topic feeds and recommendation rails (max 8 tags)
             </p>
           </div>
-          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
             {(article.tags || []).length}/8 Tags
           </span>
         </div>
@@ -400,7 +396,7 @@ export function ArticleOverviewTab({
               return (
                 <span
                   key={idx}
-                  className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium bg-[#eef5f6] dark:bg-[#152e35] text-[#0f5466] dark:text-[#5eead4] border border-[#d6e7eb] dark:border-[#1e444e] shadow-2xs"
+                  className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium bg-[#eef5f6] dark:bg-[#152e35] text-[#0f5466] dark:text-[#5eead4] border border-[#d6e7eb] dark:border-[#1e444e] shadow-2xs"
                 >
                   <span>{displayName}</span>
                   <button
@@ -435,7 +431,7 @@ export function ArticleOverviewTab({
                 }
               }}
               placeholder="Add topic tag (e.g. Artificial Intelligence, Solid State Battery)..."
-              className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
+              className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
             />
             <button
               type="button"
@@ -451,8 +447,8 @@ export function ArticleOverviewTab({
 
           {/* Autocomplete Suggestions */}
           {showTagSuggestions && suggestedTags.length > 0 && (
-            <div className="absolute top-full left-0 mt-1.5 w-full bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-750 py-1.5 z-30 max-h-48 overflow-y-auto">
-              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <div className="absolute bottom-full left-0 mb-1.5 w-full bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-750 py-1.5 z-40 max-h-48 overflow-y-auto">
+              <div className="px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-500">
                 Suggested Taxonomies
               </div>
               {suggestedTags.map(st => (
@@ -460,12 +456,10 @@ export function ArticleOverviewTab({
                   key={st.id}
                   type="button"
                   onClick={() => onAddTag(st)}
-                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between text-slate-800 dark:text-slate-200 hover:text-blue-600 transition-colors cursor-pointer"
+                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between text-slate-800 dark:text-slate-200 hover:text-blue-600 transition-colors cursor-pointer"
                 >
                   <span className="font-medium">{st.name}</span>
-                  <span className="text-[10px] text-slate-500">
-                    {st.articlesCount || 0} articles
-                  </span>
+
                 </button>
               ))}
             </div>

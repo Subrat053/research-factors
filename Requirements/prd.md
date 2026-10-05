@@ -1655,12 +1655,12 @@ Super Admin can configure and monitor the platform in real time:
 
 Show real-time aggregated metrics via optimized SQL grouping:
 
-* Total manuscripts & breakdown (Published, Pending Review, Drafts, Rejected, Archived)
+* Total articles & breakdown (Published, Pending Review, Drafts, Rejected, Archived)
 * Total comments & reported comments
 * Total users & verified accredited authors
 * Total categories & total keyword tags
 * Unread public contact inquiries
-* Recent manuscript submissions table with author, status, and direct live inspection links
+* Recent article submissions table with author, status, and direct live inspection links
 * Quick administrative launcher cards
 
 ---
@@ -1726,13 +1726,13 @@ Admin can:
 
 Admin can:
 
-* Browse all platform manuscripts across all statuses (`DRAFT`, `PENDING_REVIEW`, `APPROVED`, `PUBLISHED`, `ARCHIVED`, `REJECTED`)
-* Review pending manuscripts with full block-rendered prose inspection
-* Approve manuscripts for immediate publication or scheduling
-* Return manuscripts to authors with line-by-line editorial feedback notes
+* Browse all platform articles across all statuses (`DRAFT`, `PENDING_REVIEW`, `APPROVED`, `PUBLISHED`, `ARCHIVED`, `REJECTED`)
+* Review pending articles with full block-rendered prose inspection
+* Approve articles for immediate publication or scheduling
+* Return articles to authors with line-by-line editorial feedback notes
 * Archive live articles
 * Schedule article publication for future timestamps
-* Force delete manuscripts with cascade cleanup across tags, comments, bookmarks, and block content
+* Force delete articles with cascade cleanup across tags, comments, bookmarks, and block content
 
 ---
 

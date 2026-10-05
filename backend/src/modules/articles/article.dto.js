@@ -77,6 +77,8 @@ export class ArticleDTO {
     return {
       ...this.toPublicDetail(article),
       rejectionReason: article.rejectionReason,
+      hasUnpublishedChanges: Boolean(article.hasUnpublishedChanges),
+      draftData: article.draftData || null,
       scheduledAt: article.scheduledAt,
       createdById: article.createdById,
       publishedById: article.publishedById,

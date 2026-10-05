@@ -69,7 +69,7 @@ export default function ArticleReviewQueuePage() {
   return (
     <AdminLayout
       title="Editorial Review Desk"
-      subtitle="Peer review incoming manuscripts, inspect empirical content blocks, request revisions, or publish featured research"
+      subtitle="Peer review incoming articles, inspect empirical content blocks, request revisions, or publish featured research"
       actions={
         <Link
           to="/admin/articles"
@@ -87,11 +87,10 @@ export default function ArticleReviewQueuePage() {
       {/* Alert Banner */}
       {alertMsg && (
         <div
-          className={`mb-6 p-4 rounded-xl flex items-center justify-between text-xs font-medium border ${
-            alertMsg.type === 'success'
+          className={`mb-6 p-4 rounded-xl flex items-center justify-between text-xs font-medium border ${alertMsg.type === 'success'
               ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
               : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800/60'
-          }`}
+            }`}
         >
           <span>{alertMsg.text}</span>
           <button onClick={() => setAlertMsg(null)} className="p-1 opacity-70 hover:opacity-100 transition-opacity">
@@ -111,11 +110,10 @@ export default function ArticleReviewQueuePage() {
           <button
             key={st.key}
             onClick={() => setSelectedStatus(st.key)}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
-              selectedStatus === st.key
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${selectedStatus === st.key
                 ? 'bg-blue-600 text-white shadow-xs shadow-blue-600/30'
                 : 'bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-            }`}
+              }`}
           >
             {st.label}
           </button>
@@ -136,7 +134,7 @@ export default function ArticleReviewQueuePage() {
             </div>
             <p className="text-base font-bold text-slate-900 dark:text-white">Review Queue Clear</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-              No manuscripts currently match the selected status filter.
+              No articles currently match the selected status filter.
             </p>
           </div>
         ) : (
@@ -169,23 +167,22 @@ export default function ArticleReviewQueuePage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
                         <span
-                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                            article.status === 'PUBLISHED'
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${article.status === 'PUBLISHED'
                               ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
                               : article.status === 'PENDING_REVIEW'
-                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                              : article.status === 'REJECTED'
-                              ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                          }`}
+                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                                : article.status === 'REJECTED'
+                                  ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                            }`}
                         >
                           {article.status === 'PENDING_REVIEW'
                             ? 'Pending Review'
                             : article.status === 'REJECTED'
-                            ? 'Changes Requested'
-                            : article.status === 'PUBLISHED'
-                            ? 'Published'
-                            : article.status}
+                              ? 'Changes Requested'
+                              : article.status === 'PUBLISHED'
+                                ? 'Published'
+                                : article.status}
                         </span>
                         {article.isFeatured && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
@@ -298,11 +295,10 @@ export default function ArticleReviewQueuePage() {
                   onClick={() => {
                     setReviewAction('REJECT');
                   }}
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
-                    reviewAction === 'REJECT'
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${reviewAction === 'REJECT'
                       ? 'bg-red-600 text-white border-red-600'
                       : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400 hover:bg-red-500/20'
-                  }`}
+                    }`}
                 >
                   Reject with Notes
                 </button>
@@ -313,11 +309,10 @@ export default function ArticleReviewQueuePage() {
                   onClick={() => {
                     setReviewAction('APPROVE');
                   }}
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
-                    reviewAction === 'APPROVE'
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${reviewAction === 'APPROVE'
                       ? 'bg-emerald-600 text-white border-emerald-600'
                       : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20'
-                  }`}
+                    }`}
                 >
                   Approve
                 </button>

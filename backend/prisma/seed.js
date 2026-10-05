@@ -173,7 +173,7 @@ async function main() {
       role: roles.ADMIN,
       authorProfile: {
         headline: 'Editorial Operations Manager & Staff Administrator',
-        biography: 'Liam Vance coordinates researcher accreditation, manuscript pipelines, and editorial workflows.',
+        biography: 'Liam Vance coordinates researcher accreditation, article pipelines, and editorial workflows.',
         isApproved: true
       }
     },
@@ -185,7 +185,7 @@ async function main() {
       role: roles.EDITOR,
       authorProfile: {
         headline: 'Senior Technology & Physics Review Editor',
-        biography: 'Elena Rostova oversees empirical technology manuscripts and solid-state physics investigations.',
+        biography: 'Elena Rostova oversees empirical technology articles and solid-state physics investigations.',
         isApproved: true
       }
     },

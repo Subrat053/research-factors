@@ -121,14 +121,14 @@ The backoffice provides two complementary desks for community governance:
 
 ### A. Global Comments Management Hub (`/admin/comments`)
 Located at `/admin/comments` and powered by `CommentAdminService.listAllComments`:
-- **Complete Scope**: Displays **all comments across all manuscripts**, not just flagged ones.
+- **Complete Scope**: Displays **all comments across all articles**, not just flagged ones.
 - **Dynamic Status Filter Tabs with Live Badges**:
   - `All Comments` (total count)
   - `Reported` (amber alert badge with pulsing indicator when count > 0)
   - `Visible` (emerald badge)
   - `Hidden` (slate badge)
   - `Deleted` (red badge)
-- **Search & Filter Toolbar**: Search by comment prose, author name/email, or manuscript title; filter by article; sort by `Newest`, `Oldest`, `Most Reported`, or `Most Liked`.
+- **Search & Filter Toolbar**: Search by comment prose, author name/email, or article title; filter by article; sort by `Newest`, `Oldest`, `Most Reported`, or `Most Liked`.
 - **Auto-Refresh & Polling**: Background TanStack Query poll (30s) or manual instant refresh.
 - **Granular Report Inspection**: When a comment has reports (`reportCount > 0`), clicking `⚠️ X Reports — Inspect` opens the **Report Details Modal** without leaving the page.
 - **Moderation Actions**:

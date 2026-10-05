@@ -60,18 +60,18 @@ export function ArticleSourcesTab({
           <div className="flex items-center space-x-2.5">
             <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                 Literature Citations & Bibliographic Sources
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Formal scholarly references, journal papers, and primary research sources cited in this manuscript
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Formal scholarly references, journal papers, and primary research sources cited in this article
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={handleAddSource}
-            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-xs transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Citation</span>
@@ -81,13 +81,13 @@ export function ArticleSourcesTab({
         {sources.length === 0 ? (
           <div className="p-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-950/30">
             <Quote className="w-8 h-8 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-              No bibliographic citations added yet. Adding citations increases manuscript authority and reader trust.
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
+              No bibliographic citations added yet. Adding citations increases article authority and reader trust.
             </p>
             <button
               type="button"
               onClick={handleAddSource}
-              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+              className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
             >
               + Add First Citation
             </button>
@@ -99,7 +99,7 @@ export function ArticleSourcesTab({
                 key={src.id || idx}
                 className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 space-y-3"
               >
-                <div className="flex items-center justify-between text-xs text-slate-500">
+                <div className="flex items-center justify-between text-sm text-slate-500">
                   <span className="font-bold uppercase tracking-wider text-[10px] text-blue-600 dark:text-blue-400">
                     [{idx + 1}] Citation Entry
                   </span>

@@ -62,7 +62,11 @@ export function getStorageBaseUrl() {
     return import.meta.env.VITE_STORAGE_URL.replace(/\/+$/, '');
   }
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL.replace(/\/+$/, '').replace(/\/api\/v1$/, '/uploads');
+    const apiBase = import.meta.env.VITE_API_URL.replace(/\/+$/, '');
+    if (apiBase.endsWith('/api/v1')) {
+      return apiBase.replace(/\/api\/v1$/, '/uploads');
+    }
+    return `${apiBase}/uploads`;
   }
   return 'http://localhost:5005/uploads';
 }
@@ -78,12 +82,16 @@ export function normalizeMediaUrl(url) {
   const baseUrl = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 
   // 1. Detect legacy localhost / loopback addresses on any port and dynamically rewrite to active storage base
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/uploads\/(.*)$/i.test(url)) {
-    const cleanPath = url.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/uploads\/?/i, '');
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/rf)?\/uploads\/(.*)$/i.test(url)) {
+    const cleanPath = url.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/rf)?\/uploads\/?/i, '');
     return `${storageUrl}/${cleanPath}`;
   }
 
-  // 2. Handle relative /uploads path
+  // 2. Handle relative /uploads or /rf/uploads path
+  if (url.startsWith('/rf/uploads')) {
+    const cleanPath = url.replace(/^\/rf\/uploads\/?/, '');
+    return `${storageUrl}/${cleanPath}`;
+  }
   if (url.startsWith('/uploads')) {
     const cleanPath = url.replace(/^\/uploads\/?/, '');
     return `${storageUrl}/${cleanPath}`;

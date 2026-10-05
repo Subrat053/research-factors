@@ -18,6 +18,8 @@ router.post('/', authenticate, requirePermission('article.create'), ArticleContr
 router.get('/:id/draft', authenticate, requireArticleOwnership, ArticleController.getDraft);
 router.patch('/:id/draft', authenticate, requirePermission('article.update_own'), requireArticleOwnership, ArticleController.updateDraft);
 router.post('/:id/submit', authenticate, requirePermission('article.submit'), requireArticleOwnership, ArticleController.submitForReview);
+router.post('/:id/modify-changes', authenticate, requireArticleOwnership, ArticleController.modifyChanges);
+router.post('/:id/discard-draft', authenticate, requireArticleOwnership, ArticleController.discardDraft);
 
 // 3. Editorial & Publishing Endpoints
 router.post('/:id/approve', authenticate, requirePermission('article.approve'), ArticleController.approveArticle);

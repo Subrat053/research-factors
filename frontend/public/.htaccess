@@ -1,8 +1,35 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /rf/
+
+  # ====================================================================
+  # 1. SECURITY GUARDS: Forbid web access to sensitive backend files
+  # ====================================================================
+  RewriteRule ^(\.env|\.git|package\.json|package-lock\.json|prisma|src|node_modules|backend) - [F,L]
+  RewriteRule \.(log|sql|md|sh)$ - [F,L]
+
+  # ====================================================================
+  # 2. APACHE MOD_PROXY (If Apache is proxying to Node.js on port 5005)
+  # Uncomment the following rules if you choose Option B (Apache proxy)
+  # ====================================================================
+  # <IfModule mod_proxy.c>
+  #   RewriteRule ^api/(.*)$ http://127.0.0.1:5005/api/$1 [P,L]
+  #   RewriteRule ^uploads/(.*)$ http://127.0.0.1:5005/uploads/$1 [P,L]
+  #   RewriteRule ^health/(.*)$ http://127.0.0.1:5005/health/$1 [P,L]
+  # </IfModule>
+
+  # ====================================================================
+  # 3. SPA ROUTING: Route all other client requests to /rf/index.html
+  # ====================================================================
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . /rf/index.html [L]
+</IfModule>
+
+# Security Headers & Content Protection
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>

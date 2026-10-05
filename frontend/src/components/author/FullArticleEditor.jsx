@@ -211,11 +211,10 @@ export function FullArticleEditor({
                       key={lvl}
                       type="button"
                       onClick={() => handleBlockContentChange(index, { level: lvl })}
-                      className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition-colors cursor-pointer ${
-                        (block.content?.level || 2) === lvl
+                      className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition-colors cursor-pointer ${(block.content?.level || 2) === lvl
                           ? 'bg-blue-600 text-white shadow-2xs'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                      }`}
+                        }`}
                     >
                       H{lvl} Section
                     </button>
@@ -236,7 +235,7 @@ export function FullArticleEditor({
               <RichTextEditor
                 content={block.content}
                 onChange={(updated) => handleBlockContentChange(index, updated)}
-                placeholder="Write manuscript findings, empirical prose, or methodology..."
+                placeholder="Write article findings, empirical prose, or methodology..."
               />
             )}
 
@@ -278,13 +277,12 @@ export function FullArticleEditor({
             {/* 4. CALLOUT */}
             {block.blockType === 'callout' && (
               <div
-                className={`space-y-3 p-4 rounded-xl border ${
-                  block.content?.variant === 'warning'
+                className={`space-y-3 p-4 rounded-xl border ${block.content?.variant === 'warning'
                     ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30'
                     : block.content?.variant === 'tip'
-                    ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30'
-                    : 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30'
-                }`}
+                      ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30'
+                      : 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30'
+                  }`}
               >
                 <div className="flex items-center space-x-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase">Callout Type:</span>
@@ -293,11 +291,10 @@ export function FullArticleEditor({
                       key={v}
                       type="button"
                       onClick={() => handleBlockContentChange(index, { variant: v, type: v })}
-                      className={`px-2.5 py-0.5 rounded text-[11px] font-bold capitalize transition-colors cursor-pointer ${
-                        (block.content?.variant || 'info') === v
+                      className={`px-2.5 py-0.5 rounded text-[11px] font-bold capitalize transition-colors cursor-pointer ${(block.content?.variant || 'info') === v
                           ? 'bg-blue-600 text-white shadow-2xs'
                           : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                      }`}
+                        }`}
                     >
                       {v}
                     </button>
@@ -665,22 +662,20 @@ export function FullArticleEditor({
                       <button
                         type="button"
                         onClick={() => updateList(items, false)}
-                        className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition-colors cursor-pointer ${
-                          !ordered
+                        className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition-colors cursor-pointer ${!ordered
                             ? 'bg-blue-600 text-white shadow-2xs'
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                        }`}
+                          }`}
                       >
                         Bullet List (•)
                       </button>
                       <button
                         type="button"
                         onClick={() => updateList(items, true)}
-                        className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition-colors cursor-pointer ${
-                          ordered
+                        className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition-colors cursor-pointer ${ordered
                             ? 'bg-blue-600 text-white shadow-2xs'
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                        }`}
+                          }`}
                       >
                         Numbered List (1, 2, 3)
                       </button>

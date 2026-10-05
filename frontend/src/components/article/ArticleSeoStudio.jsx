@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Search,
+  Loader,
   Sparkles,
   Share2,
   CheckCircle2,
@@ -39,7 +40,7 @@ export function ArticleSeoStudio({
   const genDesc = seoMetadata?.generatedDescription || (cleanExcerpt ? (cleanExcerpt.length > 160 ? cleanExcerpt.slice(0, 157).trim() + '...' : cleanExcerpt) : 'Empirical research findings, methodologies, and analysis published on Research Factors.');
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const catSlug = article.category?.slug || (article.categorySlug ? article.categorySlug : 'research');
-  const genCanonical = seoMetadata?.generatedCanonicalUrl || `${origin}/rf/${catSlug}/${article.slug || 'manuscript-slug'}`;
+  const genCanonical = seoMetadata?.generatedCanonicalUrl || `${origin}/rf/${catSlug}/${article.slug || 'article-slug'}`;
   const genOgImage = seoMetadata?.generatedOgImage || article.coverImageUrl || `${origin}/images/og-default.png`;
 
   // Resolved live values for preview
@@ -116,7 +117,7 @@ export function ArticleSeoStudio({
         ? 'High quality social/search cover asset with accessible alt text.'
         : hasCover
           ? 'Cover image attached, but alt text is missing or too brief.'
-          : 'No manuscript cover image provided.'
+          : 'No article cover image provided.'
     });
 
     // 5. Heading Structure (Blocks)
@@ -165,18 +166,17 @@ export function ArticleSeoStudio({
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+              <h3 className="text-base font-bold uppercase tracking-normal text-slate-800 dark:text-slate-200">
                 Editorial SEO & Social Studio
               </h3>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                article.isNoIndex
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${article.isNoIndex
                   ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
                   : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-              }`}>
+                }`}>
                 {article.isNoIndex ? 'noindex' : 'index, follow'}
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Deterministic 4-tier SEO fallbacks, rich schema generation, and live crawler simulation
             </p>
           </div>
@@ -190,9 +190,9 @@ export function ArticleSeoStudio({
               onClick={onRegenerate}
               disabled={isRegenerating}
               className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800/60 transition-all disabled:opacity-50 cursor-pointer"
-              title="Automatically refresh generated title, description, and keywords based on manuscript content"
+              title="Automatically refresh generated title, description, and keywords based on article content"
             >
-              <Sparkles className={`w-3.5 h-3.5 ${isRegenerating ? 'animate-spin' : ''}`} />
+              <Loader className={`w-3.5 h-3.5 ${isRegenerating ? 'animate-spin' : ''}`} />
               <span>{isRegenerating ? 'Regenerating...' : 'Regenerate SEO from Manuscript'}</span>
             </button>
           )}
@@ -204,11 +204,10 @@ export function ArticleSeoStudio({
         <button
           type="button"
           onClick={() => setActiveTab('serp')}
-          className={`flex-1 flex items-center justify-center space-x-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'serp'
+          className={`flex-1 flex items-center justify-center space-x-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${activeTab === 'serp'
               ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
+            }`}
         >
           <Globe className="w-3.5 h-3.5" />
           <span>Search Engine (SERP)</span>
@@ -217,11 +216,10 @@ export function ArticleSeoStudio({
         <button
           type="button"
           onClick={() => setActiveTab('social')}
-          className={`flex-1 flex items-center justify-center space-x-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'social'
+          className={`flex-1 flex items-center justify-center space-x-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${activeTab === 'social'
               ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
+            }`}
         >
           <Share2 className="w-3.5 h-3.5" />
           <span>Social Sharing (OG)</span>
@@ -230,11 +228,10 @@ export function ArticleSeoStudio({
         <button
           type="button"
           onClick={() => setActiveTab('preview')}
-          className={`flex-1 flex items-center justify-center space-x-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'preview'
+          className={`flex-1 flex items-center justify-center space-x-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${activeTab === 'preview'
               ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
+            }`}
         >
           <Eye className="w-3.5 h-3.5" />
           <span>Live Previews</span>
@@ -243,11 +240,10 @@ export function ArticleSeoStudio({
         <button
           type="button"
           onClick={() => setActiveTab('audit')}
-          className={`flex-1 flex items-center justify-center space-x-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
-            activeTab === 'audit'
+          className={`flex-1 flex items-center justify-center space-x-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${activeTab === 'audit'
               ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-          }`}
+            }`}
         >
           <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />
           <span>SEO Health ({audit.percentage}%)</span>
@@ -276,11 +272,10 @@ export function ArticleSeoStudio({
                 )}
               </div>
               <div className="flex items-center space-x-2">
-                <span className={`text-[10px] font-mono font-medium ${
-                  (article.seoTitle || liveTitle).length >= 45 && (article.seoTitle || liveTitle).length <= 65
+                <span className={`text-[10px] font-mono font-medium ${(article.seoTitle || liveTitle).length >= 45 && (article.seoTitle || liveTitle).length <= 65
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : 'text-slate-500'
-                }`}>
+                  }`}>
                   {(article.seoTitle || liveTitle).length}/60 chars
                 </span>
                 {article.isSeoTitleCustom && (
@@ -288,7 +283,7 @@ export function ArticleSeoStudio({
                     type="button"
                     onClick={() => onChange({ seoTitle: genTitle, isSeoTitleCustom: false })}
                     className="inline-flex items-center space-x-1 text-[10px] text-blue-600 hover:text-blue-700 dark:text-blue-400 cursor-pointer font-semibold"
-                    title="Reset to live auto-generated title from manuscript headline"
+                    title="Reset to live auto-generated title from article headline"
                   >
                     <RotateCcw className="w-2.5 h-2.5" />
                     <span>Re-sync with Manuscript</span>
@@ -305,7 +300,7 @@ export function ArticleSeoStudio({
             />
             <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
               <span className="truncate max-w-md">
-                <strong>Source:</strong> {!article.isSeoTitleCustom ? 'Live synchronized from manuscript headline' : 'User custom override'}
+                <strong>Source:</strong> {!article.isSeoTitleCustom ? 'Live synchronized from article headline' : 'User custom override'}
               </span>
             </div>
           </div>
@@ -329,11 +324,10 @@ export function ArticleSeoStudio({
                 )}
               </div>
               <div className="flex items-center space-x-2">
-                <span className={`text-[10px] font-mono font-medium ${
-                  (article.seoDescription || liveDesc).length >= 120 && (article.seoDescription || liveDesc).length <= 165
+                <span className={`text-[10px] font-mono font-medium ${(article.seoDescription || liveDesc).length >= 120 && (article.seoDescription || liveDesc).length <= 165
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : 'text-slate-500'
-                }`}>
+                  }`}>
                   {(article.seoDescription || liveDesc).length}/160 chars
                 </span>
                 {article.isSeoDescCustom && (
@@ -341,7 +335,7 @@ export function ArticleSeoStudio({
                     type="button"
                     onClick={() => onChange({ seoDescription: genDesc, isSeoDescCustom: false })}
                     className="inline-flex items-center space-x-1 text-[10px] text-blue-600 hover:text-blue-700 dark:text-blue-400 cursor-pointer font-semibold"
-                    title="Reset to live auto-generated description from manuscript excerpt"
+                    title="Reset to live auto-generated description from article excerpt"
                   >
                     <RotateCcw className="w-2.5 h-2.5" />
                     <span>Re-sync with Manuscript</span>
@@ -358,7 +352,7 @@ export function ArticleSeoStudio({
             />
             <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
               <span className="truncate max-w-md">
-                <strong>Source:</strong> {!article.isSeoDescCustom ? 'Live synchronized from manuscript excerpt' : 'User custom override'}
+                <strong>Source:</strong> {!article.isSeoDescCustom ? 'Live synchronized from article excerpt' : 'User custom override'}
               </span>
             </div>
           </div>
@@ -620,7 +614,7 @@ export function ArticleSeoStudio({
                   type="button"
                   onClick={() => onChange({ customOgImage: genOgImage, isOgImageCustom: false })}
                   className="inline-flex items-center space-x-1 text-[10px] text-blue-600 dark:text-blue-400 cursor-pointer font-semibold"
-                  title="Reset to match manuscript cover image"
+                  title="Reset to match article cover image"
                 >
                   <RotateCcw className="w-2.5 h-2.5" />
                   <span>Re-sync with Cover Image</span>
@@ -649,11 +643,10 @@ export function ArticleSeoStudio({
               <button
                 type="button"
                 onClick={() => setSerpDevice('desktop')}
-                className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                  serpDevice === 'desktop'
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${serpDevice === 'desktop'
                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white'
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-                }`}
+                  }`}
               >
                 <Monitor className="w-3.5 h-3.5" />
                 <span>Google Desktop</span>
@@ -661,11 +654,10 @@ export function ArticleSeoStudio({
               <button
                 type="button"
                 onClick={() => setSerpDevice('mobile')}
-                className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                  serpDevice === 'mobile'
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${serpDevice === 'mobile'
                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white'
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-                }`}
+                  }`}
               >
                 <Smartphone className="w-3.5 h-3.5" />
                 <span>Google Mobile</span>
@@ -676,22 +668,20 @@ export function ArticleSeoStudio({
               <button
                 type="button"
                 onClick={() => setSocialPlatform('facebook')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                  socialPlatform === 'facebook'
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${socialPlatform === 'facebook'
                     ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-                }`}
+                  }`}
               >
                 Facebook / LinkedIn Card
               </button>
               <button
                 type="button"
                 onClick={() => setSocialPlatform('twitter')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                  socialPlatform === 'twitter'
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${socialPlatform === 'twitter'
                     ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300'
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-                }`}
+                  }`}
               >
                 X (Twitter) Card
               </button>
@@ -704,9 +694,8 @@ export function ArticleSeoStudio({
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
                 Google Search Result ({serpDevice.toUpperCase()})
               </span>
-              <div className={`p-4 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-sans space-y-1.5 shadow-xs ${
-                serpDevice === 'mobile' ? 'max-w-sm' : 'max-w-full'
-              }`}>
+              <div className={`p-4 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-sans space-y-1.5 shadow-xs ${serpDevice === 'mobile' ? 'max-w-sm' : 'max-w-full'
+                }`}>
                 <div className="flex items-center space-x-2 text-[11px] text-slate-600 dark:text-slate-400">
                   <div className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px] font-bold">
                     RF
@@ -716,7 +705,7 @@ export function ArticleSeoStudio({
                     <span>›</span>
                     <span>research</span>
                     <span>›</span>
-                    <span className="text-slate-400 truncate">{article.slug || 'manuscript-title'}</span>
+                    <span className="text-slate-400 truncate">{article.slug || 'article-title'}</span>
                   </div>
                 </div>
 

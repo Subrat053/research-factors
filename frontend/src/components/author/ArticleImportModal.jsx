@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   X,
-  Sparkles,
+  Import,
   FileText,
   Table as TableIcon,
   Heading,
@@ -50,7 +50,7 @@ export function ArticleImportModal({
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
             <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
-              <Sparkles className="w-5 h-5" />
+              <Import className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
@@ -79,22 +79,20 @@ export function ArticleImportModal({
               <button
                 type="button"
                 onClick={() => setImportMode('append')}
-                className={`px-3 py-1 rounded-lg font-medium transition-colors ${
-                  importMode === 'append'
+                className={`px-3 py-1 rounded-lg font-medium transition-colors ${importMode === 'append'
                     ? 'bg-blue-600 text-white shadow-2xs'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 Append to Existing Blocks
               </button>
               <button
                 type="button"
                 onClick={() => setImportMode('replace')}
-                className={`px-3 py-1 rounded-lg font-medium transition-colors ${
-                  importMode === 'replace'
+                className={`px-3 py-1 rounded-lg font-medium transition-colors ${importMode === 'replace'
                     ? 'bg-red-600 text-white shadow-2xs'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 Replace All Blocks
               </button>
@@ -116,9 +114,9 @@ export function ArticleImportModal({
               <textarea
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Paste manuscript text, Markdown headers (# / ##), tables (| Col |), blockquotes (>), or callouts (> [!NOTE])..."
+                placeholder="Paste article text, Markdown headers (# / ##), tables (| Col |), blockquotes (>), or callouts (> [!NOTE])..."
                 rows={12}
-                className="w-full text-xs font-mono p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-y leading-relaxed placeholder-slate-400 dark:placeholder-slate-600"
+                className="w-full text-sm font-mono p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-y leading-relaxed placeholder-slate-400 dark:placeholder-slate-600"
               />
             </div>
           ) : (
@@ -199,8 +197,8 @@ export function ArticleImportModal({
 
         {/* Modal Footer */}
         <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex items-center justify-between">
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-            {importMode === 'replace' ? '⚠️ This will replace all existing blocks in the article.' : 'New blocks will be inserted at the end of the manuscript.'}
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {importMode === 'replace' ? '⚠️ This will replace all existing blocks in the article.' : 'New blocks will be inserted at the end of the article.'}
           </p>
           <div className="flex items-center space-x-2">
             <button

@@ -719,7 +719,7 @@
         "number": 2,
         "heading": "Source Verification & Multi-Tier Fact-Checking",
         "paragraphs": [
-          "Factual accuracy is the cornerstone of our credibility. Every manuscript submitted to Research Factors undergoes rigorous pre-publication verification.",
+          "Factual accuracy is the cornerstone of our credibility. Every article submitted to Research Factors undergoes rigorous pre-publication verification.",
           "Our researchers prioritize primary sources over secondary reportage. When secondary sources must be cited, our editorial team audits the original research to verify that findings have not been distorted, taken out of context, or overstated."
         ],
         "subSections": [
@@ -759,7 +759,7 @@
         "heading": "Editorial Independence, Commercial Firewalls & Sponsorship",
         "paragraphs": [
           "Research Factors maintains an impenetrable firewall between our editorial research staff and our commercial, sponsorship, and business operations.",
-          "Editorial coverage, manuscript evaluations, scoring, and publication schedules are determined solely by our editorial board. Commercial partners, sponsors, and advertisers have zero input into our research conclusions."
+          "Editorial coverage, article evaluations, scoring, and publication schedules are determined solely by our editorial board. Commercial partners, sponsors, and advertisers have zero input into our research conclusions."
         ],
         "subSections": [
           {
@@ -797,7 +797,7 @@
         "heading": "Corrections, Clarifications, and Retraction Policy",
         "paragraphs": [
           "Despite rigorous verification, errors can occasionally occur. When an error of fact is identified, Research Factors is committed to correcting it swiftly, transparently, and completely.",
-          "We do not quietly overwrite or whitewash factual mistakes. Substantive corrections are acknowledged directly on the published manuscript with a clear timestamped errata notice."
+          "We do not quietly overwrite or whitewash factual mistakes. Substantive corrections are acknowledged directly on the published article with a clear timestamped errata notice."
         ],
         "subSections": [
           {
@@ -806,7 +806,7 @@
           },
           {
             "title": "Retraction Protocol",
-            "content": "In the rare event that a manuscript is found to contain fundamentally flawed methodology or plagiarized material, it is formally retracted with a public statement of cause."
+            "content": "In the rare event that a article is found to contain fundamentally flawed methodology or plagiarized material, it is formally retracted with a public statement of cause."
           }
         ],
         "bullets": [
@@ -826,7 +826,7 @@
         "bullets": [
           "Every sentence, benchmark figure, and analytical conclusion must be written, verified, and endorsed by a human researcher.",
           "Authors are legally and ethically accountable for all content published under their byline, regardless of tools used.",
-          "AI-generated synthetic citations, hallucinations, or unverified automated summaries will result in immediate disqualification of the manuscript and review of author accreditation."
+          "AI-generated synthetic citations, hallucinations, or unverified automated summaries will result in immediate disqualification of the article and review of author accreditation."
         ]
       },
       {

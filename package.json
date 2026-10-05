@@ -9,6 +9,7 @@
     "dev:backend": "npm run dev --prefix backend",
     "dev:frontend": "npm run dev --prefix frontend",
     "build": "npm run build --prefix frontend",
+    "package:rf": "npm run build --prefix frontend && node backend/scripts/prepare-production-rf.js",
     "test": "npm run test --prefix backend",
     "prisma:migrate": "npm run prisma:migrate --prefix backend",
     "prisma:seed": "npm run prisma:seed --prefix backend",

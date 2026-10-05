@@ -1,40 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-function crawlerDevProxyPlugin() {
-  return {
-    name: 'crawler-dev-proxy',
-    configureServer(server) {
-      server.middlewares.use(async (req, res, next) => {
-        const userAgent = req.headers['user-agent'] || '';
-        const isCrawler = /bot|crawler|spider|crawling|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Googlebot|bingbot/i.test(userAgent);
-        const forceCrawler = req.url && req.url.includes('crawler=1');
-        if (isCrawler || forceCrawler) {
-          try {
-            const backendRes = await fetch(`http://localhost:5005${req.url}`, {
-              headers: { ...req.headers, host: 'localhost:5005' }
-            });
-            if (backendRes.ok) {
-              const text = await backendRes.text();
-              res.statusCode = backendRes.status;
-              for (const [key, value] of backendRes.headers.entries()) {
-                res.setHeader(key, value);
-              }
-              return res.end(text);
-            }
-          } catch {
-            // If backend is unreachable, fallback to standard Vite handling
-          }
-        }
-        next();
-      });
-    }
-  };
-}
-
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || '/rf/',
-  plugins: [react(), crawlerDevProxyPlugin()],
+  plugins: [react()],
   server: {
     port: 5173,
     host: true,

@@ -109,11 +109,10 @@ export default function MediaLibraryPage() {
       {/* Alerts */}
       {alertMsg && (
         <div
-          className={`mb-6 p-4 rounded-xl flex items-center justify-between text-xs font-medium border animate-in fade-in duration-150 ${
-            alertMsg.type === 'success'
+          className={`mb-6 p-4 rounded-xl flex items-center justify-between text-xs font-medium border animate-in fade-in duration-150 ${alertMsg.type === 'success'
               ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
               : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800/60'
-          }`}
+            }`}
         >
           <span>{alertMsg.text}</span>
           <button onClick={() => setAlertMsg(null)} className="p-1 opacity-70 hover:opacity-100 transition-opacity cursor-pointer">
@@ -198,11 +197,10 @@ export default function MediaLibraryPage() {
           <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80">
             <button
               onClick={() => handleViewModeChange('grid')}
-              className={`p-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
-                viewMode === 'grid'
+              className={`p-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${viewMode === 'grid'
                   ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-semibold'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+                }`}
               title="Grid View"
             >
               <LayoutGrid className="w-4 h-4" />
@@ -211,11 +209,10 @@ export default function MediaLibraryPage() {
 
             <button
               onClick={() => handleViewModeChange('list')}
-              className={`p-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
-                viewMode === 'list'
+              className={`p-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${viewMode === 'list'
                   ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-semibold'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+                }`}
               title="List View"
             >
               <List className="w-4 h-4" />
@@ -224,11 +221,10 @@ export default function MediaLibraryPage() {
 
             <button
               onClick={() => handleViewModeChange('table')}
-              className={`p-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
-                viewMode === 'table'
+              className={`p-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${viewMode === 'table'
                   ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-semibold'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+                }`}
               title="Tabular / Table View"
             >
               <TableIcon className="w-4 h-4" />
@@ -251,7 +247,7 @@ export default function MediaLibraryPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
             {search || providerFilter || usageFilter
               ? 'No digital assets match your current search and filter criteria. Try clearing filters.'
-              : 'Uploaded manuscript figures and hero images will appear here.'}
+              : 'Uploaded article figures and hero images will appear here.'}
           </p>
           {(search || providerFilter || usageFilter) && (
             <button
@@ -291,11 +287,10 @@ export default function MediaLibraryPage() {
                 {/* Content Usage Pill */}
                 <button
                   onClick={() => setSelectedUsageMedia(m)}
-                  className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide flex items-center gap-1 backdrop-blur-xs cursor-pointer transition-transform hover:scale-105 ${
-                    m.usageCount > 0
+                  className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide flex items-center gap-1 backdrop-blur-xs cursor-pointer transition-transform hover:scale-105 ${m.usageCount > 0
                       ? 'bg-emerald-600/90 hover:bg-emerald-600 text-white border border-emerald-400/30'
                       : 'bg-black/60 text-slate-300 border border-white/10'
-                  }`}
+                    }`}
                   title={m.usageCount > 0 ? `Used in ${m.usageCount} location(s) - click to inspect` : 'Unused asset'}
                 >
                   <Layers className="w-3 h-3" />
@@ -810,7 +805,7 @@ function AssetUsageModal({ media, onClose, onDelete }) {
                 Orphaned Digital Asset (Unused)
               </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                This asset is not currently referenced in any article covers, content manuscript blocks, category illustrations, author profiles, or SEO metadata.
+                This asset is not currently referenced in any article covers, content article blocks, category illustrations, author profiles, or SEO metadata.
               </p>
               <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
                 ✓ Safe to delete or retain for future editorial publications.

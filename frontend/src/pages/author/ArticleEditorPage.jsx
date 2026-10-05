@@ -46,7 +46,7 @@ const getGeneratedArticleSeo = (data = {}, categoriesList = []) => {
   const description = cleanExcerpt
     ? (cleanExcerpt.length > 160 ? cleanExcerpt.slice(0, 157).trim() + '...' : cleanExcerpt)
     : 'Empirical research findings, methodologies, and analysis published on Research Factors.';
-  const slug = data.slug || slugify(cleanTitle) || 'manuscript-slug';
+  const slug = data.slug || slugify(cleanTitle) || 'article-slug';
 
   let categorySlug = 'research';
   if (data.category && typeof data.category === 'object' && data.category.slug) {
@@ -134,6 +134,7 @@ export default function ArticleEditorPage() {
     isOgImageCustom: false,
     schemaType: 'ScholarlyArticle',
     rejectionReason: null,
+    hasUnpublishedChanges: false,
     blocks: [
       {
         id: 'block-1',
@@ -192,7 +193,7 @@ export default function ArticleEditorPage() {
   useEffect(() => {
     articlesApi.getCategories()
       .then(res => setCategories(res.data || []))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // 2. Fetch existing article if editing
@@ -279,23 +280,24 @@ export default function ArticleEditorPage() {
               isOgImageCustom: hasCustomOgImage,
               schemaType: seoMeta.schemaType || 'ScholarlyArticle',
               rejectionReason: data.rejectionReason || null,
+              hasUnpublishedChanges: Boolean(data.hasUnpublishedChanges),
               blocks: Array.isArray(data.blocks) && data.blocks.length > 0
                 ? data.blocks.map((b, idx) => ({
-                    id: b.id || `block-${idx}`,
-                    blockType: b.blockType || b.type || 'paragraph',
-                    position: b.position ?? idx,
-                    content: b.blockType === 'image' && b.content?.url
-                      ? { ...b.content, url: normalizeMediaUrl(b.content.url) }
-                      : (b.content || {})
-                  }))
+                  id: b.id || `block-${idx}`,
+                  blockType: b.blockType || b.type || 'paragraph',
+                  position: b.position ?? idx,
+                  content: b.blockType === 'image' && b.content?.url
+                    ? { ...b.content, url: normalizeMediaUrl(b.content.url) }
+                    : (b.content || {})
+                }))
                 : [
-                    {
-                      id: 'block-1',
-                      blockType: 'paragraph',
-                      position: 0,
-                      content: { text: 'Begin drafting your research findings here...' }
-                    }
-                  ]
+                  {
+                    id: 'block-1',
+                    blockType: 'paragraph',
+                    position: 0,
+                    content: { text: 'Begin drafting your research findings here...' }
+                  }
+                ]
             });
           }
         })
@@ -379,23 +381,24 @@ export default function ArticleEditorPage() {
                   isOgImageCustom: hasCustomOgImage,
                   schemaType: seoMeta.schemaType || 'ScholarlyArticle',
                   rejectionReason: found.rejectionReason || null,
+                  hasUnpublishedChanges: Boolean(found.hasUnpublishedChanges),
                   blocks: Array.isArray(found.blocks) && found.blocks.length > 0
                     ? found.blocks.map(b => b.blockType === 'image' && b.content?.url ? { ...b, content: { ...b.content, url: normalizeMediaUrl(b.content.url) } } : b)
                     : [
-                        {
-                          id: 'block-1',
-                          blockType: 'paragraph',
-                          position: 0,
-                          content: { text: 'Begin drafting your research findings here...' }
-                        }
-                      ]
+                      {
+                        id: 'block-1',
+                        blockType: 'paragraph',
+                        position: 0,
+                        content: { text: 'Begin drafting your research findings here...' }
+                      }
+                    ]
                 });
               }
             })
             .catch(() => {
               setActiveAlert({
                 type: 'error',
-                message: err.message || 'Unable to retrieve draft manuscript.'
+                message: err.message || 'Unable to retrieve draft article'
               });
             });
         })
@@ -414,7 +417,10 @@ export default function ArticleEditorPage() {
       if (currentId) {
         try {
           setSaveStatus('saving');
-          await articlesApi.updateDraft(currentId, updatedData);
+          const res = await articlesApi.updateDraft(currentId, updatedData);
+          if (res.data?.hasUnpublishedChanges !== undefined) {
+            setArticle(prev => ({ ...prev, hasUnpublishedChanges: res.data.hasUnpublishedChanges }));
+          }
           setSaveStatus('saved');
         } catch {
           setSaveStatus('unsaved');
@@ -431,7 +437,7 @@ export default function ArticleEditorPage() {
       updated = { ...article, [field]: value };
     }
 
-    // Live auto-synchronize generated SEO into input fields when manuscript content changes
+    // Live auto-synchronize generated SEO into input fields when article content changes
     if (typeof field === 'string') {
       if (field === 'title') {
         const generated = getGeneratedArticleSeo({ ...updated, title: value }, categories);
@@ -487,7 +493,7 @@ export default function ArticleEditorPage() {
     }
 
     if ((article.tags || []).length >= 8) {
-      setActiveAlert({ type: 'error', message: 'Maximum 8 topic tags allowed per manuscript.' });
+      setActiveAlert({ type: 'error', message: 'Maximum 8 topic tags allowed per article' });
       return;
     }
 
@@ -526,7 +532,7 @@ export default function ArticleEditorPage() {
     if (!hasCategory) {
       setActiveAlert({
         type: 'error',
-        message: 'Please select or specify a primary research category for your manuscript.'
+        message: 'Please select or specify a primary research category for your article'
       });
       return null;
     }
@@ -560,10 +566,15 @@ export default function ArticleEditorPage() {
         const res = await articlesApi.updateDraft(currentId, payload);
         if (res.data?.seoMetadata) setSeoMetadata(res.data.seoMetadata);
         if (res.data?.seo) setResolvedSeo(res.data.seo);
+        if (res.data?.hasUnpublishedChanges !== undefined) {
+          setArticle(prev => ({ ...prev, hasUnpublishedChanges: res.data.hasUnpublishedChanges }));
+        }
         setSaveStatus('saved');
         setActiveAlert({
           type: 'success',
-          message: 'Article draft saved successfully!'
+          message: article.status === 'PUBLISHED'
+            ? 'Article draft modifications saved without altering live publication!'
+            : 'Article draft saved successfully!'
         });
         return currentId;
       }
@@ -644,7 +655,7 @@ export default function ArticleEditorPage() {
     if (!canSubmit) {
       setActiveAlert({
         type: 'error',
-        message: 'Permission denied: Your account role does not have permission to submit manuscripts for review.'
+        message: 'Permission denied: Your account role does not have permission to submit articles for review.'
       });
       return;
     }
@@ -669,7 +680,7 @@ export default function ArticleEditorPage() {
     if (!article.blocks || article.blocks.length === 0) {
       setActiveAlert({
         type: 'error',
-        message: 'Please add at least one content block to your manuscript.'
+        message: 'Please add at least one content block to your article'
       });
       return;
     }
@@ -677,7 +688,7 @@ export default function ArticleEditorPage() {
     if (article.status === 'PENDING_REVIEW') {
       setActiveAlert({
         type: 'error',
-        message: 'This manuscript has already been submitted and is currently undergoing peer editorial review.'
+        message: 'This article has already been submitted and is currently undergoing peer editorial review.'
       });
       return;
     }
@@ -749,7 +760,7 @@ export default function ArticleEditorPage() {
     if (!article.blocks || article.blocks.length === 0) {
       setActiveAlert({
         type: 'error',
-        message: 'Please add at least one content block to your manuscript before publishing.'
+        message: 'Please add at least one content block to your article before publishing.'
       });
       return;
     }
@@ -795,7 +806,7 @@ export default function ArticleEditorPage() {
     if (!currentId) return;
     const ok = await confirm({
       title: 'Unpublish Manuscript',
-      message: `Are you sure you want to unpublish '${article.title || 'this manuscript'}' and return it to the archive? It will no longer be visible to the public.`,
+      message: `Are you sure you want to unpublish '${article.title || 'this article'}' and return it to the archive? It will no longer be visible to the public.`,
       confirmText: 'Unpublish',
       cancelText: 'Cancel',
       variant: 'danger'
@@ -818,6 +829,125 @@ export default function ArticleEditorPage() {
       });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleModifyChanges = async () => {
+    setActiveAlert(null);
+
+    if (!article.title || article.title.trim().length < 3) {
+      setActiveAlert({
+        type: 'error',
+        message: 'Article title must be at least 3 characters long before applying modifications.'
+      });
+      return;
+    }
+
+    const hasCategory = article.categoryId || (isCustomCategory && customCategoryName.trim().length >= 2);
+    if (!hasCategory) {
+      setActiveAlert({
+        type: 'error',
+        message: 'Please select or specify a primary category before applying modifications.'
+      });
+      return;
+    }
+
+    if (!article.blocks || article.blocks.length === 0) {
+      setActiveAlert({
+        type: 'error',
+        message: 'Please ensure at least one content block exists in your article.'
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    const payload = {
+      ...article,
+      tags: article.tags || [],
+      ...(isCustomCategory && customCategoryName.trim()
+        ? { categoryName: customCategoryName.trim(), categoryId: '' }
+        : { categoryId: article.categoryId })
+    };
+
+    try {
+      let targetId = currentId;
+      if (!targetId) {
+        const res = await articlesApi.createDraft(payload);
+        targetId = res.data.id;
+        setCurrentId(targetId);
+        navigate(`/admin/editor/${targetId}`, { replace: true });
+      }
+
+      const res = await articlesApi.modifyChanges(targetId, payload);
+      const isLive = res.publishedLive || res.data?.status === 'PUBLISHED';
+
+      setArticle(prev => ({
+        ...prev,
+        status: isLive ? 'PUBLISHED' : 'PENDING_REVIEW',
+        hasUnpublishedChanges: false
+      }));
+      setSaveStatus('saved');
+      setActiveAlert({
+        type: 'success',
+        message: isLive
+          ? 'Article modifications published live to digital magazine successfully!'
+          : 'Article modifications submitted for peer editorial review!'
+      });
+    } catch (err) {
+      setActiveAlert({
+        type: 'error',
+        message: err.response?.data?.error?.message || err.message || 'Failed to modify article.'
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDiscardDraft = async () => {
+    if (!currentId) return;
+    const ok = await confirm({
+      title: 'Discard Draft Changes',
+      message: 'Are you sure you want to discard your draft edits? The workspace will revert back to the currently live published version of this article.',
+      confirmText: 'Discard Changes',
+      cancelText: 'Keep Editing',
+      variant: 'warning'
+    });
+    if (!ok) return;
+
+    setLoading(true);
+    try {
+      const res = await articlesApi.discardDraft(currentId);
+      if (res.data) {
+        const data = res.data;
+        setArticle(prev => ({
+          ...prev,
+          title: data.title || '',
+          subtitle: data.subtitle || '',
+          excerpt: data.excerpt || '',
+          coverImageUrl: normalizeMediaUrl(data.coverImageUrl || ''),
+          coverImageAlt: data.coverImageAlt || '',
+          categoryId: data.category?.id || data.categoryId || '',
+          type: data.type || 'RESEARCH',
+          tags: Array.isArray(data.tags) ? data.tags : [],
+          status: data.status || 'PUBLISHED',
+          hasUnpublishedChanges: false,
+          blocks: Array.isArray(data.blocks) && data.blocks.length > 0
+            ? data.blocks.map(b => b.blockType === 'image' && b.content?.url ? { ...b, content: { ...b.content, url: normalizeMediaUrl(b.content.url) } } : b)
+            : prev.blocks
+        }));
+        setSaveStatus('saved');
+        setActiveAlert({
+          type: 'success',
+          message: 'Draft modifications discarded. Reverted to live published version.'
+        });
+      }
+    } catch (err) {
+      setActiveAlert({
+        type: 'error',
+        message: err.response?.data?.error?.message || err.message || 'Failed to discard draft changes.'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -879,7 +1009,7 @@ export default function ArticleEditorPage() {
 
   return (
     <AdminLayout
-      title={currentId ? 'Manuscript Workspace' : 'Draft Manuscript'}
+      title={currentId ? 'Writing Space' : 'Draft'}
       subtitle={article.title ? `Working on: "${article.title}"` : 'Structure chapters, empirical benchmarks, and submit for peer review.'}
     >
       <Helmet>
@@ -906,6 +1036,8 @@ export default function ArticleEditorPage() {
           onSubmitForReview={handleSubmitForReview}
           onDirectPublish={handleDirectPublish}
           onUnpublish={handleUnpublish}
+          onModifyChanges={handleModifyChanges}
+          onDiscardDraft={handleDiscardDraft}
         />
       </div>
 
@@ -913,11 +1045,10 @@ export default function ArticleEditorPage() {
         {/* Dynamic Alert Banner */}
         {activeAlert && (
           <div
-            className={`p-4 rounded-2xl flex items-start justify-between border animate-in fade-in duration-200 ${
-              activeAlert.type === 'error'
-                ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/60 text-red-800 dark:text-red-300'
-                : 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300'
-            }`}
+            className={`p-4 rounded-2xl flex items-start justify-between border animate-in fade-in duration-200 ${activeAlert.type === 'error'
+              ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/60 text-red-800 dark:text-red-300'
+              : 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300'
+              }`}
           >
             <div className="flex items-start space-x-2.5">
               {activeAlert.type === 'error' ? (
@@ -940,7 +1071,7 @@ export default function ArticleEditorPage() {
         {loading ? (
           <div className="py-24 text-center">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-3" />
-            <p className="text-sm text-slate-400">Loading manuscript workspace...</p>
+            <p className="text-sm text-slate-400">Loading article workspace...</p>
           </div>
         ) : (
           /* Active Tab Panels */
@@ -1022,6 +1153,8 @@ export default function ArticleEditorPage() {
                 onDirectPublish={handleDirectPublish}
                 onUnpublish={handleUnpublish}
                 onPreviewLive={handlePreviewInNewTab}
+                onModifyChanges={handleModifyChanges}
+                onDiscardDraft={handleDiscardDraft}
               />
             )}
           </div>

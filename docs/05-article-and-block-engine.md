@@ -13,7 +13,7 @@ This block-based architecture ensures:
 
 ## 2. Article Formats & Editorial Genres (`ArticleType`)
 
-Every manuscript is assigned a primary editorial format that defines its investigative nature and drives cross-platform discovery:
+Every article is assigned a primary editorial format that defines its investigative nature and drives cross-platform discovery:
 
 | Format Code | UI Display Label | Journalistic Scope |
 | :--- | :--- | :--- |
@@ -24,7 +24,7 @@ Every manuscript is assigned a primary editorial format that defines its investi
 | **`GUIDE`** | Guide | Practical engineering methodologies, protocols, and implementation workflows. |
 | **`OPINION`** | Opinion | Expert perspectives, speculative essays, and editorial commentaries. |
 
-Authors dynamically select their manuscript's format in the Author Studio (`ArticleEditorPage`). The chosen format is stored in `Article.type`, validated against `VALID_ARTICLE_TYPES` in `ArticleService`, and rendered as a clickable discovery badge across public reading views.
+Authors dynamically select their article's format in the Author Studio (`ArticleEditorPage`). The chosen format is stored in `Article.type`, validated against `VALID_ARTICLE_TYPES` in `ArticleService`, and rendered as a clickable discovery badge across public reading views.
 
 ---
 
@@ -204,10 +204,10 @@ Used for structured bulleted (`unordered`) or numbered (`ordered`) editorial lis
 
 ---
 
-## 4. Autosave Engine & Concurrency Protections
+## 4. Autosave Engine & Staged Draft Revision Buffer
 
 ### Frontend Autosave Implementation
-- When an author edits an article in `ArticleEditor.jsx`, changes trigger a **debounced save hook** (1,500ms debounce).
+- When an author edits an article in `ArticleEditorPage.jsx`, changes trigger a **debounced save hook** (1,500ms debounce).
 - Status indicator states:
   - `IDLE`: "All changes saved"
   - `DIRTY`: "Unsaved changes..."
@@ -216,30 +216,82 @@ Used for structured bulleted (`unordered`) or numbered (`ordered`) editorial lis
   - `ERROR`: "Save failed — Click to retry"
 - A `beforeunload` event listener prevents tab closure if `isDirty` is true.
 
-### Backend Upsert Strategy
-- Autosave hits `PATCH /api/v1/articles/:id/draft`.
-- The server updates the article header fields and executes a transactional block replacement:
-  ```javascript
-  await prisma.$transaction(async (tx) => {
-    // 1. Update article summary and timestamp
-    await tx.article.update({
-      where: { id: articleId },
-      data: { title, excerpt, categoryId, updatedAt: new Date() }
-    });
+### Backend Upsert Strategy & Live Publication Guard
+- Autosave requests hit `PATCH /api/v1/articles/:id/draft`.
+- **Case 1: Unpublished Articles (`DRAFT`, `PENDING_REVIEW`, `REJECTED`, `ARCHIVED`)**:
+  - The server updates the article header fields and executes a transactional block replacement:
+    ```javascript
+    await prisma.$transaction(async (tx) => {
+      // 1. Update article summary and timestamp
+      await tx.article.update({
+        where: { id: articleId },
+        data: { title, excerpt, categoryId, updatedAt: new Date() }
+      });
 
-    // 2. Wipe existing blocks and rewrite updated sequence
-    await tx.articleBlock.deleteMany({ where: { articleId } });
-    await tx.articleBlock.createMany({
-      data: blocks.map((b, idx) => ({
-        articleId,
-        blockType: b.type,
-        position: idx,
-        content: b.content,
-        metadata: b.metadata || {}
-      }))
+      // 2. Wipe existing blocks and rewrite updated sequence
+      await tx.articleBlock.deleteMany({ where: { articleId } });
+      await tx.articleBlock.createMany({
+        data: blocks.map((b, idx) => ({
+          articleId,
+          blockType: b.type,
+          position: idx,
+          content: b.content,
+          metadata: b.metadata || {}
+        }))
+      });
     });
-  });
-  ```
+    ```
+- **Case 2: Live Published Articles (`PUBLISHED`) — Zero Direct Mutation**:
+  - When an article is already live, auto-saving or manual saving **NEVER modifies the live `Article` columns or `article_blocks` rows**.
+  - Instead, changes are safely staged into `draftData` (JSON) and flagged with `hasUnpublishedChanges: true`:
+    ```javascript
+    await prisma.article.update({
+      where: { id: articleId },
+      data: {
+        draftData: draftPayload,
+        hasUnpublishedChanges: true,
+        updatedAt: new Date()
+      }
+    });
+    ```
+  - **Live Reader Isolation**: Public readers, RSS feeds, recommendations, and search crawlers reading via `getPublishedArticles` and `getArticleBySlug` read live database columns and blocks, completely oblivious to unapproved or half-typed modifications.
+
+---
+
+## 5. Staged Revisions & Permission-Based "Modify Changes" Lifecycle
+
+### 1. Workspace Experience & Visual State Indicators
+- **Seamless Draft Loading**: When opening the authoring studio (`getDraftById`), the backend dynamically merges staged `draftData` on top of the live article record so authors and editors immediately resume working from their latest draft checkpoint.
+- **Header Badges & Action Controls** (`ArticleWorkspaceHeader.jsx`):
+  - A distinct amber badge (`Clock` icon) displays **"Unpublished Changes"** whenever `hasUnpublishedChanges === true`.
+  - A **"Discard Draft"** action (`RotateCcw` icon) appears alongside the save trigger.
+  - A contextual primary button **"Modify Changes"** (`Sparkles` icon) replaces the generic publish button.
+- **Publishing Tab Banner** (`ArticlePublishingTab.jsx`):
+  - Features an informative, high-visibility notice: *"Live Publication Protection Active — You are editing a live published article. Auto-saves and manual draft saves are safely staged in your working buffer and will NOT alter the live public article until you click 'Modify Changes'."*
+
+### 2. Dual-Permission "Modify Changes" Contract (`POST /api/v1/articles/:id/modify-changes`)
+Clicking **"Modify Changes"** evaluates the user's resolved permissions dynamically:
+1. **Privileged Roles (`article.publish` permission — Admin / Editor / Super Admin)**:
+   - Commits the staged modifications immediately to the live public article.
+   - Transactionally executes `applyModificationsToArticle`: updates `title`, `slug`, `excerpt`, `coverImageUrl`, replaces `article_blocks` rows, resolves and normalizes tags, updates `seo_metadata`, and maintains 301 slug redirect history.
+   - Sets `status: 'PUBLISHED'`, `hasUnpublishedChanges: false`, `draftData: null`, and `publishedById: userId`.
+   - Records an audit log: `ARTICLE_MODIFIED_AND_PUBLISHED`.
+   - The live publication updates instantly for public readers.
+2. **Author Accounts (`article.submit` permission without `article.publish` — Staff Authors / Contributors)**:
+   - Modifications remain safely staged inside `draftData` with `hasUnpublishedChanges: true`.
+   - Transitions the article status from `PUBLISHED` to `PENDING_REVIEW`.
+   - Records an audit log: `ARTICLE_MODIFICATIONS_SUBMITTED_FOR_REVIEW`.
+   - Places the revision directly into the editorial review queue (`/admin/review-queue`).
+   - The live article continues to serve its current published blocks on the public magazine until an editor approves the revision.
+3. **Editorial Desk Review & Approval** (`admin.service.js` `reviewArticle`):
+   - When an Editor or Admin reviews an article in the queue and selects `action: 'PUBLISH'`, the service checks `if (article.hasUnpublishedChanges && article.draftData)`.
+   - It transactionally applies the staged `draftData` to the live article, sets `hasUnpublishedChanges: false`, and clears `draftData: null`.
+
+### 3. Draft Discard Flow (`POST /api/v1/articles/:id/discard-draft`)
+- If an author or editor wishes to abandon their uncommitted draft edits and revert to the live version:
+  - Clicking **"Discard Draft"** invokes `POST /api/v1/articles/:id/discard-draft`.
+  - The backend transactionally sets `draftData: null` and `hasUnpublishedChanges: false`.
+  - Reverts the workspace immediately to the current live published state with zero residue.
 
 ---
 
@@ -272,11 +324,11 @@ If a slug collision occurs:
 
 ## 7. Authoring Studio & Interactive Block Matrix Implementation
 
-The manuscript editor (`/admin/editor` and `/admin/editor/:id`, with seamless canonical redirects from `/editor` and `/editor/:id`) in [`ArticleEditorPage.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/author/ArticleEditorPage.jsx) is integrated directly inside [`AdminLayout.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/components/admin/AdminLayout.jsx). It provides a unified, dark editorial studio experience with full portal sidebar navigation, real-time save state indicators, live production preview, and a dynamic block authoring matrix:
+The article editor (`/admin/editor` and `/admin/editor/:id`, with seamless canonical redirects from `/editor` and `/editor/:id`) in [`ArticleEditorPage.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/author/ArticleEditorPage.jsx) is integrated directly inside [`AdminLayout.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/components/admin/AdminLayout.jsx). It provides a unified, dark editorial studio experience with full portal sidebar navigation, real-time save state indicators, live production preview, and a dynamic block authoring matrix:
 
 ### 1. Dynamic RBAC Permission Checks
 All actions are conditionally enabled based on the author's resolved permissions via `useAuth().hasPermission`:
-- `article.create`: Required to access the manuscript studio and initialize new drafts (highlights "Write Article" in the admin portal sidebar).
+- `article.create`: Required to access the article studio and initialize new drafts (highlights "Write Article" in the admin portal sidebar).
 - `article.update_own`: Enforced on `PATCH /api/v1/articles/:id/draft`.
 - `article.submit`: Required to trigger `POST /api/v1/articles/:id/submit`. Submitting users without this permission are given an informative alert.
 - `media.upload`: Required to upload manual image files. If unavailable, authors are informed and offered an external URL fallback.
@@ -299,7 +351,7 @@ All actions are conditionally enabled based on the author's resolved permissions
 ### 4. Review Submission Resilience & Workflow Status Guards
 - Pre-submission validation asserts title length (>= 5 chars), required primary category, and at least one content block.
 - Automatically synchronizes and saves any pending block changes before submitting.
-- Reflects the active manuscript status (`Draft`, `Under Review`, `Published`, `Changes Requested`) in the editor header badge.
+- Reflects the active article status (`Draft`, `Under Review`, `Published`, `Changes Requested`) in the editor header badge.
 - Re-submission is safely guarded when status is `PENDING_REVIEW`, displaying an informative `<Clock /> Under Review` state and preventing redundant 400 Bad Request submissions.
 - When an article has status `REJECTED`, editorial notes (`rejectionReason`) are prominently surfaced, and the submit button adapts to `Re-submit for Review`.
 - Alert popups (`activeAlert`) automatically auto-hide after 5 seconds while preserving the manual dismiss button.
@@ -310,11 +362,11 @@ All actions are conditionally enabled based on the author's resolved permissions
 - The Homepage masthead (`HomePage.jsx`) queries this endpoint, displaying the featured article in the hero slot (`<ArticleCard variant="featured" />`) with an editorial `Featured` badge and deduplicating it from the general feed.
 
 ### 6. Direct Publishing & Dual Publish/Unpublish Action
-- Privileged editorial roles with `article.publish` permission can directly publish any manuscript live via `POST /api/v1/admin/articles/:id/publish` without routing through the peer review queue.
+- Privileged editorial roles with `article.publish` permission can directly publish any article live via `POST /api/v1/admin/articles/:id/publish` without routing through the peer review queue.
 - In [`ArticleManagementPage.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/admin/ArticleManagementPage.jsx), the action controls feature a dual publish/unpublish action:
   - When an article is not published (`DRAFT`, `PENDING_REVIEW`, `REJECTED`, or `ARCHIVED`), clicking the `<Globe />` button directly publishes the article live, recording slug history and timestamp.
   - When an article is `PUBLISHED`, clicking the `<Archive />` button immediately unpublishes/archives it (`ARCHIVED`), hiding it from public discovery while preserving content and history.
-- In [`ArticleEditorPage.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/author/ArticleEditorPage.jsx), users with `article.publish` permission have direct **Publish Live** and **Unpublish** header buttons in the manuscript studio, eliminating unnecessary review overhead for administrators and senior editors.
+- In [`ArticleEditorPage.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/author/ArticleEditorPage.jsx), users with `article.publish` permission have direct **Publish Live** and **Unpublish** header buttons in the article studio, eliminating unnecessary review overhead for administrators and senior editors.
 
 ### 7. Spatial Rhythm & Field Ordering Alignment with Desktop Reader Layout
 The form controls in [`ArticleEditorPage.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/author/ArticleEditorPage.jsx) strictly mirror the top-to-bottom visual hierarchy of the reader view ([`ArticleDetailPage.jsx`](file:///d:/Wizmonk/ResearchFactor/frontend/src/pages/public/ArticleDetailPage.jsx)):
@@ -333,15 +385,16 @@ The form controls in [`ArticleEditorPage.jsx`](file:///d:/Wizmonk/ResearchFactor
 
 ---
 
-## 4. Redesigned Article Authoring Workspace Architecture
+## 8. Redesigned Article Authoring Workspace Architecture
 
-The Research Factors authoring environment (`ArticleEditorPage.jsx`) provides a focused, high-productivity workspace tailored for long-form research manuscripts, technical comparisons, and reviews without the cognitive fatigue of monolithic forms.
+The Research Factors authoring environment (`ArticleEditorPage.jsx`) provides a focused, high-productivity workspace tailored for long-form research articles, technical comparisons, and reviews without the cognitive fatigue of monolithic forms.
 
 ### 1. Workspace Navigation & Sticky Command Bar (`ArticleWorkspaceHeader.jsx`)
 - **Sticky Top Bar**: Permanent access to title, article format badge, draft status, real-time word count, estimated reading time, save status (`Saved`, `Saving...`, `Unsaved`), live simulation preview (`/research/preview/:id`), manual Save Draft, and role-appropriate submission/publishing actions.
 - **Tabbed Workspace Architecture**:
   1. **Overview Tab** (`ArticleOverviewTab.jsx`): Article Title, Subtitle, Abstract/Executive Excerpt, Primary Category & Format/Genre, Hero Cover Image (Sharp WebP upload or direct URL), Topic Tags (autocomplete + normal pill format), and real-time **Publication Readiness Checklist** (asserting title, category, excerpt, cover asset, blocks, and tags).
-  2. **Content Tab** (`ArticleContentTab.jsx`): Primary manuscript editor hosting two synchronized editing modes sharing the exact same underlying `ArticleBlock[]` schema:
+     - **Upward-Rendering Tag Suggestions**: Autocomplete dropdown is positioned with `bottom-full mb-1.5` and elevated `z-40` shadow/border, rendering upwards above the tag input box so suggestions are never clipped or hidden beneath the bottom of the screen.
+  2. **Content Tab** (`ArticleContentTab.jsx`): Primary article editor hosting two synchronized editing modes sharing the exact same underlying `ArticleBlock[]` schema:
      - **Mode A: Section Builder** (`SectionBuilder.jsx`): Chapter-based outline demarcated by H2 heading boundaries using `articleSections.js`. Offers collapsible sections, drag/up-down reordering, section duplication (`duplicateSection`), delete protection, and focused in-place block editing across all 9 block types (including interactive bullet/numbered `list` editors with item reordering, insertion, and deletion).
      - **Mode B: Full Article Document Editor** (`FullArticleEditor.jsx`): Continuous document editing stream with Tiptap v2 for paragraphs, and dedicated inline cards for headings, pull quotes, callouts, comparison tables, images, dividers, FAQ accordions, and bullet/numbered lists.
      - **One-Click Paste / Import Modal** (`ArticleImportModal.jsx`, `articleImportParser.js`): Ingests pasted text from ChatGPT, Claude, Word, Google Docs, or raw Markdown. Automatically detects headings, markdown tables, callout blocks (`> [!NOTE]`), blockquotes, and lists (`list`), offering "Append" or "Replace All" options with live element metric previews.
@@ -354,11 +407,32 @@ The Research Factors authoring environment (`ArticleEditorPage.jsx`) provides a 
   4. **Sources & Citations Tab** (`ArticleSourcesTab.jsx`): Structured bibliographic citation manager for academic references, journal citations, year, and DOI links.
   5. **SEO & Social Tab** (`ArticleSeoTab.jsx`): Houses `ArticleSeoStudio.jsx` for SERP and social card customization.
      - **Strict RBAC SEO Access Control**: Standard authors (`AUTHOR` role without `article.publish` or `article.update_any`) **never see the SEO tab or SEO fields**. Search metadata is generated and optimized automatically from article title, abstract, and headings. Only privileged editors and administrators can access and manually customize technical indexation directives and metadata overrides.
-  6. **Publishing & Lifecycle Tab** (`ArticlePublishingTab.jsx`): Manuscript status lifecycle pipeline (`DRAFT` → `PENDING_REVIEW` → `PUBLISHED` / `REJECTED` / `ARCHIVED`), editorial revision feedback banner, and direct publish / submit / unpublish triggers.
+  6. **Publishing & Lifecycle Tab** (`ArticlePublishingTab.jsx`): Article status lifecycle pipeline (`DRAFT` → `PENDING_REVIEW` → `PUBLISHED` / `REJECTED` / `ARCHIVED`), editorial revision feedback banner, and direct publish / submit / unpublish triggers.
+     - **Live Publication Protection**: When editing a `PUBLISHED` article, displays the staged draft notice and houses explicit "Modify Changes" and "Discard Draft" controls.
+
+### 2. Staged Draft Revision Buffer & "Modify Changes" Architecture
+To prevent destructive updates or accidental leaks to public readers when modifying live publications, Research Factors implements an isolated draft staging architecture:
+1. **Isolated Draft Staging (`hasUnpublishedChanges` & `draftData`)**:
+   - When an author or editor edits an article whose status is `PUBLISHED`, the backend `ArticleService.updateDraft` intercepts the save and stores modified fields (title, excerpt, content blocks, tags, categories) in `draftData` (JSON) and sets `hasUnpublishedChanges = true`.
+   - The live article columns (`title`, `slug`, `excerpt`, `categoryId`) and all associated relational rows in `article_blocks` remain 100% untouched. Public readers continue reading the pristine published version without risk of observing half-written sentences or unformatted blocks.
+2. **Dynamic Overlay Hydration (`getDraftById`)**:
+   - When an author or editor loads the manuscript in `ArticleEditorPage`, `getDraftById` dynamically overlays `draftData` onto the base article model, allowing them to resume editing their staged changes seamlessly.
+3. **Role-Enforced Modification Commits (`modifyChanges`)**:
+   - Triggered via the **"Modify Changes"** primary button in `ArticleWorkspaceHeader` or `ArticlePublishingTab`.
+   - **Privileged Editors & Admins** (holding `article.publish` permission): The modifications in `draftData` are committed directly into live database columns and `article_blocks`, resetting `hasUnpublishedChanges: false` and `draftData: null` in a single ACID transaction (`status: 'PUBLISHED'`).
+   - **Standard Authors** (holding `article.submit` permission): The modifications are preserved in `draftData` and the article status is moved to `PENDING_REVIEW`, queuing the revision for editorial review.
+4. **Interactive Transaction Resilience (`PRISMA_TX_OPTIONS`)**:
+   - Because `modifyChanges` orchestrates multiple relational operations (resolving topic tags, deleting obsolete blocks, batch inserting new blocks, maintaining 301 slug redirect history in `ArticleSlugHistory`, and recording an audit trail in `AuditLog`), network latency to remote/serverless PostgreSQL instances (e.g. AWS Neon over SSL) can exceed Prisma's default 5-second interactive transaction timeout.
+   - All interactive write transactions are configured with `PRISMA_TX_OPTIONS = { maxWait: 10000, timeout: 25000 }` (10-second pool wait, 25-second execution timeout).
+   - **Batch Tag Resolution**: Replaced sequential tag queries with `tx.tag.findMany({ where: { slug: { in: parsedSlugs } } })`, shrinking tag resolution round-trips from 10–20 queries to 1–2.
+   - **Decoupled Serialization**: Full relation reads (`category`, `author`, `tags`, `blocks`) and heavy SEO computations (`SeoResolverService.resolveSEO`) are decoupled from the write transaction and executed *after* the transaction commits, releasing database connection locks in under 1 second.
+5. **Discard Draft Workflow (`discardDraft`)**:
+   - If an author or editor wishes to abandon their staged modifications, clicking **"Discard Draft"** clears `draftData` and resets `hasUnpublishedChanges = false`, cleanly returning the authoring workspace to the live published state.
 
 ---
 
-### 9. Editorial Production Seed Manuscripts
+## 9. Editorial Production Seed Manuscripts
+
 - **Real Estate Comprehensive Guide** (`backend/scripts/seed-real-estate-article.js`):
   - Ingests *"When Is Investing in Real Estate a Wise Decision in 2026? A Comprehensive Guide"* (`slug: 'when-is-investing-in-real-estate-a-wise-decision-in-2026-a-comprehensive-guide'`) under the `Real Estate` subcategory (`slug: 'real-estate'`, parent: `Business`).
   - Features 18 structured blocks including H2 chapters, card subsections, commercial & residential property breakdowns, risk mitigation matrices, sponsored partner profile for **Gharabadi Realty** (`https://gharabadi.com`), and an interactive collapsible FAQ accordion (`blockType: 'faq'`).
@@ -373,17 +447,18 @@ The Research Factors authoring environment (`ArticleEditorPage.jsx`) provides a 
   - Features 56 structured semantic blocks including H2 chapters, H3 sub-chapters, comparative pricing & efficiency matrices (`table`), running cost calculations (`callout`), break-even mileage formulas, ordered recommendation lists (`list`), and editorial citations (`quote`).
   - Associated with 8 topic tags (`tata-nexon`, `electric-vehicles`, `cng`, `diesel`, `petrol-cars`, `total-cost-of-ownership`, `fuel-efficiency`, `automotive-technology`).
   - Standalone JSON data stored in both `backend/src/data/articles/` and `frontend/src/data/articles/`, with automatic ingestion supported during `npm run prisma:seed` and via `node scripts/seed-tata-nexon-article.js`.
+  - Fully integrated into the offline fallback data registry (`fallbackData.json`) and public articles fallback handler, ensuring the entire 56-block comparison renders flawlessly even without active backend connectivity.
 
 ---
 
-## 8. Future Roadmap for Article Engine
+## 10. Future Roadmap for Article Engine
 
 1. **Inline Link Annotations & Footnotes in Rich Editor**:
    - Add a modal link annotator and academic footnote superscript reference extension into `RichTextEditor.jsx`.
-2. **Draft Revisions & Rollback History**:
-   - Introduce an `ArticleRevision` model in PostgreSQL to snapshot manuscript states on every explicit save or review submission, allowing authors to compare diffs and restore previous checkpoints.
+2. **Visual Version Diffing & Historical Checkpoints**:
+   - Building on the active Staged Draft Revision buffer (`hasUnpublishedChanges` & `draftData`), introduce a side-by-side visual diff inspector allowing editors to inspect additions/deletions before committing modifications live.
 3. **Collaborative Draft Presence & Soft Locking**:
-   - Implement WebSocket heartbeats or Redis locks to prevent concurrent overwrites when multiple co-authors collaborate on the same research manuscript.
+   - Implement WebSocket heartbeats or Redis locks to prevent concurrent overwrites when multiple co-authors collaborate on the same research article.
 4. **Clipboard Image Paste & Drag-and-Drop Inserter**:
    - Support pasting images directly from the OS clipboard into the editor canvas, auto-uploading them via `mediaApi.upload` into a new `image` block.
 5. **BibTeX & DOI Citation Importer**:

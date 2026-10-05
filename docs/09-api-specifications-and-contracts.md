@@ -105,17 +105,22 @@ For paginated collections:
 - `POST /recommendations/sync-visitor`: Authenticated endpoint that safely merges an anonymous visitor's historical events, interest profiles, article type preferences, and explicit likes/dislikes into their authenticated user account upon login/registration.
 - `POST /recommendations/events`: Records asynchronous visitor reading milestones and recommendation click telemetry (`RECOMMENDATION_CLICK`, `ARTICLE_VIEW`, `ARTICLE_SCROLL_50`, `ARTICLE_COMPLETED`, `ARTICLE_LIKE`, `ARTICLE_DISLIKE`, `COMMENT_SUBMITTED`, `COMMENT_REPLY`).
 
-### Author Workspace (`/api/v1/author/articles`)
-- `GET /author/articles`: List all articles created by the authenticated author.
-- `POST /author/articles`: Initialize a new draft article (supports dynamic category, `type` editorial format, dual-format tags, brand sponsorship fields (`isSponsored`, `sponsorName`, `sponsorDescription`, `sponsorUrl`, `sponsorLogoUrl`), and SEO metadata (`seoTitle`, `seoDescription`, `canonicalUrl`)).
-- `PATCH /author/articles/:id/draft`: Debounced autosave endpoint for draft header, `type` editorial format, blocks, brand sponsorship, and SEO metadata.
+### Author Workspace (`/api/v1/articles`)
+- `GET /articles/author/me`: List all articles created by the authenticated author (requires `article.create`).
+- `POST /articles`: Initialize a new draft article (requires `article.create`; supports dynamic category, `type` editorial format, dual-format tags, brand sponsorship fields (`isSponsored`, `sponsorName`, `sponsorDescription`, `sponsorUrl`, `sponsorLogoUrl`), and SEO metadata (`seoTitle`, `seoDescription`, `canonicalUrl`)).
+- `GET /articles/:id/draft`: Full draft article for author studio (requires article ownership or override). Automatically merges staged `draftData` over the live article if `hasUnpublishedChanges` is true.
+- `PATCH /articles/:id/draft`: Debounced autosave endpoint for draft header, `type` editorial format, blocks, brand sponsorship, and SEO metadata (requires `article.update_own` and ownership). For `PUBLISHED` articles, stages changes in `draftData` and flags `hasUnpublishedChanges: true` without altering live public article columns or blocks.
+- `POST /articles/:id/modify-changes`: Permission-aware commitment of staged draft modifications on published articles (requires ownership):
+  - Users with `article.publish`: Transactionally applies staged modifications live immediately (`status: 'PUBLISHED'`), clearing `draftData` and resetting `hasUnpublishedChanges: false`.
+  - Users without `article.publish` (Authors with `article.submit`): Stages modifications and transitions article status to `PENDING_REVIEW` for editorial desk triage.
+- `POST /articles/:id/discard-draft`: Discards pending staged edits on a published article, clearing `draftData` and resetting `hasUnpublishedChanges: false` back to the live published state (requires ownership).
+- `POST /articles/:id/submit`: Transition article from `DRAFT` or `REJECTED` to `PENDING_REVIEW` (requires `article.submit` and ownership).
 - `GET /author/articles/:id/preview`: Secure author preview of draft content with sidebar sponsorship simulation and normal-form tags.
-- `POST /author/articles/:id/submit`: Transition article from `DRAFT` or `REJECTED` to `PENDING_REVIEW`.
 
 ### Article Data Transfer Objects (DTO) Schema
 - **`ArticleDTO.toPublicSummary`**: `id`, `title`, `slug`, `subtitle`, `excerpt`, `coverImageUrl`, `coverImageAlt`, `type`, `status`, `readingTimeMin`, `viewCount`, `isFeatured`, `isSponsored`, `sponsorName`, `sponsorDescription`, `sponsorUrl`, `sponsorLogoUrl`, `publishedAt`, `category`, `author`, `tags`, `commentCount`.
 - **`ArticleDTO.toPublicDetail`**: Extends summary with `seoTitle`, `seoDescription`, `canonicalUrl`, `blocks` (ordered and sanitized), and `related` publications.
-- **`ArticleDTO.toAuthorAdmin`**: Extends detail with `rejectionReason`, `scheduledAt`, `createdById`, `publishedById`, `createdAt`, `updatedAt`.
+- **`ArticleDTO.toAuthorAdmin`**: Extends detail with `hasUnpublishedChanges`, `draftData`, `rejectionReason`, `scheduledAt`, `createdById`, `publishedById`, `createdAt`, `updatedAt`.
 
 ### Editorial & Administration (`/api/v1/admin/articles`, `/api/v1/categories`, `/api/v1/admin/users`)
 - `GET /admin/articles`: Filter all articles across system statuses (`PENDING_REVIEW`, `PUBLISHED`, `DRAFT`, `APPROVED`, `REJECTED`, `ARCHIVED`), taxonomies (`categoryId`), and full-text search (`search`), scoped automatically by requester permissions.
@@ -142,7 +147,7 @@ For paginated collections:
 - `DELETE /comments/:commentId`: Delete comment (author ownership verification or `comment.moderate` / Super Admin permission).
 - `POST /bookmarks/toggle`: Toggle bookmark for authenticated reader (`{ articleId }`).
 - `GET /bookmarks`: List reader's saved research library (`page`, `limit`). Returns serialized `articles` array via `ArticleDTO.toPublicSummary` and `pagination` object.
-- `GET /bookmarks/check/:articleId`: Check if a specific manuscript is currently saved by the authenticated reader.
+- `GET /bookmarks/check/:articleId`: Check if a specific article is currently saved by the authenticated reader.
 
 ### Media Abstraction & Administration (`/api/v1/media`, `/api/v1/admin/media`)
 - `POST /media/upload`: Multipart file upload. Processes through Sharp, stores via active `StorageProvider`, creates `Media` record.

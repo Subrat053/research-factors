@@ -389,7 +389,7 @@ To safely modify any base variable, font, or dependent styling in the future:
 ## 6. Article Detail Right Sidebar Hierarchy & Natural Flow
 
 The article detail page (`/rf/research/:slug`) utilizes a 12-column responsive grid layout:
-- **Left Column (`lg:col-span-8`)**: Main research manuscript flow (Breadcrumb -> Format -> Title -> Subtitle -> Cover Asset -> Prose Blocks -> Author Bio -> Comments).
+- **Left Column (`lg:col-span-8`)**: Main research article flow (Breadcrumb -> Format -> Title -> Subtitle -> Cover Asset -> Prose Blocks -> Author Bio -> Comments).
 - **Right Column (`lg:col-span-4`)**: Desktop editorial sidebar with a strict vertical hierarchy.
 
 ### Non-Sticky Natural Flow Architecture

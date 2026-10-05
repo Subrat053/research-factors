@@ -178,7 +178,7 @@ export default function AdminDashboardPage() {
               {stats.draftArticles}
             </p>
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-2">
-              <span>Unsubmitted manuscripts</span>
+              <span>Unsubmitted articles</span>
               <span className="text-blue-500 dark:text-blue-400 font-semibold">In Progress</span>
             </div>
           </div>
@@ -248,7 +248,7 @@ export default function AdminDashboardPage() {
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {isAuthorView
                   ? 'Recent draft updates and publication checkpoints'
-                  : 'Latest manuscripts submitted or published across the platform'}
+                  : 'Latest articles submitted or published across the platform'}
               </p>
             </div>
             <Link
@@ -294,17 +294,16 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="py-3 px-2">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
-                            item.status === 'PUBLISHED'
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${item.status === 'PUBLISHED'
                               ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25'
                               : item.status === 'PENDING_REVIEW'
-                              ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25'
-                              : item.status === 'APPROVED'
-                              ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/25'
-                              : item.status === 'REJECTED'
-                              ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/25'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
-                          }`}
+                                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25'
+                                : item.status === 'APPROVED'
+                                  ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/25'
+                                  : item.status === 'REJECTED'
+                                    ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/25'
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                            }`}
                         >
                           {item.status === 'REJECTED' ? 'NEEDS REVISION' : item.status.replace('_', ' ')}
                         </span>
@@ -347,7 +346,7 @@ export default function AdminDashboardPage() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                      Profile 
+                      Profile
                     </p>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">Headline, bio, social links, avatar</p>
                   </div>

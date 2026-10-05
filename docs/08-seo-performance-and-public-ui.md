@@ -156,7 +156,7 @@ To maximize topical authority, semantic hierarchy, and search engine discoverabi
    - In `/sitemaps/articles.xml`, all article locations (`<loc>`) are dynamically emitted as `${baseUrl}/${categorySlug}/${article.slug}`.
 
 ### Automatic 301 Permanent Redirection (`ArticleSlugHistory`)
-When an editor or author updates a published manuscript's slug (e.g. from `quantum-v1` to `empirical-quantum-processors`):
+When an editor or author updates a published article's slug (e.g. from `quantum-v1` to `empirical-quantum-processors`):
 1. The prior slug is automatically preserved in the `ArticleSlugHistory` table via Prisma interactive transaction.
 2. In the public article endpoint (`GET /api/v1/articles/:slug`), if the requested slug is not found on an active article, the service immediately checks `ArticleSlugHistory`.
 3. If a match is found:
@@ -250,7 +250,7 @@ Accessible to administrators via **System Governance → SEO Governance**:
   - Click **[Backfill Missing SEO]** to run batch initialization for any articles or categories lacking metadata records.
 - **Editorial Diagnostics Table**:
   - Live table of publications flagged with short snippets, missing cover images, missing alt text, or short/long titles.
-  - Quick **[Fix in Editor]** button linking directly to the manuscript editor.
+  - Quick **[Fix in Editor]** button linking directly to the article editor.
 
 ### 3. Step-by-Step Google Search Console Submission
 1. Navigate to [Google Search Console](https://search.google.com/search-console).
@@ -421,7 +421,7 @@ The article reading experience is organized into an editorial 2-column layout:
 ## 11. Topic Tags, Taxonomy Navigation & Live Production Preview
 
 ### 1. Dual-Format Topic Tags
-- **Authoring Flexibility**: During manuscript creation/editing, authors can specify tags formatted either with hashtags and snake_case (e.g. `#semiconductor_architecture`) or plain natural language (e.g. `Semiconductor Architecture`).
+- **Authoring Flexibility**: During article creation/editing, authors can specify tags formatted either with hashtags and snake_case (e.g. `#semiconductor_architecture`) or plain natural language (e.g. `Semiconductor Architecture`).
 - **Normalized Persistence**: The backend automatically normalizes both inputs into a canonical Title Case name (`Tag.name`) and kebab-case slug (`Tag.slug`).
 - **Editorial Presentation**: On public article detail pages, tags render formatted as `#slug_with_underscores` (e.g. `#semiconductor_architecture`), matching scientific digital publishing conventions.
 - **Dynamic Tag Discovery & Filtering**: Clicking any tag badge directs readers to `/research?tag=:slug`, activating an indexed database query and showing an active tag filter chip with a one-click dismiss `[X]` action.
@@ -504,7 +504,7 @@ To avoid inconsistent ad-hoc styling and maintain strict visual coherence, the b
 
 ### 2. Comprehensive Backoffice Coverage (15 Pages)
 All backoffice modules adhere to the dual-theme token standards:
-1. `AdminDashboardPage`: Dual KPI stat cards, manuscript intake pipeline table, and editorial quick controls.
+1. `AdminDashboardPage`: Dual KPI stat cards, article intake pipeline table, and editorial quick controls.
 2. `ArticleManagementPage`: Article status tabs, filter toolbar, editorial table, and action menus.
 3. `ArticleReviewQueuePage`: Peer-review triage table, rejection modal, revision feedback modal, and approval actions.
 4. `CategoryManagementPage`: Category directory, creation form, and edit/delete drawers.
@@ -561,14 +561,14 @@ To eliminate ambiguity and prevent blank-input confusion across editorial workfl
    - Every SEO input field (`SEO Meta Title`, `SEO Meta Description`, `Canonical URL`, `Social Share Title`, `Social Share Description`, `Social Share Image URL`) is populated with live, editable text.
    - Authors and administrators immediately see the exact values that search engine crawlers and social scrapers will consume if left untouched.
 2. **Reactive Live Synchronization**:
-   - Input fields dynamically update in real time as the underlying manuscript or category changes.
+   - Input fields dynamically update in real time as the underlying article or category changes.
    - Editing an article's headline title instantly updates `seoTitle`, `canonicalUrl`, and `customOgTitle` if they are in live-sync mode.
    - Editing an article's excerpt or abstract immediately updates `seoDescription` and `customOgDescription`.
-   - Attaching or uploading a manuscript cover image updates `customOgImage`.
+   - Attaching or uploading a article cover image updates `customOgImage`.
    - Adding the first topic tag automatically pre-populates the `focusKeyword` field for content quality audits.
 3. **Explicit State Contract (`Auto-Generated` vs `Custom Override`)**:
    - Each input is equipped with a visual badge:
-     - `Auto-Generated (Live Sync)` (Emerald badge with `Sparkles` icon): Indicates the field is currently reacting to changes in the core manuscript or category content.
+     - `Auto-Generated (Live Sync)` (Emerald badge with `Sparkles` icon): Indicates the field is currently reacting to changes in the core article or category content.
      - `Custom Override Active` (Amber badge): Indicates the user has customized the field with bespoke text.
    - A dedicated one-click `[Re-sync]` button appears whenever a custom override is active, allowing the editor to instantly discard manual overrides, inherit the latest auto-generated value, and re-engage reactive live synchronization.
 4. **Intelligent Backend Persist Contract**:
@@ -592,7 +592,7 @@ The dedicated Editorial Guidelines page (`/editorial-guidelines`) provides a str
 - **Document Masthead**: Displays breadcrumb hierarchy (`Home > Editorial Guidelines`), editorial badge (`BookOpen`), primary headline, subtitle, timestamped last-updated date, and a native print trigger (`window.print()`).
 - **Desktop 2-Column Grid (`lg:grid-cols-12`)**:
   - **Left Sidebar (`lg:col-span-4`)**: Sticky Table of Contents (`sticky top-24`) with smooth-scrolling anchors and real-time scrollspy active section tracking. Also houses an editorial ombudsman contact card.
-  - **Right Column (`lg:col-span-8`)**: Structured manuscript rendering 8 numbered sections, formatted subsection cards (`grid sm:grid-cols-2`), highlighted directive bullet boxes, and an errata reporting card.
+  - **Right Column (`lg:col-span-8`)**: Structured article rendering 8 numbered sections, formatted subsection cards (`grid sm:grid-cols-2`), highlighted directive bullet boxes, and an errata reporting card.
 - **Mobile & Tablet Responsiveness (`< 1024px`)**:
   - Sticky horizontal quick-jump pill bar (`sticky top-16 z-20`) with horizontal scroll snapping, allowing readers on phones to tap and jump directly to any numbered section without scrolling fatigue.
   - Fluid padding (`px-4 sm:px-6 lg:px-8`) and scalable serif typography.

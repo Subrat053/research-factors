@@ -182,7 +182,7 @@ The frontend is built with high-performance production optimizations:
 
 ### 1. Route-Level Code Splitting & Vendor Chunking
 - **Entry Chunk**: Minified to **~73 kB (gzip: ~26 kB)** using route-level lazy loading (`React.lazy()` + `<Suspense>`).
-- **Heavy Engines Isolated**: The Tiptap rich-text manuscript editor (`@tiptap/*`, ~332 kB) is bundled into a separate `vendor-tiptap` chunk and downloaded **only** when navigating to `/admin/editor`. Public readers on `/` or `/research/:slug` never download editor dependencies.
+- **Heavy Engines Isolated**: The Tiptap rich-text article editor (`@tiptap/*`, ~332 kB) is bundled into a separate `vendor-tiptap` chunk and downloaded **only** when navigating to `/admin/editor`. Public readers on `/` or `/research/:slug` never download editor dependencies.
 - **Vendor Splitting**:
   - `vendor-react`: Core runtime (`react`, `react-dom`, `react-router-dom`, `react-helmet-async`)
   - `vendor-tanstack`: Data caching layer (`@tanstack/react-query`)

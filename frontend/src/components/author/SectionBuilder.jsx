@@ -261,7 +261,7 @@ export function SectionBuilder({
             <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span>Section Outline Builder</span>
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             Structure your article into chapters with dedicated H2 sections, drag-and-drop reordering, and in-place block editors.
           </p>
         </div>
@@ -269,7 +269,7 @@ export function SectionBuilder({
           <button
             type="button"
             onClick={() => handleAddSection(sections.length - 1)}
-            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Section</span>

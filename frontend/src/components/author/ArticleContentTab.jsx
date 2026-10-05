@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import {
   Layers,
   FileText,
-  Sparkles,
+  Import,
+  
   ArrowUpDown,
   BookOpen
 } from 'lucide-react';
@@ -87,10 +88,10 @@ export function ArticleContentTab({
           <button
             type="button"
             onClick={() => setIsImportModalOpen(true)}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-md border border-blue-200 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
             title="Import Markdown, ChatGPT, Claude, Word, or Google Docs"
           >
-            <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            <Import className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             <span>Paste / Import Article</span>
           </button>
         </div>

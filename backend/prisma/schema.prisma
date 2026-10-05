@@ -227,6 +227,8 @@ model Article {
   scheduledAt     DateTime?            @map("scheduled_at")
   publishedAt     DateTime?            @map("published_at")
   rejectionReason String?              @map("rejection_reason")
+  hasUnpublishedChanges Boolean            @default(false) @map("has_unpublished_changes")
+  draftData       Json?                @map("draft_data")
   authorId        String               @map("author_id") @db.Uuid
   categoryId      String               @map("category_id") @db.Uuid
   createdById     String               @map("created_by_id") @db.Uuid

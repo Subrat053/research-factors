@@ -20,10 +20,10 @@ export function ArticleResearchDataTab({
         <div className="flex items-center space-x-2.5 pb-2 border-b border-slate-100 dark:border-slate-800/80">
           <Database className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            <h3 className="text-base font-bold uppercase tracking-normal text-slate-700 dark:text-slate-300">
               Empirical Methodology & Experimental Parameters
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Document test rigs, baseline conditions, datasets, and reproduction guidelines for peer scrutiny
             </p>
           </div>
@@ -88,12 +88,12 @@ export function ArticleResearchDataTab({
       <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800/80 shadow-xs space-y-5 transition-colors">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/80">
           <div className="flex items-center space-x-2">
-            <Megaphone className="w-4 h-4 text-[#c25e34] dark:text-[#f87171]" />
+            <Megaphone className="w-4 h-4 sm:w-8 sm:h-8 text-[#c25e34] dark:text-[#f87171]" />
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                 Brand Sponsorship & Commercial Underwriting
               </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Disclose sponsoring organizations or commercial underwriting for this publication
               </p>
             </div>
@@ -109,7 +109,7 @@ export function ArticleResearchDataTab({
               onChange={(e) => onChange('isSponsored', e.target.checked)}
               className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 cursor-pointer"
             />
-            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
               This article is sponsored or commercially underwritten
             </span>
           </label>
@@ -120,7 +120,7 @@ export function ArticleResearchDataTab({
           <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Sponsor / Brand Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -128,12 +128,12 @@ export function ArticleResearchDataTab({
                   value={article.sponsorName || ''}
                   onChange={(e) => onChange('sponsorName', e.target.value)}
                   placeholder="e.g. Quantum Computing Institute"
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
+                  className="w-full text-sm p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Sponsor Target Action URL (Website / Offer link)
                 </label>
                 <input
@@ -141,13 +141,13 @@ export function ArticleResearchDataTab({
                   value={article.sponsorUrl || ''}
                   onChange={(e) => onChange('sponsorUrl', e.target.value)}
                   placeholder="https://sponsor.example.com/research-initiative"
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
+                  className="w-full text-sm p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Sponsor Partnership Statement / Description
               </label>
               <textarea
@@ -155,12 +155,12 @@ export function ArticleResearchDataTab({
                 onChange={(e) => onChange('sponsorDescription', e.target.value)}
                 placeholder="Disclose nature of collaboration or sponsorship..."
                 rows={3}
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
+                className="w-full text-sm p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Sponsor Logo URL (Optional)
               </label>
               <input
@@ -168,7 +168,7 @@ export function ArticleResearchDataTab({
                 value={article.sponsorLogoUrl || ''}
                 onChange={(e) => onChange('sponsorLogoUrl', e.target.value)}
                 placeholder="https://... (Direct logo image URL)"
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
+                className="w-full text-sm p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-200 font-medium"
               />
             </div>
 
@@ -184,7 +184,7 @@ export function ArticleResearchDataTab({
                 <h4 className="font-serif text-xl font-bold text-slate-900 dark:text-white leading-snug">
                   {article.sponsorName || 'Sponsor Name'}
                 </h4>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                   {article.sponsorDescription || 'Sponsor partnership statement and description will be displayed here.'}
                 </p>
                 <div className="pt-1">

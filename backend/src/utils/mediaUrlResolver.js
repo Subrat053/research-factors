@@ -15,12 +15,16 @@ export function resolveMediaUrl(url) {
   const storageBase = (config.LOCAL_STORAGE_PUBLIC_URL || `${config.API_URL.replace(/\/+$/, '')}/uploads`).replace(/\/+$/, '');
 
   // 1. Detect legacy localhost / loopback addresses on any port and rewrite to active storage base
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/uploads\/(.*)$/i.test(url)) {
-    const cleanPath = url.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/uploads\/?/i, '');
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/rf)?\/uploads\/(.*)$/i.test(url)) {
+    const cleanPath = url.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/rf)?\/uploads\/?/i, '');
     return `${storageBase}/${cleanPath}`;
   }
 
-  // 2. Relative /uploads path
+  // 2. Relative /uploads or /rf/uploads path
+  if (url.startsWith('/rf/uploads')) {
+    const cleanPath = url.replace(/^\/rf\/uploads\/?/, '');
+    return `${storageBase}/${cleanPath}`;
+  }
   if (url.startsWith('/uploads')) {
     const cleanPath = url.replace(/^\/uploads\/?/, '');
     return `${storageBase}/${cleanPath}`;

@@ -210,6 +210,8 @@ export const articlesApi = {
   createDraft: (data) => apiClient.post('/articles', data),
   updateDraft: (id, data) => apiClient.patch(`/articles/${id}/draft`, data),
   submitForReview: (id) => apiClient.post(`/articles/${id}/submit`),
+  modifyChanges: (id, data) => apiClient.post(`/articles/${id}/modify-changes`, data),
+  discardDraft: (id) => apiClient.post(`/articles/${id}/discard-draft`),
 
   // Editorial endpoints (strictly live, require active authentication)
   approveArticle: (id) => apiClient.post(`/articles/${id}/approve`),

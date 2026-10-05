@@ -119,6 +119,40 @@ export class ArticleController {
     }
   }
 
+  static async modifyChanges(req, res, next) {
+    try {
+      const canPublish = Boolean(
+        req.user?.isSuperAdmin ||
+        req.user?.permissions?.has('article.publish') ||
+        req.user?.permissions?.has('article.publish_any')
+      );
+      const result = await ArticleService.modifyChanges(req.params.id, req.user.id, canPublish, req.body);
+      res.json({
+        success: true,
+        data: ArticleDTO.toAuthorAdmin(result.article),
+        publishedLive: result.publishedLive,
+        message: result.publishedLive
+          ? 'Article modifications published live successfully'
+          : 'Article modifications submitted for editorial review'
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async discardDraft(req, res, next) {
+    try {
+      const article = await ArticleService.discardDraft(req.params.id, req.user.id);
+      res.json({
+        success: true,
+        data: ArticleDTO.toAuthorAdmin(article),
+        message: 'Draft modifications discarded. Reverted to live published version.'
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async getDraft(req, res, next) {
     try {
       const article = await ArticleService.getDraftById(req.params.id);

@@ -174,11 +174,10 @@ export default function ModerationQueuePage() {
       {/* Auto-dismissing Feedback Banner */}
       {feedback && (
         <div
-          className={`mb-6 p-4 rounded-xl flex items-center justify-between transition-all ${
-            feedback.type === 'error'
+          className={`mb-6 p-4 rounded-xl flex items-center justify-between transition-all ${feedback.type === 'error'
               ? 'bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-300'
               : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-          }`}
+            }`}
         >
           <div className="flex items-center space-x-3 text-xs font-medium">
             {feedback.type === 'error' ? (
@@ -210,21 +209,19 @@ export default function ModerationQueuePage() {
                   setActiveTab(tab.key);
                   setPage(1);
                 }}
-                className={`relative px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center space-x-2 ${
-                  isActive
+                className={`relative px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center space-x-2 ${isActive
                     ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
                     : 'bg-slate-100 dark:bg-zinc-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-zinc-700'
-                }`}
+                  }`}
               >
                 <span>{tab.label}</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    isActive
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${isActive
                       ? 'bg-white/20 text-white dark:bg-slate-900/20 dark:text-slate-900'
                       : tab.isAlert && count > 0
-                      ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
-                      : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-slate-400'
-                  }`}
+                        ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                        : 'bg-slate-200 dark:bg-zinc-700 text-slate-600 dark:text-slate-400'
+                    }`}
                 >
                   {count}
                 </span>
@@ -273,7 +270,7 @@ export default function ModerationQueuePage() {
             type="text"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search by comment prose, author name, or manuscript title..."
+            placeholder="Search by comment prose, author name, or article title..."
             className="admin-input pl-9 pr-8 py-2 w-full rounded-xl text-xs"
           />
           {searchInput && (
@@ -331,8 +328,8 @@ export default function ModerationQueuePage() {
             {searchInput
               ? 'No comments match your search criteria. Try modifying your search keywords.'
               : activeTab === 'REPORTED'
-              ? 'Excellent! No comments are currently flagged with community reports.'
-              : 'No reader comments exist in this category yet.'}
+                ? 'Excellent! No comments are currently flagged with community reports.'
+                : 'No reader comments exist in this category yet.'}
           </p>
         </div>
       ) : (
@@ -384,15 +381,14 @@ export default function ModerationQueuePage() {
 
                     {/* Status Badge */}
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        item.status === 'VISIBLE'
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${item.status === 'VISIBLE'
                           ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
                           : item.status === 'REPORTED'
-                          ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20'
-                          : item.status === 'HIDDEN'
-                          ? 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border border-slate-500/20'
-                          : 'bg-red-500/10 text-red-700 dark:text-red-300 border border-red-500/20'
-                      }`}
+                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20'
+                            : item.status === 'HIDDEN'
+                              ? 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border border-slate-500/20'
+                              : 'bg-red-500/10 text-red-700 dark:text-red-300 border border-red-500/20'
+                        }`}
                     >
                       {item.status}
                     </span>
@@ -413,7 +409,7 @@ export default function ModerationQueuePage() {
                   {/* Target Manuscript Title */}
                   {item.article && (
                     <div className="flex items-center space-x-1.5 text-xs text-slate-500 dark:text-slate-400">
-                      <span>On manuscript:</span>
+                      <span>On article:</span>
                       <a
                         href={`/rf/articles/${item.article.slug}`}
                         target="_blank"

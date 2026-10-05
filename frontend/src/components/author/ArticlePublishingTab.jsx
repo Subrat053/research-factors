@@ -24,7 +24,9 @@ export function ArticlePublishingTab({
   onSubmitForReview,
   onDirectPublish,
   onUnpublish,
-  onPreviewLive
+  onPreviewLive,
+  onModifyChanges,
+  onDiscardDraft
 }) {
   return (
     <div className="space-y-6">
@@ -47,33 +49,53 @@ export function ArticlePublishingTab({
       <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800/80 shadow-xs space-y-6 transition-colors">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
               Manuscript Lifecycle & Publishing Workflow
             </h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Manage publication status, peer review checkpoints, and public visibility
             </p>
           </div>
-          <span
-            className={`text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border ${
-              article.status === 'PUBLISHED'
-                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
-                : article.status === 'PENDING_REVIEW'
-                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
+          <div className="flex items-center space-x-2">
+            <span
+              className={`text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border ${
+                article.status === 'PUBLISHED'
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                  : article.status === 'PENDING_REVIEW'
+                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                  : article.status === 'REJECTED'
+                  ? 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+              }`}
+            >
+              {article.status === 'PENDING_REVIEW'
+                ? 'Under Editorial Review'
                 : article.status === 'REJECTED'
-                ? 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
-            }`}
-          >
-            {article.status === 'PENDING_REVIEW'
-              ? 'Under Editorial Review'
-              : article.status === 'REJECTED'
-              ? 'Changes Requested'
-              : article.status === 'PUBLISHED'
-              ? 'Published Live'
-              : 'Draft Manuscript'}
-          </span>
+                ? 'Changes Requested'
+                : article.status === 'PUBLISHED'
+                ? 'Published Live'
+                : 'Draft Manuscript'}
+            </span>
+            {article.status === 'PUBLISHED' && article.hasUnpublishedChanges && (
+              <span className="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30">
+                Draft Changes Pending
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* Live Staging Notice for Published Articles */}
+        {article.status === 'PUBLISHED' && (
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 space-y-1">
+            <span className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] block">
+              Live Publication Protection Active
+            </span>
+            <p>
+              This article is live. Any edits saved in this workspace are staged in draft mode without mutating the public website.
+              Clicking <strong className="text-slate-900 dark:text-white">Modify Changes</strong> will {canPublish ? 'directly publish your revisions live' : 'submit your revisions to the editorial peer review desk'}.
+            </p>
+          </div>
+        )}
 
         {/* Workflow Pipeline Steps */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -83,8 +105,8 @@ export function ArticlePublishingTab({
               : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800'
           }`}>
             <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Step 1</span>
-            <h4 className="text-xs font-bold text-slate-900 dark:text-white">Authoring & Draft</h4>
-            <p className="text-[11px] text-slate-500 mt-1">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">Authoring & Draft</h4>
+            <p className="text-xs text-slate-500 mt-1">
               Add empirical prose, section chapters, and tables.
             </p>
           </div>
@@ -95,8 +117,8 @@ export function ArticlePublishingTab({
               : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800'
           }`}>
             <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Step 2</span>
-            <h4 className="text-xs font-bold text-slate-900 dark:text-white">Editorial Review</h4>
-            <p className="text-[11px] text-slate-500 mt-1">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">Editorial Review</h4>
+            <p className="text-xs text-slate-500 mt-1">
               Submitted for peer review and editorial verification.
             </p>
           </div>
@@ -107,8 +129,8 @@ export function ArticlePublishingTab({
               : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800'
           }`}>
             <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Step 3</span>
-            <h4 className="text-xs font-bold text-slate-900 dark:text-white">Published Live</h4>
-            <p className="text-[11px] text-slate-500 mt-1">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">Published Live</h4>
+            <p className="text-xs text-slate-500 mt-1">
               Visible on public digital magazine and indexed by search engines.
             </p>
           </div>
@@ -119,8 +141,8 @@ export function ArticlePublishingTab({
               : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800'
           }`}>
             <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Step 4</span>
-            <h4 className="text-xs font-bold text-slate-900 dark:text-white">Archived / Closed</h4>
-            <p className="text-[11px] text-slate-500 mt-1">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">Archived / Closed</h4>
+            <p className="text-xs text-slate-500 mt-1">
               Unpublished from public magazine feed.
             </p>
           </div>
@@ -148,31 +170,64 @@ export function ArticlePublishingTab({
               <ExternalLink className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <span>Preview Live Simulation</span>
             </button>
+
+            {article.status === 'PUBLISHED' && article.hasUnpublishedChanges && onDiscardDraft && (
+              <button
+                type="button"
+                onClick={onDiscardDraft}
+                disabled={savingDraft || submitting}
+                className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 text-slate-600 dark:text-slate-300 text-xs font-semibold shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+              >
+                <span>Discard Draft Edits</span>
+              </button>
+            )}
           </div>
 
           <div className="flex items-center space-x-2">
-            {canPublish ? (
-              article.status === 'PUBLISHED' ? (
+            {article.status === 'PUBLISHED' ? (
+              <>
                 <button
                   type="button"
-                  onClick={onUnpublish}
-                  disabled={submitting}
-                  className="inline-flex items-center space-x-1.5 px-5 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+                  onClick={onModifyChanges}
+                  disabled={submitting || savingDraft || (!canPublish && !canSubmit)}
+                  className={`inline-flex items-center space-x-1.5 px-5 py-2 rounded-xl text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer ${
+                    canPublish
+                      ? 'bg-emerald-600 hover:bg-emerald-500'
+                      : 'bg-blue-600 hover:bg-blue-500'
+                  }`}
                 >
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
-                  <span>Unpublish Manuscript</span>
+                  {submitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : canPublish ? (
+                    <Globe className="w-4 h-4" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                  <span>Modify Changes</span>
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onDirectPublish}
-                  disabled={submitting}
-                  className="inline-flex items-center space-x-1.5 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
-                  <span>Publish Live to Public</span>
-                </button>
-              )
+
+                {canPublish && (
+                  <button
+                    type="button"
+                    onClick={onUnpublish}
+                    disabled={submitting}
+                    className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
+                    <span>Unpublish</span>
+                  </button>
+                )}
+              </>
+            ) : canPublish ? (
+              <button
+                type="button"
+                onClick={onDirectPublish}
+                disabled={submitting}
+                className="inline-flex items-center space-x-1.5 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                <span>Publish Live to Public</span>
+              </button>
             ) : article.status === 'PENDING_REVIEW' ? (
               <button
                 type="button"
