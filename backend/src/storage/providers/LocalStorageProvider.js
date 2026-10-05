@@ -8,7 +8,8 @@ export class LocalStorageProvider extends StorageProvider {
   constructor(options = {}) {
     super();
     this.baseDir = options.basePath ? path.resolve(options.basePath) : path.resolve(process.cwd(), config.LOCAL_STORAGE_PATH);
-    this.publicUrlBase = options.publicBaseUrl || config.LOCAL_STORAGE_PUBLIC_URL;
+    const fallbackBase = `${config.API_URL.replace(/\/+$/, '')}/uploads`;
+    this.publicUrlBase = (options.publicBaseUrl || config.LOCAL_STORAGE_PUBLIC_URL || fallbackBase).replace(/\/+$/, '');
   }
 
   async _ensureDir(dirPath) {

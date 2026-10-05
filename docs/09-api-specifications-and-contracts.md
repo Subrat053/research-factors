@@ -168,3 +168,26 @@ For paginated collections:
 - `GET /admin/reports`: Permission-gated (`comment.moderate`) triage list of reported comments with `reason` filter and pagination.
 - `POST /admin/reports/:id/resolve`: Permission-gated (`comment.moderate`) report resolution actions (`DISMISS`, `HIDE_COMMENT`, `DELETE_COMMENT`, `SUSPEND_AUTHOR`). Cleans up related tickets and records an `AuditLog` entry.
 
+---
+
+## 7. Authentication Transport & Cloud Reverse Proxy Contract
+
+### 1. Dual-Token Authentication Transport
+To guarantee resilience across both single-origin local development and cross-origin cloud environments (e.g. Render, where frontend and backend reside on separate subdomains under the Public Suffix List):
+- **Primary Mechanism (HttpOnly Cookies)**:
+  - In production (`NODE_ENV === 'production'`), authentication cookies use `SameSite=None; Secure=true`, permitting cross-site transmission over HTTPS.
+  - In development, cookies use `SameSite=Lax; Secure=false`.
+- **Resilience Fallback (Authorization Bearer Header)**:
+  - On login or registration, the JWT access token is stored in client storage (`localStorage.getItem('rf_token')`).
+  - Axios request interceptor (`apiClient.interceptors.request`) automatically attaches `Authorization: Bearer <token>`.
+  - The backend authentication middleware (`authenticate.js`) verifies either the cookie or the Bearer header.
+  - Guarantees seamless session continuity even in privacy-hardened browsers (Safari ITP, Brave) that block third-party cookies.
+
+### 2. Reverse Proxy & Rate Limiting (`trust proxy`)
+- Express is configured with `app.set('trust proxy', 1)`, accurately resolving client IPs from `X-Forwarded-For` through cloud load balancers (Render, Cloudflare, AWS).
+- Prevents reverse proxy IP pooling from causing global rate limit lockout in `authLimiter`.
+
+### 3. Dynamic CORS Origin Handling
+- The backend dynamically resolves allowed origins based on `config.APP_URL` (supporting single or comma-separated domains) alongside local preview ports (`5173`, `5174`, `4173`).
+- Static `/uploads` assets return explicit `Cross-Origin-Resource-Policy: cross-origin` and `Access-Control-Allow-Origin: *` headers to allow embedding on any client origin.
+

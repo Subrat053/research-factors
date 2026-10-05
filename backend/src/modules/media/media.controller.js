@@ -1,4 +1,5 @@
 import { MediaService } from './media.service.js';
+import { resolveMediaUrl } from '../../utils/mediaUrlResolver.js';
 
 export class MediaController {
   static async upload(req, res, next) {
@@ -13,7 +14,10 @@ export class MediaController {
       res.status(201).json({
         success: true,
         message: 'Media asset uploaded and processed successfully',
-        data: media
+        data: {
+          ...media,
+          publicUrl: resolveMediaUrl(media.publicUrl)
+        }
       });
     } catch (error) {
       next(error);

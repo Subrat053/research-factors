@@ -2,10 +2,12 @@ import { AuthService } from './auth.service.js';
 import { UserDTO } from '../users/user.dto.js';
 import { config } from '../../config/index.js';
 
+const isProduction = config.NODE_ENV === 'production';
+
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: config.NODE_ENV === 'production',
-  sameSite: 'lax',
+  secure: isProduction,
+  sameSite: isProduction ? 'none' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
 };
 
@@ -49,8 +51,8 @@ export class AuthController {
   static async logout(req, res) {
     res.clearCookie('accessToken', {
       httpOnly: true,
-      secure: config.NODE_ENV === 'production',
-      sameSite: 'lax'
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax'
     });
 
     res.status(200).json({

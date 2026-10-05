@@ -1,4 +1,5 @@
 import { UserDTO } from '../users/user.dto.js';
+import { resolveMediaUrl } from '../../utils/mediaUrlResolver.js';
 
 export class ArticleDTO {
   static toPublicSummary(article) {
@@ -10,7 +11,7 @@ export class ArticleDTO {
       slug: article.slug,
       subtitle: article.subtitle,
       excerpt: article.excerpt,
-      coverImageUrl: article.coverImageUrl,
+      coverImageUrl: resolveMediaUrl(article.coverImageUrl),
       coverImageAlt: article.coverImageAlt,
       type: article.type,
       status: article.status,
@@ -21,7 +22,7 @@ export class ArticleDTO {
       sponsorName: article.sponsorName || null,
       sponsorDescription: article.sponsorDescription || null,
       sponsorUrl: article.sponsorUrl || null,
-      sponsorLogoUrl: article.sponsorLogoUrl || null,
+      sponsorLogoUrl: resolveMediaUrl(article.sponsorLogoUrl),
       publishedAt: article.publishedAt,
       category: article.category ? {
         id: article.category.id,
@@ -46,13 +47,19 @@ export class ArticleDTO {
     if (!article) return null;
 
     const summary = this.toPublicSummary(article);
-    const blocks = article.blocks ? article.blocks.sort((a, b) => a.position - b.position).map(b => ({
-      id: b.id,
-      blockType: b.blockType,
-      position: b.position,
-      content: b.content,
-      metadata: b.metadata
-    })) : [];
+    const blocks = article.blocks ? article.blocks.sort((a, b) => a.position - b.position).map(b => {
+      let content = b.content;
+      if (b.blockType === 'image' && content?.url) {
+        content = { ...content, url: resolveMediaUrl(content.url) };
+      }
+      return {
+        id: b.id,
+        blockType: b.blockType,
+        position: b.position,
+        content,
+        metadata: b.metadata
+      };
+    }) : [];
 
     return {
       ...summary,

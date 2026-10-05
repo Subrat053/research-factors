@@ -240,7 +240,30 @@ Profile photos uploaded on `/admin/profile` pass through the identical productio
 
 ---
 
-## 10. Future Roadmap for Media & Storage System
+## 10. Dynamic Multi-Environment Storage & Single-Variable Deployment Architecture
+
+To ensure seamless transitions between local development and cloud production (e.g. Render, Railway, AWS):
+
+### 1. Dynamic Public Storage Base (`backend/src/config/index.js`)
+- `LOCAL_STORAGE_PUBLIC_URL` automatically defaults to `${config.API_URL}/uploads`.
+- Switching from local (`API_URL=http://localhost:5005`) to production (`API_URL=https://your-backend.onrender.com`) immediately updates all generated upload URLs without code changes.
+
+### 2. Multi-Tier Media URL Normalization (`mediaUrlResolver.js` & `media.api.js`)
+- **Backend DTO Layer** (`resolveMediaUrl` in `article.dto.js`, `user.dto.js`, `media.controller.js`):
+  - Detects legacy localhost/loopback URLs on any port and dynamically re-bases them to the active environment's `API_URL/uploads`.
+  - External CDN URLs (Cloudinary, Cloudflare R2, S3) are preserved verbatim.
+  - Relative paths (`/uploads/...` or `media/...`) are dynamically prefixed with the active storage base.
+- **Frontend Client Layer** (`normalizeMediaUrl` in `media.api.js`):
+  - Automatically derives `VITE_STORAGE_URL` from `VITE_API_URL` if omitted.
+  - Sanitizes any incoming localhost URLs to the active frontend storage base.
+  - Guarantees zero Private Network Access (PNA) or loopback CORS violations in modern browsers.
+
+### 3. Database URL Normalization Utility (`npm run db:normalize-media`)
+- Provides a one-click CLI script (`backend/scripts/normalize-db-media-urls.js`) to migrate and sanitize any legacy database rows in PostgreSQL when migrating between hosts.
+
+---
+
+## 11. Future Roadmap for Media & Storage System
 
 1. **Integrated Media Library Asset Picker**:
    - Add a modal dialog in the editor allowing authors to browse, search, and reuse previously uploaded figures and illustrations from `GET /admin/media` without re-uploading duplicate assets.

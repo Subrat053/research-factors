@@ -10,6 +10,22 @@ export const apiClient = axios.create({
   }
 });
 
+// Request Interceptor: Attach Bearer token fallback for cross-domain auth
+apiClient.interceptors.request.use(
+  (config) => {
+    try {
+      const token = localStorage.getItem('rf_token');
+      if (token && !config.headers.Authorization) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch {
+      // Ignore localStorage access restrictions if any
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Response Interceptor for uniform error parsing
 apiClient.interceptors.response.use(
   (response) => response.data,

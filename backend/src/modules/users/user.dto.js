@@ -1,3 +1,5 @@
+import { resolveMediaUrl } from '../../utils/mediaUrlResolver.js';
+
 export class UserDTO {
   /**
    * Safe serialization for public views (e.g. author byline, commenter)
@@ -9,7 +11,7 @@ export class UserDTO {
       firstName: user.firstName,
       lastName: user.lastName,
       fullName: `${user.firstName} ${user.lastName}`.trim(),
-      avatarUrl: user.avatarUrl,
+      avatarUrl: resolveMediaUrl(user.avatarUrl),
       bio: user.bio,
       createdAt: user.createdAt,
       authorProfile: user.authorProfile ? {
@@ -40,7 +42,7 @@ export class UserDTO {
       firstName: user.firstName,
       lastName: user.lastName,
       fullName: `${user.firstName} ${user.lastName}`.trim(),
-      avatarUrl: user.avatarUrl,
+      avatarUrl: resolveMediaUrl(user.avatarUrl),
       bio: user.bio,
       status: user.status,
       isEmailVerified: user.isEmailVerified,
@@ -67,7 +69,7 @@ export class UserDTO {
       firstName: user.firstName,
       lastName: user.lastName,
       fullName: `${user.firstName} ${user.lastName}`.trim(),
-      avatarUrl: user.avatarUrl,
+      avatarUrl: resolveMediaUrl(user.avatarUrl),
       bio: user.bio,
       status: user.status,
       isEmailVerified: user.isEmailVerified,

@@ -25,6 +25,9 @@ export function AuthProvider({ children }) {
 
   const login = async (credentials) => {
     const response = await authApi.login(credentials);
+    if (response.data?.token) {
+      try { localStorage.setItem('rf_token', response.data.token); } catch {}
+    }
     setUser(response.data?.user);
     recommendationsApi.syncVisitor().catch(() => {});
     return response.data?.user;
@@ -32,6 +35,9 @@ export function AuthProvider({ children }) {
 
   const register = async (data) => {
     const response = await authApi.register(data);
+    if (response.data?.token) {
+      try { localStorage.setItem('rf_token', response.data.token); } catch {}
+    }
     setUser(response.data?.user);
     recommendationsApi.syncVisitor().catch(() => {});
     return response.data?.user;
@@ -41,6 +47,7 @@ export function AuthProvider({ children }) {
     try {
       await authApi.logout();
     } finally {
+      try { localStorage.removeItem('rf_token'); } catch {}
       setUser(null);
     }
   };

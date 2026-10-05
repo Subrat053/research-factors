@@ -54,36 +54,54 @@ export const LOGO_WHITE_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$
 export const LOGO_ICON_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$/, '')}/logo-icon.png?v=3`;
 
 /**
- * Normalizes media asset URLs to handle dynamic port shifts and relative paths
+ * Dynamically resolves the active storage base URL.
+ * Falls back to deriving /uploads from VITE_API_URL if VITE_STORAGE_URL is omitted.
+ */
+export function getStorageBaseUrl() {
+  if (import.meta.env.VITE_STORAGE_URL) {
+    return import.meta.env.VITE_STORAGE_URL.replace(/\/+$/, '');
+  }
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL.replace(/\/+$/, '').replace(/\/api\/v1$/, '/uploads');
+  }
+  return 'http://localhost:5005/uploads';
+}
+
+/**
+ * Normalizes media asset URLs to handle dynamic port shifts, cross-environment deployments, and relative paths
  * @param {string} url - Image source URL
  * @returns {string} Normalized absolute or CDN URL
  */
 export function normalizeMediaUrl(url) {
   if (!url || typeof url !== 'string') return '';
-  const storageUrl = import.meta.env.VITE_STORAGE_URL || 'http://localhost:5005/uploads';
+  const storageUrl = getStorageBaseUrl();
   const baseUrl = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 
-  // If already absolute URL
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('//')) {
-    return url;
+  // 1. Detect legacy localhost / loopback addresses on any port and dynamically rewrite to active storage base
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/uploads\/(.*)$/i.test(url)) {
+    const cleanPath = url.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/uploads\/?/i, '');
+    return `${storageUrl}/${cleanPath}`;
   }
 
-  // Handle local public assets (/images/, /logo.png, etc.) for root or subfolder deployments
-  if (url.startsWith('/') && !url.startsWith('/uploads')) {
+  // 2. Handle relative /uploads path
+  if (url.startsWith('/uploads')) {
+    const cleanPath = url.replace(/^\/uploads\/?/, '');
+    return `${storageUrl}/${cleanPath}`;
+  }
+
+  // 3. Handle bare storage keys (e.g. "media/uuid.webp")
+  if (url.startsWith('media/')) {
+    return `${storageUrl}/${url}`;
+  }
+
+  // 4. Handle local public assets (/images/, /logo.png, etc.)
+  if (url.startsWith('/')) {
     return `${baseUrl}${url}`;
   }
 
-  // Replace any legacy localhost:5000 variations with active storage URL
-  if (url.includes(':5000/uploads')) {
-    return url.replace(/https?:\/\/localhost:5000\/uploads/g, storageUrl)
-              .replace(/localhost:5000\/uploads/g, storageUrl);
-  }
-
-  // If URL is a relative /uploads path
-  if (url.startsWith('/uploads')) {
-    const base = storageUrl.replace(/\/+$/, '');
-    const cleanPath = url.replace(/^\/uploads\/?/, '');
-    return `${base}/${cleanPath}`;
+  // 5. External CDN URLs (Cloudinary, Cloudflare R2, AWS S3, etc.)
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('//')) {
+    return url;
   }
 
   return url;

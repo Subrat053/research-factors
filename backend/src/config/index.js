@@ -47,9 +47,9 @@ const parseEnv = () => {
   }
   const data = result.data;
   if (!data.LOCAL_STORAGE_PUBLIC_URL) {
-    data.LOCAL_STORAGE_PUBLIC_URL = `http://localhost:${data.PORT}/uploads`;
-  } else if (data.LOCAL_STORAGE_PUBLIC_URL.includes('localhost:5000') && data.PORT !== 5000) {
-    data.LOCAL_STORAGE_PUBLIC_URL = data.LOCAL_STORAGE_PUBLIC_URL.replace('localhost:5000', `localhost:${data.PORT}`);
+    data.LOCAL_STORAGE_PUBLIC_URL = `${data.API_URL.replace(/\/+$/, '')}/uploads`;
+  } else {
+    data.LOCAL_STORAGE_PUBLIC_URL = data.LOCAL_STORAGE_PUBLIC_URL.replace(/\/+$/, '');
   }
   return data;
 };

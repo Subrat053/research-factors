@@ -12,14 +12,41 @@ import { errorHandler, AppError } from './middleware/errorHandler.js';
 
 export const app = express();
 
+// Enable reverse proxy trust (Render, Nginx, Cloudflare load balancers)
+app.set('trust proxy', 1);
+
 // 1. Core Security & Parsing Middleware
 app.use(requestIdMiddleware);
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 
+const configuredOrigins = config.APP_URL
+  ? config.APP_URL.split(',').map(u => u.trim().replace(/\/+$/, '')).filter(Boolean)
+  : [];
+
+const defaultOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
+  'http://localhost:4173'
+];
+
+const allowedOriginList = Array.from(new Set([...configuredOrigins, ...defaultOrigins]));
+
 app.use(cors({
-  origin: [config.APP_URL, 'http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5174', 'http://127.0.0.1:5174'],
+  origin: (origin, callback) => {
+    // Allow non-browser requests (tools, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    // Explicit match
+    if (allowedOriginList.includes(origin)) return callback(null, true);
+    // Dynamically reflect origin in non-production or for matching Render subdomains
+    if (config.NODE_ENV !== 'production' || origin.includes('onrender.com')) {
+      return callback(null, true);
+    }
+    return callback(null, origin);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id']
@@ -35,10 +62,14 @@ const morganStream = {
 };
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms', { stream: morganStream }));
 
-// 3. Static Media Serve (Local Storage Provider)
+// 3. Static Media Serve (Local Storage Provider) with explicit CORS & CORP headers
 if (config.STORAGE_PROVIDER === 'local') {
   const localUploadDir = path.resolve(process.cwd(), config.LOCAL_STORAGE_PATH);
-  app.use('/uploads', express.static(localUploadDir));
+  app.use('/uploads', (req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    next();
+  }, express.static(localUploadDir));
 }
 app.get('/', (req, res) => {
   res.send('Research Factors Backend API is running');
