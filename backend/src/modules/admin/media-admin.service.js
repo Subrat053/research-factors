@@ -1,6 +1,7 @@
 import { prisma } from '../../config/db.js';
 import { MediaService } from '../media/media.service.js';
 import { AppError } from '../../middleware/errorHandler.js';
+import { resolveMediaUrl } from '../../utils/mediaUrlResolver.js';
 
 export class MediaAdminService {
   /**
@@ -185,7 +186,7 @@ export class MediaAdminService {
 
     const formattedMedia = rawMedia.map(m => ({
       id: m.id,
-      publicUrl: m.publicUrl,
+      publicUrl: resolveMediaUrl(m.publicUrl),
       originalName: m.originalName,
       mimeType: m.mimeType,
       sizeBytes: m.sizeBytes,
@@ -251,6 +252,7 @@ export class MediaAdminService {
     }
 
     const mUrl = media.publicUrl;
+    const resolvedMediaUrl = resolveMediaUrl(media.publicUrl);
     const mKey = media.storageKey;
 
     const [articles, categories, users, seoItems, blocks] = await Promise.all([
@@ -434,7 +436,7 @@ export class MediaAdminService {
       media: {
         id: media.id,
         originalName: media.originalName,
-        publicUrl: media.publicUrl,
+        publicUrl: resolvedMediaUrl,
         mimeType: media.mimeType,
         sizeBytes: media.sizeBytes,
         width: media.width,

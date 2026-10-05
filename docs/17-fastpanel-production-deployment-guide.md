@@ -147,6 +147,7 @@ nano .env
 
 npm ci --omit=dev
 npx prisma migrate deploy
+npm run db:normalize-media
 
 pm2 start src/server.js --name rf-backend --cwd /var/www/demo_wizmonk_usr/data/www/demo.wizmonk.com/rf --update-env
 pm2 save
@@ -214,6 +215,7 @@ Before calling the deployment complete, verify these workflows:
 - Article create/edit with cover image saves and reloads correctly.
 - Public article detail page renders cover images and image blocks.
 - `/rf/.env`, `/rf/src`, `/rf/prisma`, and `/rf/package.json` are blocked.
+- No browser console requests point to `localhost`, `127.0.0.1`, or port `5005`.
 
 ## 10. Troubleshooting
 

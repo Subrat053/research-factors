@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { adminApi } from '../../services/admin.api.js';
+import { normalizeMediaUrl } from '../../services/media.api.js';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
 import { useConfirm } from '../../context/ModalContext.jsx';
 import {
@@ -67,7 +68,10 @@ export default function MediaLibraryPage() {
     }
   });
 
-  const media = data?.media || [];
+  const media = (data?.media || []).map((item) => ({
+    ...item,
+    publicUrl: normalizeMediaUrl(item.publicUrl)
+  }));
   const pagination = data?.pagination || { total: 0, totalPages: 1 };
 
   // 2. Delete Mutation

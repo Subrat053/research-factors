@@ -189,6 +189,14 @@ Existing local media from \`backend/uploads\` is included under \`uploads/\`. On
    - PHP cURL must be enabled.
    - PHP upload limits must be large enough for media uploads:
      \`upload_max_filesize=20M\`, \`post_max_size=25M\`, \`max_execution_time=60\`.
+
+7. **Normalize Legacy Localhost Media URLs**:
+   Run once after setting production \`.env\`:
+   \`\`\`bash
+   npm run db:normalize-media
+   pm2 restart rf-backend --update-env
+   \`\`\`
+   This rewrites old \`http://localhost:5005/uploads/...\` database values to \`https://demo.wizmonk.com/rf/uploads/...\`.
 `;
 
 fs.writeFileSync(path.join(outputDir, 'README_DEPLOY.md'), readmeDeploy.trim());
