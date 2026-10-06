@@ -4,7 +4,7 @@ export function getApiBaseUrl() {
   const configuredUrl = import.meta.env.VITE_API_URL;
   const isBrowser = typeof window !== 'undefined';
   const isRemote = isBrowser && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-  const basePath = (import.meta.env.BASE_URL || '/rf/').replace(/\/+$/, '');
+  const basePath = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 
   // If on a remote production domain, rewrite any accidental loopback/localhost address to same-origin
   if (isRemote) {

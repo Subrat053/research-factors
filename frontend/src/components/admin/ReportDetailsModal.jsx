@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../../services/admin.api.js';
+import { getAppUrl } from '../../utils/url.js';
 import {
   X,
   ShieldAlert,
@@ -140,7 +141,7 @@ export const ReportDetailsModal = ({ commentId, onClose, onActionComplete }) => 
                   <div className="pt-2 border-t border-slate-200/60 dark:border-zinc-700/60 flex items-center justify-between text-[11px] text-slate-500">
                     <span className="truncate max-w-md">Article: <strong className="text-slate-700 dark:text-slate-300">{comment.article.title}</strong></span>
                     <a
-                      href={`/rf/articles/${comment.article.slug}`}
+                      href={getAppUrl(`/articles/${comment.article.slug}`)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-rfblue hover:underline inline-flex items-center gap-1 shrink-0 font-medium"

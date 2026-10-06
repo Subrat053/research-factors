@@ -463,7 +463,7 @@ export default function SponsorshipPage() {
         </section>
 
         {/* 5. PRICING & SPONSORSHIP PACKAGES */}
-        <section id="tiers" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section id="tiers" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-14">
           <div className="text-center max-w-3xl mx-auto mb-16">
             
             <h2 className="text-ink-darkest tracking-tight">
@@ -631,7 +631,7 @@ export default function SponsorshipPage() {
         </section>
 
         {/* 9. SPONSORSHIP INQUIRY FORM (Preserved As-Is) */}
-        <section id="inquiry-form" className="py-20 bg-white">
+        <section id="inquiry-form" className="py-20 bg-white scroll-mt-16">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-10">
               <h2 className="text-ink-darkest">

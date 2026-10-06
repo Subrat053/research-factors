@@ -202,10 +202,41 @@ Because client-side routing is handled by React Router, web servers must rewrite
 - [`frontend/public/robots.txt`](file:///d:/Wizmonk/ResearchFactor/frontend/public/robots.txt) grants full access to public editorial routes while shielding `/admin/`, `/editor/`, and auth endpoints.
 - [`frontend/public/sitemap.xml`](file:///d:/Wizmonk/ResearchFactor/frontend/public/sitemap.xml) pre-declares canonical publication URLs with change frequencies.
 
-### 5. Subfolder Deployment (`/rf/` Subpath)
-When deploying the frontend to a subfolder (e.g. `https://demo.wizmonk.com/rf`):
-1. **Base URL**: Set via `VITE_BASE_PATH=/rf/` in environment variables, or defaults to `/rf/` in `vite.config.js`.
-2. **Router Basename**: React Router automatically inherits `import.meta.env.BASE_URL` (`<BrowserRouter basename={import.meta.env.BASE_URL}>`).
-3. **Apache / cPanel (.htaccess)**: [`frontend/public/.htaccess`](file:///d:/Wizmonk/ResearchFactor/frontend/public/.htaccess) handles URL rewrites with `RewriteBase /rf/` and `RewriteRule . /rf/index.html [L]`.
-4. **Static Redirects**: [`frontend/public/_redirects`](file:///d:/Wizmonk/ResearchFactor/frontend/public/_redirects) routes `/rf/* /rf/index.html 200`.
+### 5. Dynamic Base URL & Portability (`/rf/` Subpath vs Domain Root `/`)
+The frontend is architected for zero-code migration between subfolder hosting (e.g. `https://demo.wizmonk.com/rf/`) and domain root hosting (`https://demo.wizmonk.com/`):
+
+1. **Environment Configuration (`VITE_BASE_PATH`)**:
+   - For subfolder hosting: `VITE_BASE_PATH=/rf/` in `.env` / `.env.production`.
+   - For root domain hosting: `VITE_BASE_PATH=/` in `.env` / `.env.production`.
+   - Vite dynamically loads `VITE_BASE_PATH` via `loadEnv` in `vite.config.js`, properly normalizing leading and trailing slashes.
+
+2. **React Router Basename**:
+   - The root router automatically inherits Vite's base: `<BrowserRouter basename={import.meta.env.BASE_URL}>`.
+   - All internal navigation (`<Link>`, `<Navigate>`, `useNavigate`) operates seamlessly relative to the configured base path.
+
+3. **Dynamic URL & Path Helper (`frontend/src/utils/url.js`)**:
+   - `getAppPath(path)`: Dynamically prefixes internal paths with the active base path (e.g. `/rf/research/preview/:id` or `/research/preview/:id`).
+   - `getAppUrl(path)`: Dynamically resolves fully-qualified URLs including origin (e.g. `https://demo.wizmonk.com/rf/research/preview/:id` or `https://demo.wizmonk.com/research/preview/:id`).
+   - Use `getAppUrl` for all external `window.open` actions (such as the Manuscript Studio Live Preview button), canonical URLs, and `<a target="_blank">` context links. Never hardcode `/rf` or root paths in `window.open` or `<a href>`.
+
+4. **Directory-Agnostic Apache (.htaccess)**:
+   - [`frontend/public/.htaccess`](file:///d:/Wizmonk/ResearchFactor/frontend/public/.htaccess) uses directory-relative rewrite rules:
+     ```apache
+     RewriteRule ^index\.html$ - [L]
+     RewriteCond %{REQUEST_FILENAME} !-f
+     RewriteCond %{REQUEST_FILENAME} !-d
+     RewriteRule . index.html [L]
+     ```
+   - Omits hardcoded `RewriteBase`, allowing the same `.htaccess` file to serve single-page routing whether placed inside a subfolder (`/rf/`) or at the domain root (`/`).
+
+5. **Transitioning from `/rf/` to Root `/` Checklist**:
+   - In `frontend/.env.production`, change:
+     - `VITE_BASE_PATH=/`
+     - `VITE_API_URL=/api/v1`
+     - `VITE_STORAGE_URL=/uploads`
+   - In backend production `.env`, adjust:
+     - `APP_URL="https://demo.wizmonk.com"`
+     - `API_URL="https://demo.wizmonk.com"`
+     - `LOCAL_STORAGE_PUBLIC_URL="https://demo.wizmonk.com/uploads"`
+   - Rebuild the frontend (`npm run build`). No source code modifications are required!
 

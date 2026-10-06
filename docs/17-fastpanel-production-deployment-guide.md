@@ -67,11 +67,12 @@ The production `.htaccess` protects backend files, sends API/media/health reques
 ```apache
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteBase /rf/
 
+  # 1. SECURITY GUARDS: Forbid web access to sensitive backend files
   RewriteRule ^(\.env|\.git|package\.json|package-lock\.json|prisma|src|node_modules|backend) - [F,L]
   RewriteRule \.(log|sql|md|sh)$ - [F,L]
 
+  # 2. PHP BACKEND GATEWAY: Forward API/uploads/health to Node.js on 5005
   RewriteRule ^api/?$ rf-proxy.php?__rf_path=/api [QSA,L]
   RewriteRule ^api/(.*)$ rf-proxy.php?__rf_path=/api/$1 [QSA,L]
   RewriteCond %{REQUEST_FILENAME} !-f
@@ -83,10 +84,12 @@ The production `.htaccess` protects backend files, sends API/media/health reques
   RewriteRule ^health/?$ rf-proxy.php?__rf_path=/health [QSA,L]
   RewriteRule ^health/(.*)$ rf-proxy.php?__rf_path=/health/$1 [QSA,L]
 
+  # 3. SPA ROUTING: Route all other client requests to local index.html
+  #    Directory-agnostic (works identically under /rf/ or domain root /)
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule . /rf/index.html [L]
+  RewriteRule . index.html [L]
 </IfModule>
 ```
 

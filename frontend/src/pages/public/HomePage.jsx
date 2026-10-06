@@ -677,7 +677,7 @@ export default function HomePage() {
         </section>
 
         {/* 2. EXPLORE TOPICS SECTION ("Dive Into What Interests You") */}
-        <section id="topics" className="py-16 lg:py-20 border-b border-paper-border bg-paper-warm">
+        <section id="topics" className="py-16 lg:py-20 border-b border-paper-border bg-paper-warm scroll-mt-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-10">
               <div>
@@ -836,7 +836,7 @@ export default function HomePage() {
         </section>
 
         {/* 4. LATEST RESEARCH & INSIGHTS (4-Column Grid) */}
-        <section id="latest-research" className="py-16 lg:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section id="latest-research" className="py-16 lg:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-16 lg:scroll-mt-12">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-4 border-b border-paper-border">
             <div>
               <div className="inline-flex items-center space-x-2 text-xs sm:text-sm font-bold uppercase tracking-wider text-rfblue mb-1.5">

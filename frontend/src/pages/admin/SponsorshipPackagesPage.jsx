@@ -5,6 +5,7 @@ import { adminApi } from '../../services/admin.api.js';
 import { useConfirm } from '../../context/ModalContext.jsx';
 import { DEFAULT_SPONSORSHIP_TIERS } from '../../data/defaultSponsorship.js';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
+import { getAppUrl, getAppPath } from '../../utils/url.js';
 import {
   Handshake,
   Plus,
@@ -353,12 +354,12 @@ export default function SponsorshipPackagesPage() {
             <p className="text-[11px] text-blue-700 dark:text-blue-300/80">
               Changes saved here instantly reflect on the public{' '}
               <a
-                href="/rf/sponsorship"
+                href={getAppUrl('/sponsorship')}
                 target="_blank"
                 rel="noreferrer"
                 className="underline hover:text-blue-600 dark:hover:text-blue-200"
               >
-                /rf/sponsorship
+                {getAppPath('/sponsorship')}
               </a>{' '}
               page and dynamically populate the sponsorship package options in the inquiry form dropdown.
             </p>

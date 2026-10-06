@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
 import { seoApi } from '../../services/seo.api.js';
+import { getAppPath } from '../../utils/url.js';
 import {
   Globe,
   Search,
@@ -432,7 +433,7 @@ export default function SeoAuditPage() {
                     <td className="py-3 px-6 font-medium text-slate-900 dark:text-slate-100 max-w-xs">
                       <div className="truncate font-semibold">{item.title}</div>
                       <div className="text-[10px] text-slate-400 font-mono truncate">
-                        /rf/{item.categorySlug || (item.category ? item.category.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'research')}/{item.slug}
+                        {getAppPath(`/${item.categorySlug || (item.category ? item.category.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'research')}/${item.slug}`)}
                       </div>
                     </td>
                     <td className="py-3 px-6 text-slate-600 dark:text-slate-300">

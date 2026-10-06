@@ -7,6 +7,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
 import { ReportDetailsModal } from '../../components/admin/ReportDetailsModal.jsx';
 import { useModal } from '../../context/ModalContext.jsx';
 import { normalizeMediaUrl } from '../../services/media.api.js';
+import { getAppUrl } from '../../utils/url.js';
 import {
   Search,
   RefreshCw,
@@ -411,7 +412,7 @@ export default function ModerationQueuePage() {
                     <div className="flex items-center space-x-1.5 text-xs text-slate-500 dark:text-slate-400">
                       <span>On article:</span>
                       <a
-                        href={`/rf/articles/${item.article.slug}`}
+                        href={getAppUrl(`/articles/${item.article.slug}`)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="font-medium text-rfblue hover:underline inline-flex items-center gap-1 truncate max-w-md"

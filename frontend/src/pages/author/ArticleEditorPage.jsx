@@ -20,6 +20,7 @@ import { adminApi } from '../../services/admin.api.js';
 import { normalizeMediaUrl } from '../../services/media.api.js';
 import { seoApi } from '../../services/seo.api.js';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
+import { getAppUrl } from '../../utils/url.js';
 
 // Modular Workspace Tab Components
 import { ArticleWorkspaceHeader } from '../../components/author/ArticleWorkspaceHeader.jsx';
@@ -60,9 +61,7 @@ const getGeneratedArticleSeo = (data = {}, categoriesList = []) => {
     categorySlug = slugify(data.categoryName);
   }
 
-  const canonicalUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/rf/${categorySlug}/${slug}`
-    : `/rf/${categorySlug}/${slug}`;
+  const canonicalUrl = getAppUrl(`/${categorySlug}/${slug}`);
   const ogImage = normalizeMediaUrl(data.coverImageUrl || '') ||
     (typeof window !== 'undefined' ? `${window.location.origin}/images/og-default.png` : '/images/og-default.png');
 
@@ -645,7 +644,7 @@ export default function ArticleEditorPage() {
       targetId = await handleSaveDraft();
     }
     if (targetId) {
-      window.open(`/research/preview/${targetId}`, '_blank');
+      window.open(getAppUrl(`/research/preview/${targetId}`), '_blank');
     }
   };
 

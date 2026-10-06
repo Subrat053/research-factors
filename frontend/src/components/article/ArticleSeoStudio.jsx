@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Layers
 } from 'lucide-react';
+import { getAppUrl } from '../../utils/url.js';
 
 export function ArticleSeoStudio({
   article,
@@ -40,7 +41,7 @@ export function ArticleSeoStudio({
   const genDesc = seoMetadata?.generatedDescription || (cleanExcerpt ? (cleanExcerpt.length > 160 ? cleanExcerpt.slice(0, 157).trim() + '...' : cleanExcerpt) : 'Empirical research findings, methodologies, and analysis published on Research Factors.');
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const catSlug = article.category?.slug || (article.categorySlug ? article.categorySlug : 'research');
-  const genCanonical = seoMetadata?.generatedCanonicalUrl || `${origin}/rf/${catSlug}/${article.slug || 'article-slug'}`;
+  const genCanonical = seoMetadata?.generatedCanonicalUrl || getAppUrl(`/${catSlug}/${article.slug || 'article-slug'}`);
   const genOgImage = seoMetadata?.generatedOgImage || article.coverImageUrl || `${origin}/images/og-default.png`;
 
   // Resolved live values for preview

@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { adminApi } from '../../services/admin.api.js';
 import { normalizeMediaUrl } from '../../services/media.api.js';
 import { AdminLayout } from '../../components/admin/AdminLayout.jsx';
+import { getAppUrl } from '../../utils/url.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useConfirm } from '../../context/ModalContext.jsx';
 import {
@@ -1462,7 +1463,7 @@ export default function UserManagementPage() {
                               </div>
                               <div className="flex items-center space-x-1.5 shrink-0">
                                 <a
-                                  href={`/rf/admin/editor/${art.id}`}
+                                  href={getAppUrl(`/admin/editor/${art.id}`)}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:border-blue-300 dark:hover:border-blue-700 transition-colors"

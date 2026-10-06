@@ -60,7 +60,7 @@ export const LOGO_ICON_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/+$/
 export function getStorageBaseUrl() {
   const isBrowser = typeof window !== 'undefined';
   const isRemote = isBrowser && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-  const basePath = (import.meta.env.BASE_URL || '/rf/').replace(/\/+$/, '');
+  const basePath = (import.meta.env.BASE_URL || '/').replace(/\/+$/, '');
 
   // If on a remote production domain, rewrite any loopback/localhost address to same-origin
   if (isRemote) {
